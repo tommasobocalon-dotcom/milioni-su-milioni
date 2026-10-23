@@ -106,7 +106,11 @@ export async function Results({ mode, params }: { mode: "agency" | "pro"; params
       </div>
 
       <div className="grid gap-8 lg:grid-cols-[280px_1fr]">
-        <aside aria-label="Filtri" className="flex flex-col gap-6 self-start rounded-lg border border-line bg-surface p-5">
+        <aside
+          id="filtri"
+          aria-label="Filtri"
+          className="order-2 flex scroll-mt-20 flex-col gap-6 self-start rounded-lg border border-line bg-surface p-5 lg:order-1"
+        >
           <h2 className="flex items-center gap-2 text-h4 font-semibold">
             <SlidersHorizontal className="size-4" aria-hidden /> Filtri
           </h2>
@@ -199,14 +203,20 @@ export async function Results({ mode, params }: { mode: "agency" | "pro"; params
           </p>
         </aside>
 
-        <section aria-label="Risultati" className="flex flex-col gap-4">
+        <section aria-label="Risultati" className="order-1 flex flex-col gap-4 lg:order-2">
+          <a
+            href="#filtri"
+            className="inline-flex items-center gap-2 self-start rounded-full border border-line bg-surface px-4 py-2 text-body-s font-semibold lg:hidden"
+          >
+            <SlidersHorizontal className="size-4" aria-hidden /> Filtri e ordinamento
+          </a>
           {sponsored.length > 0 && (
             <>
-              <h2 className="overline text-ink-2">Sponsorizzato</h2>
+              <h2 className="caps-label text-ink-2">Sponsorizzato</h2>
               {sponsored.map((p) => (
                 <PartnerCard key={p.id} p={p} />
               ))}
-              <h2 className="overline mt-2 text-ink-2">
+              <h2 className="caps-label mt-2 text-ink-2">
                 {results.length} {results.length === 1 ? "risultato" : "risultati"}
               </h2>
             </>

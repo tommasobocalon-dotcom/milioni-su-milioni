@@ -8,17 +8,17 @@ Aggregatore web (Veneto → Triveneto → Nord Italia) che mette in contatto cli
 - **B2C**: *Trova Casa*, *Trova Professionista / Artigiano*, profili pubblici, richiesta di contatto guidata con OTP, recensioni verificate.
 - **B2B**: abbonamenti Stripe (Base / Media / Professional, mensile o annuale) + **token prepagati** (lead oltre quota, boost, in evidenza). Sospensione automatica al pagamento fallito.
 - **Area Commerciale** (vendita porta a porta, mobile), **Backoffice Admin**, **assistente AI** (mascotte geco) lato cliente e partner.
-- Stato: solo documentazione, **nessun codice ancora**. Prossimo passo: Fase 0 della roadmap (PRD §18).
+- Stato (ottobre 2026): **MVP navigabile in sviluppo**, vedi "Stato dello sviluppo" sotto e [README.md](README.md) per avviarlo.
 
-## Stack (PRD §12)
+## Stack (PRD §12, con le scelte fatte)
 
 | Livello | Scelta |
 |---|---|
-| App | Next.js (App Router) + TypeScript, unico progetto |
-| UI | Tailwind CSS + shadcn/ui, token di brand (PRD §11.1) |
-| DB | PostgreSQL su Supabase (UE) con PostGIS + pgvector |
-| ORM | Drizzle o Prisma (da decidere) |
-| Auth | Supabase Auth (magic link, OTP), Row Level Security |
+| App | **Next.js 16** (App Router, Cache Components + Partial Prefetching attivi) + TypeScript, unico progetto. Leggere `node_modules/next/dist/docs/` prima di usare API di Next: è cambiato molto (vedi `AGENTS.md`) |
+| UI | Tailwind CSS 4 con i token del Figma in `src/app/globals.css`; componenti propri in stile shadcn (cva + tailwind-merge) in `src/components/ui` |
+| DB | PostgreSQL (Supabase UE in produzione). In locale **embedded-postgres** avviato da `npm run dev` (porta 54329, dati in `.data/postgres`). Distanze calcolate in TypeScript; PostGIS e pgvector quando servono |
+| ORM | **Drizzle** (deciso): schema in `src/lib/db/schema.ts`, migrazioni SQL in `drizzle/` |
+| Auth | **Codici OTP propri + sessioni nel database** (cookie httpOnly, token salvato come hash). Stesso sistema OTP per verificare i lead via SMS e per l'accesso dei partner via email. Supabase Auth non usato per ora. Autorizzazione nell'app: ogni pagina/azione dell'Area Partner passa da `requirePartner()`; **RLS da aggiungere** prima del lancio |
 | Storage | Supabase Storage |
 | Pagamenti | Stripe Billing, Checkout, Customer Portal, webhook idempotenti e firmati |
 | Fatture | Provider SdI italiano via API |
@@ -42,7 +42,21 @@ Aggregatore web (Veneto → Triveneto → Nord Italia) che mette in contatto cli
 - **Mobile-first**, PWA per partner e commerciali.
 - **Test**: TDD dove possibile (Vitest unit, Playwright E2E). Non modificare i test per farli passare (plugin `protect-tests` attivo).
 - Ambiente: **Windows 11**, shell PowerShell 5.1 (niente `&&`) oppure Git Bash.
-- La cartella non è ancora un repo git a sé (il repo rilevato è la home utente): fare `git init` nella cartella del progetto prima di committare.
+- Repo git nella cartella del progetto (branch `main`), Git per Windows installato. In PowerShell 5.1 non riscrivere file con `Get-Content`/`Set-Content` (rompe gli accenti UTF-8): usare gli strumenti di modifica file.
+- Con Cache Components: letture di cookie, `searchParams`, `params` e dati non in cache vanno dentro `<Suspense>`; prima di `new Date()` in un componente chiamare `await connection()`. Verificare sempre con `npm run build` e controllando la console (insight di Next).
+
+## Stato dello sviluppo
+
+**Fatto e testato** (61 test unitari, 5 end-to-end, build di produzione ok):
+- Home, *Trova Casa*, *Trova Professionista* con filtri, ordinamento (punteggio PRD §7.5) e posti sponsorizzati etichettati; ricerca libera `/cerca` ("rifare il bagno a Mestre").
+- Profili pubblici agenzia e professionista con listino indicativo, portfolio, recensioni verificate, dati strutturati `LocalBusiness`/`AggregateRating`, URL del PRD §5.4.
+- Richiesta di contatto in 5 passi con domande dinamiche per categoria, verifica OTP via SMS, conteggio quota/token/duplicati/lead bloccato oltre quota (PRD §7.4), pagina di conferma con alternative.
+- Area Partner: accesso con codice, panoramica, inbox e dettaglio lead (stato, note, segnalazione entro 72 h, sblocco con token), token (registro immutabile, acquisto simulato solo in sviluppo), listino, abbonamento.
+- Pagine *Come funziona* (ordinamento e recensioni spiegati), *Per i professionisti* (piani), privacy e termini in bozza, 404.
+
+**Da fare** (prossimi passi suggeriti): Stripe (abbonamenti, Checkout token, webhook, sospensione), editor della scheda/listino/portfolio con upload foto, area cliente e recensioni dopo il ricontatto, mappa MapLibre, provider reali SMS/email, RLS e rate limit per IP + Turnstile, registrazione self-service, Area Commerciale, Backoffice Admin, assistente AI, deploy (Vercel + Supabase UE).
+
+**Valori provvisori presi dal Figma** (da confermare, PRD §20): nome "geco", prezzi piani (annuale = 10 mensilità), 8 token per lead oltre quota con sblocco entro 48 h, pacchetti token 50/120/300 a 49/99/219 €, tono "tu" anche verso i partner.
 
 ## Skill da usare (via tool `Skill`)
 
@@ -160,4 +174,4 @@ Tutto il resto delle regole della skill vale: niente gradienti, glow, glass, emo
 
 ## Decisioni aperte (PRD §20)
 
-Prima di implementare parti che ne dipendono, chiedere all'utente: nome piattaforma/mascotte, esclusiva di zona, agenzie non partner, regole token e lead oltre quota, prezzi piani, tolleranza pagamento, prova gratuita, modello B2B, import immobili, area cliente, provvigioni commerciali, tono tu/lei, ORM (Drizzle vs Prisma), provider email/SMS/SdI.
+Prima di implementare parti che ne dipendono, chiedere all'utente: nome piattaforma/mascotte, esclusiva di zona, agenzie non partner, regole token e lead oltre quota, prezzi piani, tolleranza pagamento, prova gratuita, modello B2B, import immobili, area cliente, provvigioni commerciali, tono tu/lei, provider email/SMS/SdI. (ORM deciso: Drizzle.) Nel frattempo si usano i valori provvisori del Figma elencati in "Stato dello sviluppo".

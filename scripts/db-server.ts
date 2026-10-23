@@ -4,12 +4,15 @@
  * come farà con Supabase in produzione. I dati restano in .data/postgres.
  */
 import { existsSync } from "node:fs";
-import { connect } from "node:net";
+import { connect as tcpConnect } from "node:net";
+import { migrate } from "drizzle-orm/postgres-js/migrator";
 import EmbeddedPostgres from "embedded-postgres";
+import { connect } from "./db-connection";
+import { seed } from "./seed";
 
 const portInUse = (port: number) =>
   new Promise<boolean>((resolve) => {
-    const socket = connect({ port, host: "127.0.0.1" }, () => {
+    const socket = tcpConnect({ port, host: "127.0.0.1" }, () => {
       socket.end();
       resolve(true);
     });
@@ -42,6 +45,18 @@ async function main() {
   }
   await pg.start();
   console.log(`[db] PostgreSQL pronto su 127.0.0.1:${port} — dati in ${databaseDir}`);
+
+  // Primo avvio: crea le tabelle e carica i dati di esempio, così `npm run dev` basta da solo.
+  const { sql, db } = connect();
+  const [{ exists }] = await sql<{ exists: boolean }[]>`select to_regclass('public.partners') is not null as exists`;
+  if (!exists) {
+    await migrate(db, { migrationsFolder: "drizzle" });
+    await seed(db);
+    console.log("[db] tabelle create e dati di esempio caricati");
+  } else {
+    await migrate(db, { migrationsFolder: "drizzle" });
+  }
+  await sql.end();
 
   const shutdown = async () => {
     await pg.stop();

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { formatEuro, formatPriceRange, formatResponseTime, slugify } from "./format";
+import { formatEuro, formatPhone, formatPriceRange, formatResponseTime, slugify } from "./format";
 
 describe("formatEuro", () => {
   it("uses Italian separators and drops zero cents", () => {
@@ -38,6 +38,17 @@ describe("formatResponseTime", () => {
     expect(formatResponseTime(110)).toBe("~2 ore");
     expect(formatResponseTime(60 * 30)).toBe("~1 giorno");
     expect(formatResponseTime(null)).toBeNull();
+  });
+});
+
+describe("formatPhone", () => {
+  it("groups Italian mobile and landline numbers for reading", () => {
+    expect(formatPhone("+393475551218")).toBe("+39 347 555 1218");
+    expect(formatPhone("+390491234567")).toBe("+39 049 123 4567");
+  });
+
+  it("leaves other formats untouched", () => {
+    expect(formatPhone("+4930123456")).toBe("+4930123456");
   });
 });
 

@@ -58,6 +58,12 @@ export function formatDistanceKm(km: number): string {
   return `${km.toLocaleString("it-IT", { maximumFractionDigits: 1, minimumFractionDigits: km < 10 ? 1 : 0 })} km`;
 }
 
+/** "+393475551218" → "+39 347 555 1218". Numeri non italiani restano come sono. */
+export function formatPhone(e164: string): string {
+  const m = /^\+39(\d{3})(\d{3})(\d{3,5})$/.exec(e164);
+  return m ? `+39 ${m[1]} ${m[2]} ${m[3]}` : e164;
+}
+
 export function slugify(input: string): string {
   return input
     .normalize("NFD")

@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import * as s from "../src/lib/db/schema";
 import { slugify } from "../src/lib/domain/format";
@@ -17,6 +18,15 @@ import {
 } from "./seed-data";
 
 type Db = PostgresJsDatabase<typeof s>;
+
+/**
+ * UUID stabile ricavato da una chiave: lo stesso dato di esempio ha lo stesso id a ogni reset,
+ * così la cache del server di sviluppo resta coerente col database.
+ */
+function sid(key: string): string {
+  const h = createHash("sha256").update(`geco-seed:${key}`).digest("hex");
+  return `${h.slice(0, 8)}-${h.slice(8, 12)}-4${h.slice(13, 16)}-${((parseInt(h[16], 16) & 0x3) | 0x8).toString(16)}${h.slice(17, 20)}-${h.slice(20, 32)}`;
+}
 
 const HOUR = 3600_000;
 const DAY = 24 * HOUR;
@@ -72,12 +82,12 @@ export async function seed(db: Db) {
   for (const [i, c] of CATEGORIES.entries()) {
     const [cat] = await db
       .insert(s.categories)
-      .values({ partnerType: c.partnerType, name: c.name, pluralName: c.pluralName, slug: c.slug, icon: c.icon, sortOrder: i })
+      .values({ id: sid(`category:${c.slug}`), partnerType: c.partnerType, name: c.name, pluralName: c.pluralName, slug: c.slug, icon: c.icon, sortOrder: i })
       .returning({ id: s.categories.id });
     categoryIds.set(c.slug, cat.id);
     const svcs = await db
       .insert(s.services)
-      .values(c.services.map(([slug, name, unit]) => ({ categoryId: cat.id, slug, name, defaultUnit: unit })))
+      .values(c.services.map(([slug, name, unit]) => ({ id: sid(`service:${c.slug}/${slug}`), categoryId: cat.id, slug, name, defaultUnit: unit })))
       .returning({ id: s.services.id, slug: s.services.slug });
     for (const sv of svcs) serviceIds.set(`${c.slug}/${sv.slug}`, sv.id);
 
@@ -98,7 +108,10 @@ export async function seed(db: Db) {
     }
   }
 
-  const plans = await db.insert(s.plans).values(PLANS).returning({ id: s.plans.id, code: s.plans.code });
+  const plans = await db
+    .insert(s.plans)
+    .values(PLANS.map((p) => ({ ...p, id: sid(`plan:${p.code}`) })))
+    .returning({ id: s.plans.id, code: s.plans.code });
   const planId = new Map(plans.map((p) => [p.code, p.id]));
 
   // Partner
@@ -109,6 +122,7 @@ export async function seed(db: Db) {
     const [row] = await db
       .insert(s.partners)
       .values({
+        id: sid(`partner:${p.slug}`),
         type: cat.partnerType,
         categoryId: categoryIds.get(p.category)!,
         businessName: p.businessName,
@@ -246,7 +260,7 @@ export async function seed(db: Db) {
   // Utente partner per la demo dell'Area Partner
   const [mario] = await db
     .insert(s.users)
-    .values({ email: "mario@rossiimpianti.it", name: "Mario Rossi", phone: "+393475550192", role: "partner" })
+    .values({ id: sid("user:mario@rossiimpianti.it"), email: "mario@rossiimpianti.it", name: "Mario Rossi", phone: "+393475550192", role: "partner" })
     .returning({ id: s.users.id });
   const rossiId = partnerIds.get("rossi-impianti")!;
   await db.insert(s.partnerMembers).values({ partnerId: rossiId, userId: mario.id, role: "owner" });

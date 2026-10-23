@@ -20,7 +20,7 @@ export default function HomePage() {
     <>
       <section className="container-page grid items-center gap-10 pt-12 pb-16 md:grid-cols-[1fr_auto] md:pt-20">
         <div className="flex max-w-3xl flex-col gap-6">
-          <p className="overline text-primary">Venezia · Padova · Treviso</p>
+          <p className="caps-label text-primary">Venezia · Padova · Treviso</p>
           <h1 className="font-display text-h1 md:text-display-xl">Casa e lavori di casa: trova chi fa per te.</h1>
           <p className="max-w-2xl text-body-l text-ink-2">
             Confronta agenzie immobiliari, tecnici e artigiani verificati della tua zona. Richiedi un contatto in pochi
@@ -123,7 +123,7 @@ export default function HomePage() {
         <div className="flex flex-col items-start gap-6 rounded-xl bg-brand p-8 text-on-brand md:flex-row md:items-center md:p-10">
           <Geco outfit="partner" size={120} />
           <div className="flex flex-1 flex-col gap-2">
-            <p className="overline text-on-brand-muted">Per agenzie, studi tecnici e artigiani</p>
+            <p className="caps-label text-on-brand-muted">Per agenzie, studi tecnici e artigiani</p>
             <h2 className="font-display text-h2">Ricevi richieste qualificate dalla tua zona</h2>
             <p className="text-body-s text-on-brand-muted">
               Abbonamento fisso mensile o annuale, lead verificati con OTP, scheda gestita in autonomia. Token prepagati per
