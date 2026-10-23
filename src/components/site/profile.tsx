@@ -1,0 +1,304 @@
+import Link from "next/link";
+import { BadgeCheck, CalendarDays, Clock, Home, Image as ImageIcon, MapPin, MessageCircle, ShieldCheck } from "lucide-react";
+import { Geco } from "@/components/site/geco";
+import { Badge, planBadge } from "@/components/ui/badge";
+import { ButtonLink } from "@/components/ui/button";
+import { Chip } from "@/components/ui/chip";
+import { LogoPartner } from "@/components/ui/logo-partner";
+import { Rating, Stars } from "@/components/ui/stars";
+import type { PartnerProfile } from "@/lib/data/partners";
+import { formatEuro, formatPriceRange, formatRating, formatResponseTime, PRICE_UNIT_LABEL, type PriceUnit } from "@/lib/domain/format";
+
+const dateFmt = new Intl.DateTimeFormat("it-IT", { month: "long", year: "numeric" });
+
+/** Profilo pubblico del partner (PRD §5.4), stesso impianto per agenzie e professionisti. */
+export function ProfileView({ p }: { p: PartnerProfile }) {
+  const isAgency = p.type === "agency";
+  const response = formatResponseTime(p.responseMinutes);
+  const portfolioLabel = isAgency ? "Immobili" : "Lavori svolti";
+
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": isAgency ? "RealEstateAgent" : "HomeAndConstructionBusiness",
+    name: p.displayName,
+    description: p.description,
+    address: { "@type": "PostalAddress", addressLocality: p.municipalityName, addressRegion: p.provinceCode, addressCountry: "IT" },
+    areaServed: p.areas,
+    ...(p.rating.count > 0 && {
+      aggregateRating: {
+        "@type": "AggregateRating",
+        ratingValue: Number(p.rating.average.toFixed(1)),
+        reviewCount: p.rating.count,
+        bestRating: 5,
+        worstRating: 1,
+      },
+    }),
+  };
+
+  return (
+    <>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c") }} />
+      <div aria-hidden className="h-28 bg-brand-soft md:h-40" />
+      <div className="container-page -mt-12 flex flex-col gap-6 pb-16 md:-mt-16">
+        <header className="flex flex-col gap-5 md:flex-row md:items-end">
+          <LogoPartner name={p.displayName} size={112} className="border-4 border-page" />
+          <div className="flex flex-1 flex-col gap-2">
+            <div className="flex flex-wrap items-center gap-2">
+              <h1 className="font-display text-h1">{p.displayName}</h1>
+              {p.verified && <Badge kind="verified" />}
+              {p.planCode && <Badge kind={planBadge(p.planCode)} />}
+            </div>
+            <p className="text-body text-ink-2">
+              {p.categoryName} · {p.tagline} · {p.municipalityName} ({p.provinceCode})
+            </p>
+            <div className="flex flex-wrap items-center gap-x-5 gap-y-1 text-body-s text-ink-2">
+              <Rating average={p.rating.average} count={p.rating.count} />
+              {response && (
+                <span className="inline-flex items-center gap-1">
+                  <Clock className="size-4" aria-hidden /> Risponde in {response}
+                </span>
+              )}
+              {p.verified && (
+                <span className="inline-flex items-center gap-1">
+                  <ShieldCheck className="size-4" aria-hidden /> P.IVA verificata
+                </span>
+              )}
+              {p.foundedYear && (
+                <span className="inline-flex items-center gap-1">
+                  <CalendarDays className="size-4" aria-hidden /> Dal {p.foundedYear}
+                </span>
+              )}
+            </div>
+          </div>
+        </header>
+
+        <nav aria-label="Sezioni del profilo" className="flex gap-6 overflow-x-auto border-b border-line text-body-s font-semibold">
+          {[
+            ["#panoramica", "Panoramica"],
+            ["#prezzi", isAgency ? "Servizi e costi" : "Listino prezzi"],
+            ["#portfolio", `${portfolioLabel} (${p.portfolio.length})`],
+            ["#recensioni", `Recensioni (${p.rating.count})`],
+            ["#zone", "Zone servite"],
+          ].map(([href, label]) => (
+            <a key={href} href={href} className="shrink-0 border-b-2 border-transparent pb-3 hover:border-primary hover:text-primary">
+              {label}
+            </a>
+          ))}
+        </nav>
+
+        <div className="grid gap-8 lg:grid-cols-[1fr_360px]">
+          <div className="flex min-w-0 flex-col gap-6">
+            <section id="panoramica" className="flex flex-col gap-4 rounded-lg border border-line bg-surface p-6">
+              <h2 className="font-display text-h2">Chi siamo</h2>
+              <p className="text-body">{p.description}</p>
+              <ul className="flex flex-wrap gap-2" aria-label="Specializzazioni">
+                {p.specialties.map((s) => (
+                  <li key={s}>
+                    <Chip>{s}</Chip>
+                  </li>
+                ))}
+              </ul>
+            </section>
+
+            <section id="prezzi" className="flex flex-col gap-4 rounded-lg border border-line bg-surface p-6">
+              <h2 className="font-display text-h2">{isAgency ? "Servizi e costi indicativi" : "Listino prezzi indicativi"}</h2>
+              {p.priceList.length === 0 ? (
+                <p className="text-body-s text-ink-2">Il partner non ha ancora pubblicato prezzi indicativi.</p>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full min-w-[560px] text-left text-body-s">
+                    <thead className="bg-subtle text-caption text-ink-2">
+                      <tr>
+                        <th className="px-3 py-2 font-semibold">Servizio</th>
+                        <th className="px-3 py-2 font-semibold">Unità</th>
+                        <th className="px-3 py-2 font-semibold">Prezzo indicativo</th>
+                        <th className="px-3 py-2 font-semibold">Note</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {p.priceList.map((row) => (
+                        <tr key={row.id} className="border-b border-line last:border-0">
+                          <td className="px-3 py-3 font-medium">{row.serviceName}</td>
+                          <td className="px-3 py-3 text-ink-2">{PRICE_UNIT_LABEL[row.unit as PriceUnit]}</td>
+                          <td className="px-3 py-3 font-semibold">
+                            {formatPriceRange(row.priceFrom, row.priceTo, row.unit as PriceUnit) ?? "Su preventivo"}
+                          </td>
+                          <td className="px-3 py-3 text-ink-2">{row.notes}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+              <p className="text-caption text-ink-2">
+                * Prezzi indicativi pubblicati dal partner, non vincolanti. Il preventivo definitivo arriva dopo il contatto.
+              </p>
+            </section>
+
+            <section id="portfolio" className="flex flex-col gap-4 rounded-lg border border-line bg-surface p-6">
+              <h2 className="font-display text-h2">{isAgency ? "Immobili in portfolio" : "Lavori svolti"}</h2>
+              {p.portfolio.length === 0 ? (
+                <p className="text-body-s text-ink-2">Ancora nessun elemento nel portfolio.</p>
+              ) : (
+                <ul className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                  {p.portfolio.map((item) => (
+                    <li key={item.id} className="flex flex-col gap-2">
+                      <div className="relative flex aspect-[4/3] items-center justify-center rounded-md bg-muted text-ink-2">
+                        {item.kind === "property" ? <Home className="size-8" aria-hidden /> : <ImageIcon className="size-8" aria-hidden />}
+                        <span className="sr-only">Foto in arrivo</span>
+                        {item.hasBeforeAfter && (
+                          <span className="absolute top-2 left-2 rounded-full bg-surface px-2 py-0.5 text-caption font-semibold">Prima / Dopo</span>
+                        )}
+                        {item.contract && (
+                          <span className="absolute top-2 left-2 rounded-full bg-surface px-2 py-0.5 text-caption font-semibold">
+                            {item.contract === "sale" ? "In vendita" : "In affitto"}
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-body-s font-semibold">
+                        {item.title}
+                        {item.priceCents !== null && ` · ${formatEuro(item.priceCents)}${item.contract === "rent" ? "/mese" : ""}`}
+                      </p>
+                      <p className="inline-flex items-center gap-1 text-caption text-ink-2">
+                        <MapPin className="size-3.5" aria-hidden />
+                        {item.municipality}
+                        {item.sqm && ` · ${item.sqm} m²`}
+                        {item.rooms && ` · ${item.rooms} ${item.rooms === 1 ? "locale" : "locali"}`}
+                      </p>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </section>
+
+            <section id="recensioni" className="flex flex-col gap-5 rounded-lg border border-line bg-surface p-6">
+              <div className="flex items-center gap-3">
+                <h2 className="font-display text-h2">Recensioni verificate</h2>
+                <Geco outfit="recensioni" size={44} />
+              </div>
+              {p.rating.count === 0 ? (
+                <p className="text-body-s text-ink-2">Ancora nessuna recensione.</p>
+              ) : (
+                <>
+                  <div className="grid gap-6 rounded-md bg-subtle p-5 md:grid-cols-[140px_1fr_1fr]">
+                    <div className="flex flex-col items-start gap-1">
+                      <span className="font-display text-display-l">{formatRating(p.rating.average)}</span>
+                      <Stars value={p.rating.average} />
+                      <span className="text-caption text-ink-2">{p.rating.count} recensioni</span>
+                    </div>
+                    <ul className="flex flex-col gap-1.5" aria-label="Distribuzione delle stelle">
+                      {([5, 4, 3, 2, 1] as const).map((star) => {
+                        const n = p.rating.distribution[star];
+                        return (
+                          <li key={star} className="flex items-center gap-2 text-caption">
+                            <span className="w-3">{star}</span>
+                            <span className="h-2 flex-1 overflow-hidden rounded-full bg-surface">
+                              <span className="block h-full bg-star" style={{ width: `${(n / p.rating.count) * 100}%` }} />
+                            </span>
+                            <span className="w-8 text-right text-ink-2">{n}</span>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                    <dl className="grid grid-cols-[1fr_auto] gap-x-4 gap-y-1.5 text-body-s">
+                      {[
+                        ["Qualità", p.subScores.quality],
+                        ["Puntualità", p.subScores.punctuality],
+                        ["Qualità/prezzo", p.subScores.value],
+                        ["Comunicazione", p.subScores.communication],
+                      ].map(([label, value]) => (
+                        <div key={label as string} className="contents">
+                          <dt className="text-ink-2">{label}</dt>
+                          <dd className="font-semibold">{formatRating(Number(value))}</dd>
+                        </div>
+                      ))}
+                    </dl>
+                  </div>
+                  <ul className="flex flex-col divide-y divide-line">
+                    {p.latestReviews.map((r) => (
+                      <li key={r.id} className="flex flex-col gap-2 py-4">
+                        <div className="flex flex-wrap items-center gap-2 text-body-s">
+                          <Stars value={r.rating} size={14} />
+                          <span className="font-semibold">{r.authorName}</span>
+                          <span className="text-ink-2">{dateFmt.format(r.createdAt)}</span>
+                          <span className="inline-flex items-center gap-1 text-caption font-semibold text-primary">
+                            <BadgeCheck className="size-3.5" aria-hidden /> Recensione verificata
+                          </span>
+                        </div>
+                        <p className="text-body">{r.text}</p>
+                        {r.partnerReply && (
+                          <div className="rounded-md bg-subtle p-3 text-body-s">
+                            <p className="font-semibold">Risposta di {p.displayName}</p>
+                            <p className="text-ink-2">{r.partnerReply}</p>
+                          </div>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                  <p className="text-caption text-ink-2">
+                    Può recensire solo chi ha inviato una richiesta verificata a questo partner.{" "}
+                    <Link href="/come-funziona#recensioni" className="font-semibold text-primary underline">
+                      Come verifichiamo le recensioni
+                    </Link>
+                  </p>
+                </>
+              )}
+            </section>
+          </div>
+
+          <aside className="flex flex-col gap-6 lg:sticky lg:top-24 lg:self-start">
+            <section className="flex flex-col gap-4 rounded-lg border border-line bg-surface p-6">
+              <div className="flex items-center gap-3">
+                <Geco outfit={isAgency ? "casa" : "professionista"} size={56} />
+                <div>
+                  <h2 className="text-h4 font-semibold">Richiedi un contatto</h2>
+                  <p className="text-body-s text-ink-2">Gratis e senza impegno</p>
+                </div>
+              </div>
+              <ul className="flex flex-col gap-1.5 text-body-s">
+                {response && <li>✓ Risposta media in {response}</li>}
+                <li>✓ Numero verificato con SMS, niente spam</li>
+                <li>✓ I tuoi dati vanno solo a questo partner</li>
+              </ul>
+              <ButtonLink href={`/richiesta/${p.slug}`}>Richiedi contatto</ButtonLink>
+              <p className="inline-flex items-center gap-1.5 text-caption text-ink-2">
+                <MessageCircle className="size-3.5" aria-hidden /> Hai una domanda? Il geco (un assistente IA) arriva presto.
+              </p>
+            </section>
+
+            <section id="zone" className="flex flex-col gap-3 rounded-lg border border-line bg-surface p-6">
+              <h2 className="text-h4 font-semibold">Zone servite</h2>
+              <ul className="flex flex-wrap gap-2">
+                {p.areas.map((a) => (
+                  <li key={a}>
+                    <Chip>{a}</Chip>
+                  </li>
+                ))}
+              </ul>
+            </section>
+
+            {p.openingHours.length > 0 && (
+              <section className="flex flex-col gap-3 rounded-lg border border-line bg-surface p-6">
+                <h2 className="text-h4 font-semibold">Orari</h2>
+                <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5 text-body-s">
+                  {p.openingHours.map((h) => (
+                    <div key={h.label} className="contents">
+                      <dt className="text-ink-2">{h.label}</dt>
+                      <dd className="text-right font-semibold">{h.value}</dd>
+                    </div>
+                  ))}
+                </dl>
+              </section>
+            )}
+
+            {p.hideDirectContacts && (
+              <p className="text-caption text-ink-2">
+                Contatti diretti nascosti dal partner: le richieste passano dal modulo verificato.
+              </p>
+            )}
+          </aside>
+        </div>
+      </div>
+    </>
+  );
+}
