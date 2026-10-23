@@ -80,7 +80,7 @@ async function Dashboard() {
 
       <LockedLeadsBanner leads={o.locked} now={now} />
 
-      <div className="grid gap-6 xl:grid-cols-[1fr_340px]">
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_340px]">
         <section aria-labelledby="lead-recenti" className="rounded-lg border border-line bg-surface">
           <div className="flex items-center justify-between px-5 pt-5 pb-3">
             <h2 id="lead-recenti" className="text-h4 font-semibold">

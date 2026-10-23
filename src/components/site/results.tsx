@@ -105,7 +105,7 @@ export async function Results({ mode, params }: { mode: "agency" | "pro"; params
         </p>
       </div>
 
-      <div className="grid gap-8 lg:grid-cols-[280px_1fr]">
+      <div className="grid grid-cols-1 gap-8 lg:grid-cols-[280px_minmax(0,1fr)]">
         <aside
           id="filtri"
           aria-label="Filtri"
@@ -247,7 +247,7 @@ export function ResultsSkeleton() {
     <div className="container-page flex flex-col gap-6 py-8" aria-busy="true" aria-label="Caricamento dei risultati">
       <div className="h-5 w-64 animate-pulse rounded bg-muted" />
       <div className="h-10 w-96 max-w-full animate-pulse rounded bg-muted" />
-      <div className="grid gap-8 lg:grid-cols-[280px_1fr]">
+      <div className="grid grid-cols-1 gap-8 lg:grid-cols-[280px_minmax(0,1fr)]">
         <div className="h-96 animate-pulse rounded-lg bg-muted" />
         <div className="flex flex-col gap-4">
           {[0, 1, 2].map((i) => (

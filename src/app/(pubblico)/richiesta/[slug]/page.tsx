@@ -40,7 +40,7 @@ async function Request({ slug, service }: { slug: string; service?: string }) {
         <ArrowLeft className="size-4" aria-hidden /> Torna al profilo
       </Link>
       <h1 className="font-display text-h1">Richiedi un contatto a {ctx.partner.displayName}</h1>
-      <div className="grid gap-8 lg:grid-cols-[1fr_340px]">
+      <div className="grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,1fr)_340px]">
         <LeadWizard ctx={ctx} places={places.map((p) => `${p.name} (${p.provinceCode})`)} initialServiceSlug={service} />
         <aside className="flex flex-col gap-4 self-start rounded-lg bg-subtle p-6">
           <div className="flex items-center gap-3">

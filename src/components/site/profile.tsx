@@ -86,7 +86,7 @@ export function ProfileView({ p }: { p: PartnerProfile }) {
           ))}
         </nav>
 
-        <div className="grid gap-8 lg:grid-cols-[1fr_360px]">
+        <div className="grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,1fr)_360px]">
           <div className="flex min-w-0 flex-col gap-6">
             <section id="panoramica" className="flex flex-col gap-4 rounded-lg border border-line bg-surface p-6">
               <h2 className="font-display text-h2">Chi siamo</h2>

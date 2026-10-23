@@ -38,7 +38,7 @@ async function Subscription() {
   return (
     <div className="flex flex-col gap-6">
       <PartnerPageHeader title="Abbonamento" subtitle="Pagamento anticipato, rinnovo automatico" partnerName={partner.displayName} planCode={sub.planCode} />
-      <div className="grid gap-6 xl:grid-cols-[1fr_340px]">
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_340px]">
         <section className="flex flex-col gap-5 rounded-lg border border-line bg-surface p-6">
           <div className="flex flex-wrap items-end justify-between gap-4">
             <div>

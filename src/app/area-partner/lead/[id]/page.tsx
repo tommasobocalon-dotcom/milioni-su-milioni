@@ -85,7 +85,7 @@ async function Lead({ id }: { id: string }) {
         </Button>
       </form>
 
-      <div className="grid gap-6 xl:grid-cols-[1fr_340px]">
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_340px]">
         <div className="flex flex-col gap-6">
           <section className="flex flex-col gap-3 rounded-lg border border-line bg-surface p-6">
             <div className="flex items-center justify-between gap-3">
