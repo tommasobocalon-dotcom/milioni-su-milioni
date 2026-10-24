@@ -5,6 +5,7 @@ import { Suspense } from "react";
 import { ArrowLeft, Clock } from "lucide-react";
 import { Geco } from "@/components/site/geco";
 import { LeadWizard } from "@/components/site/lead-wizard";
+import { TrackEvent } from "@/components/site/track-event";
 import { LogoPartner } from "@/components/ui/logo-partner";
 import { getMunicipalities } from "@/lib/data/catalog";
 import { getRequestContext } from "@/lib/data/partners";
@@ -36,6 +37,9 @@ async function Request({ slug, service }: { slug: string; service?: string }) {
   const response = formatResponseTime(ctx.partner.responseMinutes);
   return (
     <div className="flex flex-col gap-6">
+      <Suspense>
+        <TrackEvent partnerId={ctx.partner.id} type="contact_click" />
+      </Suspense>
       <Link href={ctx.partner.href} className="inline-flex items-center gap-1 self-start text-body-s font-semibold text-primary hover:underline">
         <ArrowLeft className="size-4" aria-hidden /> Torna al profilo
       </Link>
@@ -44,7 +48,7 @@ async function Request({ slug, service }: { slug: string; service?: string }) {
         <LeadWizard ctx={ctx} places={places.map((p) => `${p.name} (${p.provinceCode})`)} initialServiceSlug={service} />
         <aside className="flex flex-col gap-4 self-start rounded-lg bg-subtle p-6">
           <div className="flex items-center gap-3">
-            <LogoPartner name={ctx.partner.displayName} size={48} />
+            <LogoPartner name={ctx.partner.displayName} src={ctx.partner.logoUrl} size={48} />
             <div>
               <p className="font-semibold">{ctx.partner.displayName}</p>
               <p className="text-body-s text-ink-2">

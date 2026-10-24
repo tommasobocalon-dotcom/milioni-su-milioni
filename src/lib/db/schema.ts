@@ -27,6 +27,8 @@ export const users = pgTable("users", {
   email: text("email").notNull().unique(),
   phone: text("phone"),
   name: text("name").notNull(),
+  /** Foto profilo della persona (es. titolare dell'azienda). */
+  avatarUrl: text("avatar_url"),
   role: userRole("role").notNull().default("client"),
   createdAt: createdAt(),
 });
@@ -195,6 +197,8 @@ export const partners = pgTable(
     foundedYear: smallint("founded_year"),
     phone: text("phone"),
     email: text("email"),
+    /** Foto profilo / logo caricato dal partner (URL pubblico). */
+    logoUrl: text("logo_url"),
     /** Se vero i contatti diretti restano nascosti e le richieste passano solo dal modulo. */
     hideDirectContacts: boolean("hide_direct_contacts").notNull().default(true),
     openingHours: jsonb("opening_hours").$type<{ label: string; value: string }[]>().notNull().default([]),
@@ -209,6 +213,23 @@ export const partners = pgTable(
     index("partners_category_idx").on(t.categoryId),
     index("partners_municipality_idx").on(t.municipalityId),
   ],
+);
+
+/** Eventi per le statistiche della scheda: comparsa nei risultati, apertura del profilo, apertura del modulo di contatto. */
+export const profileEventType = pgEnum("profile_event_type", ["impression", "view", "contact_click"]);
+
+// ponytail: una riga per evento; passare a contatori giornalieri quando il volume lo richiede.
+export const profileEvents = pgTable(
+  "profile_events",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    partnerId: uuid("partner_id")
+      .notNull()
+      .references(() => partners.id, { onDelete: "cascade" }),
+    type: profileEventType("type").notNull(),
+    createdAt: createdAt(),
+  },
+  (t) => [index("profile_events_partner_idx").on(t.partnerId, t.createdAt)],
 );
 
 export const memberRole = pgEnum("member_role", ["owner", "member"]);

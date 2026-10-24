@@ -1,15 +1,18 @@
 "use server";
 
-import { and, eq, isNotNull } from "drizzle-orm";
-import { revalidatePath } from "next/cache";
+import { and, eq, isNotNull, max } from "drizzle-orm";
+import { randomUUID } from "node:crypto";
+import { mkdir, writeFile } from "node:fs/promises";
+import path from "node:path";
+import { revalidatePath, updateTag } from "next/cache";
 import { z } from "zod";
 import { requirePartner } from "@/lib/auth/session";
 import { db } from "@/lib/db/client";
-import { auditLogs, leadEvents, leads, subscriptions, tokenLedger } from "@/lib/db/schema";
+import { auditLogs, leadEvents, leads, partners, portfolioItems, subscriptions, tokenLedger, users } from "@/lib/db/schema";
 import { canReportLead, REPORT_REASONS } from "@/lib/domain/lead-rules";
 import { TOKEN_PACKAGES } from "@/lib/domain/offers";
 import { tokenExpiryFrom } from "@/lib/domain/tokens";
-import { LeadNotUnlockableError, unlockLead } from "@/lib/leads/service";
+import { activateBoost, BoostNotActivatableError, LeadNotUnlockableError, unlockLead } from "@/lib/leads/service";
 import { LEAD_STATUSES, statusInfo } from "@/lib/leads/status";
 
 const Id = z.uuid();
@@ -121,4 +124,179 @@ export async function setAutoUseTokens(formData: FormData) {
   const on = formData.get("auto") === "on";
   await db.update(subscriptions).set({ autoUseTokens: on }).where(eq(subscriptions.partnerId, partner.id));
   revalidatePath("/area-partner", "layout");
+}
+
+export type ActionState = { error?: string; ok?: string };
+
+export async function activateBoostAction(days: number): Promise<ActionState> {
+  const { user, partner } = await requirePartner();
+  try {
+    const { endsAt } = await activateBoost(partner.id, days);
+    await db.insert(auditLogs).values({ actor: user.email, action: "boost.activated", entity: "partner", entityId: partner.id, data: { days } });
+    revalidatePath("/area-partner", "layout");
+    return { ok: `Boost attivo fino al ${endsAt.toLocaleDateString("it-IT")}` };
+  } catch (e) {
+    if (e instanceof BoostNotActivatableError) return { error: e.message };
+    throw e;
+  }
+}
+
+const IMAGE_MAX_BYTES = 2 * 1024 * 1024;
+
+const ProfileSchema = z.object({
+  firstName: z.string().trim().min(1, "Scrivi il nome").max(60),
+  lastName: z.string().trim().min(1, "Scrivi il cognome").max(60),
+  businessName: z.string().trim().min(2, "Scrivi la ragione sociale").max(160),
+  vatNumber: z
+    .string()
+    .trim()
+    .transform((v) => v.replace(/^IT/i, "").replace(/\s/g, ""))
+    .pipe(z.string().regex(/^\d{11}$/, "La partita IVA ha 11 cifre")),
+  address: z.string().trim().min(5, "Scrivi l'indirizzo della sede legale").max(200),
+  tagline: z.string().trim().min(3, "Scrivi una frase di presentazione").max(120),
+  description: z.string().trim().min(20, "La descrizione deve avere almeno 20 caratteri").max(2000),
+  phone: z.string().trim().max(30).optional(),
+  email: z.union([z.literal(""), z.email("Email non valida")]).optional(),
+});
+
+/** Riconosce il formato dai primi byte del file: il tipo dichiarato dal browser non basta. */
+async function sniffImage(file: File): Promise<"jpg" | "png" | "webp" | null> {
+  const b = new Uint8Array(await file.slice(0, 12).arrayBuffer());
+  if (b[0] === 0xff && b[1] === 0xd8 && b[2] === 0xff) return "jpg";
+  if (b[0] === 0x89 && b[1] === 0x50 && b[2] === 0x4e && b[3] === 0x47) return "png";
+  if (String.fromCharCode(...b.slice(0, 4)) === "RIFF" && String.fromCharCode(...b.slice(8, 12)) === "WEBP") return "webp";
+  return null;
+}
+
+/**
+ * Valida e salva un'immagine caricata. Nessun file: null; file non valido: messaggio d'errore.
+ * ponytail: disco locale in public/uploads; in produzione Supabase Storage (su Vercel il disco è di sola lettura).
+ */
+async function saveImage(folder: "partners" | "avatars" | "portfolio", partnerId: string, file: FormDataEntryValue | null): Promise<{ url: string } | { error: string } | null> {
+  if (!(file instanceof File) || file.size === 0) return null;
+  if (file.size > IMAGE_MAX_BYTES) return { error: "La foto può pesare al massimo 2 MB" };
+  const ext = await sniffImage(file);
+  if (!ext) return { error: "La foto deve essere JPG, PNG o WebP" };
+  const dir = path.join(process.cwd(), "public", "uploads", folder);
+  await mkdir(dir, { recursive: true });
+  const name = `${partnerId}-${randomUUID()}.${ext}`;
+  await writeFile(path.join(dir, name), Buffer.from(await file.arrayBuffer()));
+  return { url: `/uploads/${folder}/${name}` };
+}
+
+/** Profilo: dati della persona (nome, foto) e dell'azienda (logo, dati fiscali, sede, presentazione). */
+export async function updateProfile(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const { user, partner, memberRole } = await requirePartner();
+  const field = (k: string) => formData.get(k) ?? undefined;
+  const parsed = ProfileSchema.safeParse(
+    Object.fromEntries(["firstName", "lastName", "businessName", "vatNumber", "address", "tagline", "description", "phone", "email"].map((k) => [k, field(k)])),
+  );
+  if (!parsed.success) return { error: parsed.error.issues[0].message };
+
+  const logo = await saveImage("partners", partner.id, formData.get("logo"));
+  if (logo && "error" in logo) return logo;
+  const avatar = await saveImage("avatars", user.id, formData.get("avatar"));
+  if (avatar && "error" in avatar) return avatar;
+
+  const d = parsed.data;
+  // Ragione sociale e partita IVA finiscono in fattura: le cambia solo il titolare dell'account.
+  const fiscal = memberRole === "owner" ? { businessName: d.businessName, vatNumber: d.vatNumber } : {};
+  await db.transaction(async (tx) => {
+    await tx
+      .update(partners)
+      .set({
+        ...fiscal,
+        address: d.address,
+        tagline: d.tagline,
+        description: d.description,
+        phone: d.phone || null,
+        email: d.email || null,
+        ...(logo && { logoUrl: logo.url }),
+      })
+      .where(eq(partners.id, partner.id));
+    await tx
+      .update(users)
+      .set({ name: `${d.firstName} ${d.lastName}`, ...(avatar && { avatarUrl: avatar.url }) })
+      .where(eq(users.id, user.id));
+    await tx.insert(auditLogs).values({
+      actor: user.email,
+      action: "partner.profile_updated",
+      entity: "partner",
+      entityId: partner.id,
+      data: { logo: !!logo, avatar: !!avatar, fiscal: memberRole === "owner" },
+    });
+  });
+  updateTag(`partner:${partner.slug}`);
+  revalidatePath("/area-partner", "layout");
+  return { ok: "Profilo aggiornato" };
+}
+
+const optionalInt = (limit: number) =>
+  z.preprocess((v) => (v === "" || v === null ? undefined : v), z.coerce.number().int().min(0).max(limit).optional());
+
+const PortfolioSchema = z.object({
+  title: z.string().trim().min(3, "Dai un titolo all'elemento").max(120),
+  description: z.string().trim().max(1000).optional(),
+  municipalityId: optionalInt(1_000_000),
+  // Solo immobili (agenzie)
+  contract: z.enum(["sale", "rent"]).optional(),
+  priceEuro: optionalInt(100_000_000),
+  sqm: optionalInt(100_000),
+  rooms: optionalInt(100),
+  hasBeforeAfter: z.literal("on").optional(),
+});
+
+/** Agenzie: immobili. Tutti gli altri: lavori svolti. Il tipo arriva dal partner, non dal form. */
+export async function addPortfolioItem(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const { partner } = await requirePartner();
+  const parsed = PortfolioSchema.safeParse(Object.fromEntries([...formData.entries()].filter(([, v]) => typeof v === "string")));
+  if (!parsed.success) return { error: parsed.error.issues[0].message };
+  const d = parsed.data;
+  const isProperty = partner.type === "agency";
+  if (isProperty && !d.contract) return { error: "Scegli vendita o affitto" };
+
+  const image = await saveImage("portfolio", partner.id, formData.get("image"));
+  if (image && "error" in image) return image;
+
+  const [{ last }] = await db.select({ last: max(portfolioItems.sortOrder) }).from(portfolioItems).where(eq(portfolioItems.partnerId, partner.id));
+  await db.insert(portfolioItems).values({
+    partnerId: partner.id,
+    kind: isProperty ? "property" : "work",
+    title: d.title,
+    description: d.description || null,
+    municipalityId: d.municipalityId ?? null,
+    contract: isProperty ? d.contract : null,
+    priceCents: isProperty && d.priceEuro !== undefined ? d.priceEuro * 100 : null,
+    sqm: isProperty ? (d.sqm ?? null) : null,
+    rooms: isProperty ? (d.rooms ?? null) : null,
+    status: isProperty ? "available" : null,
+    hasBeforeAfter: !isProperty && d.hasBeforeAfter === "on",
+    imageUrl: image?.url ?? null,
+    sortOrder: (last ?? -1) + 1,
+  });
+  updateTag(`partner:${partner.slug}`);
+  revalidatePath("/area-partner/scheda");
+  return { ok: "Aggiunto al portfolio" };
+}
+
+const PropertyStatusSchema = z.enum(["available", "negotiating", "sold"]);
+
+export async function setPortfolioStatus(itemId: string, formData: FormData) {
+  const { partner } = await requirePartner();
+  const status = PropertyStatusSchema.safeParse(formData.get("status"));
+  if (!Id.safeParse(itemId).success || !status.success) return;
+  await db
+    .update(portfolioItems)
+    .set({ status: status.data })
+    .where(and(eq(portfolioItems.id, itemId), eq(portfolioItems.partnerId, partner.id), eq(portfolioItems.kind, "property")));
+  updateTag(`partner:${partner.slug}`);
+  revalidatePath("/area-partner/scheda");
+}
+
+export async function deletePortfolioItem(itemId: string) {
+  const { partner } = await requirePartner();
+  if (!Id.safeParse(itemId).success) return;
+  await db.delete(portfolioItems).where(and(eq(portfolioItems.id, itemId), eq(portfolioItems.partnerId, partner.id)));
+  updateTag(`partner:${partner.slug}`);
+  revalidatePath("/area-partner/scheda");
 }

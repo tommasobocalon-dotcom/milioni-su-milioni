@@ -2,6 +2,7 @@ import "server-only";
 import { and, eq, gt, inArray, lte, or, sql } from "drizzle-orm";
 import { connection } from "next/server";
 import { db } from "@/lib/db/client";
+import { recordProfileEvents } from "./stats";
 import {
   boosts,
   categories,
@@ -28,6 +29,7 @@ export type PartnerListItem = {
   slug: string;
   href: string;
   displayName: string;
+  logoUrl: string | null;
   tagline: string;
   categoryName: string;
   categorySlug: string;
@@ -96,6 +98,7 @@ export async function searchPartners(input: {
       id: partners.id,
       slug: partners.slug,
       displayName: partners.displayName,
+      logoUrl: partners.logoUrl,
       tagline: partners.tagline,
       partnerType: partners.type,
       lat: partners.lat,
@@ -181,6 +184,7 @@ export async function searchPartners(input: {
         slug: r.slug,
         href: profileHref(r),
         displayName: r.displayName,
+        logoUrl: r.logoUrl,
         tagline: r.tagline,
         categoryName: r.categoryName,
         categorySlug: r.categorySlug,
@@ -227,6 +231,10 @@ export async function searchPartners(input: {
   };
   // Al massimo due posti sponsorizzati, separati dai risultati organici ed etichettati.
   const sponsored = items.filter((i) => i.sponsored).slice(0, 2);
+  await recordProfileEvents(
+    items.map((i) => i.id),
+    "impression",
+  );
   return {
     sponsored: sponsored.map(strip),
     results: items.filter((i) => !sponsored.includes(i)).map((i) => ({ ...strip(i), sponsored: false })),

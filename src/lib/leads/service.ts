@@ -1,7 +1,8 @@
 import "server-only";
-import { and, eq, gt, isNotNull, ne } from "drizzle-orm";
+import { and, desc, eq, gt, isNotNull, ne } from "drizzle-orm";
 import { db } from "@/lib/db/client";
-import { leadEvents, leads, partners, plans, subscriptions, tokenLedger, type LeadAnswer } from "@/lib/db/schema";
+import { boosts, leadEvents, leads, municipalities, partners, plans, subscriptions, tokenLedger, type LeadAnswer } from "@/lib/db/schema";
+import { BOOST_OPTIONS } from "@/lib/domain/offers";
 import { decideLeadCharge, isDuplicateLead, TOKEN_COST_PER_LEAD, DUPLICATE_WINDOW_DAYS } from "@/lib/domain/lead-rules";
 import { InsufficientTokensError, planConsumption, tokenBalance, type LedgerEntry } from "@/lib/domain/tokens";
 
@@ -145,5 +146,42 @@ export async function unlockLead(partnerId: string, leadId: string, actor: strin
     }
     await tx.update(leads).set({ charge: "token", tokensCharged: TOKEN_COST_PER_LEAD, unlockExpiresAt: null }).where(eq(leads.id, lead.id));
     await tx.insert(leadEvents).values({ leadId: lead.id, type: "unlocked", message: `Sbloccato con ${TOKEN_COST_PER_LEAD} token`, actor, createdAt: now });
+  });
+}
+
+export class BoostNotActivatableError extends Error {}
+
+/**
+ * Boost della scheda pagato a token, per la categoria e la provincia del partner.
+ * Se un boost è già attivo, il nuovo parte alla sua scadenza (si allunga, non si sovrappone).
+ */
+export async function activateBoost(partnerId: string, days: number, now = new Date()) {
+  const option = BOOST_OPTIONS.find((o) => o.days === days);
+  if (!option) throw new BoostNotActivatableError("Durata del boost non valida");
+  return db.transaction(async (tx) => {
+    // Il lock sul partner serializza attivazioni concorrenti dello stesso partner.
+    const [p] = await tx
+      .select({ categoryId: partners.categoryId, provinceId: municipalities.provinceId })
+      .from(partners)
+      .innerJoin(municipalities, eq(municipalities.id, partners.municipalityId))
+      .where(eq(partners.id, partnerId))
+      .for("update", { of: partners });
+    if (!p) throw new BoostNotActivatableError("Partner non trovato");
+    const [last] = await tx
+      .select({ endsAt: boosts.endsAt })
+      .from(boosts)
+      .where(and(eq(boosts.partnerId, partnerId), gt(boosts.endsAt, now)))
+      .orderBy(desc(boosts.endsAt))
+      .limit(1);
+    const startsAt = last?.endsAt ?? now;
+    const endsAt = new Date(startsAt.getTime() + option.days * 86_400_000);
+    try {
+      await debitTokens(tx, partnerId, option.tokens, `Boost ${option.days} giorni`, now);
+    } catch (e) {
+      if (e instanceof InsufficientTokensError) throw new BoostNotActivatableError(`Servono ${e.requested} token, ne hai ${e.available}`);
+      throw e;
+    }
+    await tx.insert(boosts).values({ partnerId, categoryId: p.categoryId, provinceId: p.provinceId, startsAt, endsAt, tokensSpent: option.tokens, createdAt: now });
+    return { startsAt, endsAt };
   });
 }

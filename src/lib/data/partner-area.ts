@@ -8,6 +8,7 @@ import {
   partners,
   partnerServices,
   plans,
+  portfolioItems,
   reviews,
   services,
   subscriptions,
@@ -204,4 +205,25 @@ export async function getPriceList(partnerId: string) {
     .innerJoin(services, eq(services.id, partnerServices.serviceId))
     .where(eq(partnerServices.partnerId, partnerId))
     .orderBy(asc(partnerServices.sortOrder));
+}
+
+export async function getPortfolio(partnerId: string) {
+  return db
+    .select({
+      id: portfolioItems.id,
+      title: portfolioItems.title,
+      description: portfolioItems.description,
+      municipality: municipalities.name,
+      contract: portfolioItems.contract,
+      priceCents: portfolioItems.priceCents,
+      sqm: portfolioItems.sqm,
+      rooms: portfolioItems.rooms,
+      status: portfolioItems.status,
+      imageUrl: portfolioItems.imageUrl,
+      hasBeforeAfter: portfolioItems.hasBeforeAfter,
+    })
+    .from(portfolioItems)
+    .leftJoin(municipalities, eq(municipalities.id, portfolioItems.municipalityId))
+    .where(eq(portfolioItems.partnerId, partnerId))
+    .orderBy(asc(portfolioItems.sortOrder));
 }

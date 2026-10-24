@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { notFound, permanentRedirect } from "next/navigation";
 import { Suspense } from "react";
 import { ProfileView } from "@/components/site/profile";
+import { TrackEvent } from "@/components/site/track-event";
 import { getPartnerProfile } from "@/lib/data/partners";
 import { listPublicPartnerPaths } from "@/lib/data/paths";
 
@@ -29,5 +30,12 @@ async function Profile({ provincia, categoria, slug }: { provincia: string; cate
   const p = await getPartnerProfile(slug);
   if (!p || p.type === "agency" || p.accountStatus !== "active") notFound();
   if (p.provinceSlug !== provincia || p.categorySlug !== categoria) permanentRedirect(p.href);
-  return <ProfileView p={p} />;
+  return (
+    <>
+      <ProfileView p={p} />
+      <Suspense>
+        <TrackEvent partnerId={p.id} type="view" />
+      </Suspense>
+    </>
+  );
 }

@@ -5,12 +5,14 @@ export function PartnerPageHeader({
   title,
   subtitle,
   partnerName,
+  logoUrl,
   planCode,
   status,
 }: {
   title: string;
   subtitle?: string;
   partnerName: string;
+  logoUrl?: string | null;
   planCode?: string | null;
   status?: string;
 }) {
@@ -27,7 +29,7 @@ export function PartnerPageHeader({
             {status && <span className="text-ink-2">{status}</span>}
           </span>
         )}
-        <LogoPartner name={partnerName} size={40} />
+        <LogoPartner name={partnerName} src={logoUrl} size={40} />
       </div>
     </header>
   );

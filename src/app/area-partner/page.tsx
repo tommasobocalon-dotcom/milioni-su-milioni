@@ -45,7 +45,7 @@ async function Dashboard() {
       <PartnerPageHeader
         title={`${greeting}, ${firstName}`}
         subtitle={`${new Intl.DateTimeFormat("it-IT", { weekday: "long", day: "numeric", month: "long", timeZone: "Europe/Rome" }).format(now)} · ${partner.displayName}`}
-        partnerName={partner.displayName}
+        partnerName={partner.displayName} logoUrl={partner.logoUrl}
         planCode={o.sub?.planCode}
         status={o.sub ? `Attivo · rinnovo ${dateFmt.format(o.sub.currentPeriodEnd)}` : undefined}
       />

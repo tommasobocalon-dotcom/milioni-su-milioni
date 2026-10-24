@@ -38,7 +38,7 @@ export function LoginForm() {
   return sentTo ? (
     <form onSubmit={verify} className="flex flex-col gap-4">
       <p className="text-body">
-        Se <strong>{sentTo}</strong> è registrato, ti abbiamo inviato un codice di 6 cifre. Controlla anche lo spam.
+        Ti abbiamo inviato un codice di 6 cifre a <strong>{sentTo}</strong>. Controlla anche lo spam.
       </p>
       {devCode && (
         <p className="rounded-md border border-dashed border-info bg-info-soft p-3 text-body-s text-info">

@@ -25,7 +25,7 @@ async function PriceList() {
       <PartnerPageHeader
         title="Listino prezzi"
         subtitle="Prezzi indicativi mostrati sul profilo e nei risultati di ricerca"
-        partnerName={partner.displayName}
+        partnerName={partner.displayName} logoUrl={partner.logoUrl}
         planCode={sub?.planCode}
       />
       <p className="flex items-start gap-3 rounded-md bg-info-soft p-4 text-body-s">

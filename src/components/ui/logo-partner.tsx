@@ -1,7 +1,11 @@
+import Image from "next/image";
 import { cn, initials } from "@/lib/utils";
 
-/** Componente "Logo partner": finché il partner non carica il logo mostra le iniziali. */
-export function LogoPartner({ name, size = 56, className }: { name: string; size?: number; className?: string }) {
+/** Componente "Logo partner": la foto profilo caricata, altrimenti le iniziali. */
+export function LogoPartner({ name, src, size = 56, className }: { name: string; src?: string | null; size?: number; className?: string }) {
+  if (src) {
+    return <Image src={src} alt="" unoptimized={src.startsWith("blob:")} width={size} height={size} style={{ width: size, height: size }} className={cn("shrink-0 rounded-md object-cover", className)} />;
+  }
   return (
     <span
       aria-hidden

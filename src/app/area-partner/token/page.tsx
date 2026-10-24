@@ -1,7 +1,9 @@
 import { Suspense } from "react";
+import Link from "next/link";
 import { Rocket } from "lucide-react";
 import { connection } from "next/server";
 import { setAutoUseTokens, simulateTokenPurchase } from "@/app/area-partner/actions";
+import { BoostButtons } from "@/components/partner/boost-buttons";
 import { PartnerPageHeader } from "@/components/partner/page-header";
 import { PartnerSkeleton } from "@/components/partner/skeleton";
 import { Geco } from "@/components/site/geco";
@@ -38,7 +40,7 @@ async function Tokens() {
       <PartnerPageHeader
         title="Token e boost"
         subtitle="Crediti prepagati per lead oltre quota, boost e vetrina. Validi 12 mesi."
-        partnerName={partner.displayName}
+        partnerName={partner.displayName} logoUrl={partner.logoUrl}
         planCode={sub?.planCode}
       />
 
@@ -122,14 +124,14 @@ async function Tokens() {
           Posizione sponsorizzata in cima ai risultati per la tua categoria e provincia, sempre etichettata come
           &quot;Sponsorizzato&quot;.
         </p>
-        <ul className="flex flex-wrap gap-3">
-          {BOOST_OPTIONS.map((b) => (
-            <li key={b.days} className="rounded-md border border-line px-4 py-3 text-body-s">
-              <span className="font-semibold">{b.days} giorni</span> · {b.tokens} token
-            </li>
-          ))}
-        </ul>
-        <p className="text-caption text-ink-2">L&apos;attivazione dei boost dall&apos;Area Partner arriva nella prossima versione.</p>
+        <BoostButtons options={BOOST_OPTIONS} balance={balance} />
+        <p className="text-caption text-ink-2">
+          Vale per la tua categoria nella tua provincia. Se hai già un boost attivo, il nuovo parte alla sua scadenza. I risultati li trovi in{" "}
+          <Link href="/area-partner/statistiche" className="font-semibold text-primary underline">
+            Statistiche
+          </Link>
+          .
+        </p>
       </section>
 
       <section className="rounded-lg border border-line bg-surface">

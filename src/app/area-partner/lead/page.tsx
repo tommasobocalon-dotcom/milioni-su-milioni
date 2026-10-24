@@ -38,7 +38,7 @@ async function Leads({ status }: { status?: string }) {
       <PartnerPageHeader
         title="Lead"
         subtitle={`${counts.all} richieste ricevute · ${counts.new ?? 0} nuove da gestire`}
-        partnerName={partner.displayName}
+        partnerName={partner.displayName} logoUrl={partner.logoUrl}
         planCode={o.sub?.planCode}
       />
 

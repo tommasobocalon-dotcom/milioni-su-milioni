@@ -25,7 +25,7 @@ async function Subscription() {
   if (!sub) {
     return (
       <div className="flex flex-col gap-6">
-        <PartnerPageHeader title="Abbonamento" partnerName={partner.displayName} />
+        <PartnerPageHeader title="Abbonamento" partnerName={partner.displayName} logoUrl={partner.logoUrl} />
         <p className="text-body">Nessun abbonamento attivo.</p>
         <ButtonLink href="/per-i-professionisti#piani" className="self-start">
           Scegli un piano
@@ -37,7 +37,7 @@ async function Subscription() {
   const used = Math.min(100, Math.round((sub.leadsUsed / Math.max(1, sub.leadsIncluded)) * 100));
   return (
     <div className="flex flex-col gap-6">
-      <PartnerPageHeader title="Abbonamento" subtitle="Pagamento anticipato, rinnovo automatico" partnerName={partner.displayName} planCode={sub.planCode} />
+      <PartnerPageHeader title="Abbonamento" subtitle="Pagamento anticipato, rinnovo automatico" partnerName={partner.displayName} logoUrl={partner.logoUrl} planCode={sub.planCode} />
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_340px]">
         <section className="flex flex-col gap-5 rounded-lg border border-line bg-surface p-6">
           <div className="flex flex-wrap items-end justify-between gap-4">

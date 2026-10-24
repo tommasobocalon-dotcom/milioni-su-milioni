@@ -3,6 +3,8 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   cacheComponents: true,
   partialPrefetching: true,
+  // Foto profilo fino a 2 MB più il margine del multipart.
+  experimental: { serverActions: { bodySizeLimit: "2.1mb" } },
   turbopack: {
     rules: {
       "*.css": {

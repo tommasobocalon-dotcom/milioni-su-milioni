@@ -50,3 +50,4 @@ next-env.d.ts
 
 # eccezione: l'esempio di configurazione va versionato
 !.env.example
+/public/uploads

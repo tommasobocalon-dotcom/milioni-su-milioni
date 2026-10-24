@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import { BadgeCheck, CalendarDays, Clock, Home, Image as ImageIcon, MapPin, MessageCircle, ShieldCheck } from "lucide-react";
 import { Geco } from "@/components/site/geco";
@@ -22,7 +23,7 @@ export function ProfileView({ p }: { p: PartnerProfile }) {
     "@type": isAgency ? "RealEstateAgent" : "HomeAndConstructionBusiness",
     name: p.displayName,
     description: p.description,
-    address: { "@type": "PostalAddress", addressLocality: p.municipalityName, addressRegion: p.provinceCode, addressCountry: "IT" },
+    address: { "@type": "PostalAddress", streetAddress: p.address ?? undefined, addressLocality: p.municipalityName, addressRegion: p.provinceCode, addressCountry: "IT" },
     areaServed: p.areas,
     ...(p.rating.count > 0 && {
       aggregateRating: {
@@ -41,7 +42,7 @@ export function ProfileView({ p }: { p: PartnerProfile }) {
       <div aria-hidden className="h-28 bg-brand-soft md:h-40" />
       <div className="container-page -mt-12 flex flex-col gap-6 pb-16 md:-mt-16">
         <header className="flex flex-col gap-5 md:flex-row md:items-end">
-          <LogoPartner name={p.displayName} size={112} className="border-4 border-page" />
+          <LogoPartner name={p.displayName} src={p.logoUrl} size={112} className="border-4 border-page" />
           <div className="flex flex-1 flex-col gap-2">
             <div className="flex flex-wrap items-center gap-2">
               <h1 className="font-display text-h1">{p.displayName}</h1>
@@ -143,15 +144,26 @@ export function ProfileView({ p }: { p: PartnerProfile }) {
                 <ul className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
                   {p.portfolio.map((item) => (
                     <li key={item.id} className="flex flex-col gap-2">
-                      <div className="relative flex aspect-[4/3] items-center justify-center rounded-md bg-muted text-ink-2">
-                        {item.kind === "property" ? <Home className="size-8" aria-hidden /> : <ImageIcon className="size-8" aria-hidden />}
-                        <span className="sr-only">Foto in arrivo</span>
+                      <div className="relative flex aspect-[4/3] items-center justify-center overflow-hidden rounded-md bg-muted text-ink-2">
+                        {item.imageUrl ? (
+                          <Image src={item.imageUrl} alt={item.title} fill sizes="(min-width: 1280px) 30vw, (min-width: 640px) 45vw, 100vw" className="object-cover" />
+                        ) : item.kind === "property" ? (
+                          <Home className="size-8" aria-hidden />
+                        ) : (
+                          <ImageIcon className="size-8" aria-hidden />
+                        )}
                         {item.hasBeforeAfter && (
                           <span className="absolute top-2 left-2 rounded-full bg-surface px-2 py-0.5 text-caption font-semibold">Prima / Dopo</span>
                         )}
                         {item.contract && (
                           <span className="absolute top-2 left-2 rounded-full bg-surface px-2 py-0.5 text-caption font-semibold">
-                            {item.contract === "sale" ? "In vendita" : "In affitto"}
+                            {item.status === "sold"
+                              ? item.contract === "sale" ? "Venduto" : "Affittato"
+                              : item.status === "negotiating"
+                                ? "In trattativa"
+                                : item.contract === "sale"
+                                  ? "In vendita"
+                                  : "In affitto"}
                           </span>
                         )}
                       </div>
@@ -159,6 +171,7 @@ export function ProfileView({ p }: { p: PartnerProfile }) {
                         {item.title}
                         {item.priceCents !== null && ` · ${formatEuro(item.priceCents)}${item.contract === "rent" ? "/mese" : ""}`}
                       </p>
+                      {item.description && <p className="line-clamp-2 text-caption text-ink-2">{item.description}</p>}
                       <p className="inline-flex items-center gap-1 text-caption text-ink-2">
                         <MapPin className="size-3.5" aria-hidden />
                         {item.municipality}
@@ -290,6 +303,13 @@ export function ProfileView({ p }: { p: PartnerProfile }) {
                 </dl>
               </section>
             )}
+
+            <section className="flex flex-col gap-1 rounded-lg border border-line bg-surface p-6 text-body-s">
+              <h2 className="mb-2 text-h4 font-semibold">Dati aziendali</h2>
+              <p className="font-semibold">{p.businessName}</p>
+              {p.address && <p>Sede legale: {p.address}</p>}
+              <p>P. IVA {p.vatNumber}</p>
+            </section>
 
             {p.hideDirectContacts && (
               <p className="text-caption text-ink-2">

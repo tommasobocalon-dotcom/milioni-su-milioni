@@ -2,6 +2,7 @@ import { Suspense } from "react";
 import { ExternalLink } from "lucide-react";
 import { ComingSoon } from "@/components/partner/coming-soon";
 import { PartnerPageHeader } from "@/components/partner/page-header";
+import { PortfolioManager } from "@/components/partner/portfolio-manager";
 import { PartnerSkeleton } from "@/components/partner/skeleton";
 import { ButtonLink } from "@/components/ui/button";
 import { Chip } from "@/components/ui/chip";
@@ -25,7 +26,7 @@ async function Profile() {
   if (!p) return null;
   return (
     <div className="flex flex-col gap-6">
-      <PartnerPageHeader title="La mia scheda" subtitle="Così ti vedono i clienti" partnerName={partner.displayName} planCode={sub?.planCode} />
+      <PartnerPageHeader title="La mia scheda" subtitle="Così ti vedono i clienti" partnerName={partner.displayName} logoUrl={partner.logoUrl} planCode={sub?.planCode} />
       <section className="flex flex-col gap-4 rounded-lg border border-line bg-surface p-6">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h2 className="text-h3 font-semibold">{p.displayName}</h2>
@@ -48,10 +49,11 @@ async function Profile() {
           <span className="font-semibold">Zone servite:</span> {p.areas.join(", ")}
         </p>
       </section>
+      <PortfolioManager partnerId={partner.id} isAgency={partner.type === "agency"} />
       <ComingSoon
-        title="Modifica della scheda"
+        title="Prossimamente"
         items={[
-          "descrizione, logo, copertina, orari e contatti con anteprima prima di salvare",
+          "copertina e orari (logo, dati aziendali e descrizione si modificano in Profilo)",
           "categoria, servizi e zone servite entro i limiti del piano",
           "indicatore di completezza con i consigli del geco",
           "collaboratori con accesso limitato",

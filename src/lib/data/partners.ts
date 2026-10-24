@@ -31,7 +31,10 @@ export async function getPartnerProfile(slug: string) {
       slug: partners.slug,
       type: partners.type,
       displayName: partners.displayName,
+      logoUrl: partners.logoUrl,
       businessName: partners.businessName,
+      vatNumber: partners.vatNumber,
+      address: partners.address,
       tagline: partners.tagline,
       description: partners.description,
       specialties: partners.specialties,
@@ -94,6 +97,9 @@ export async function getPartnerProfile(slug: string) {
         sqm: portfolioItems.sqm,
         rooms: portfolioItems.rooms,
         hasBeforeAfter: portfolioItems.hasBeforeAfter,
+        description: portfolioItems.description,
+        status: portfolioItems.status,
+        imageUrl: portfolioItems.imageUrl,
       })
       .from(portfolioItems)
       .leftJoin(municipalities, eq(municipalities.id, portfolioItems.municipalityId))
@@ -163,6 +169,7 @@ export async function getRequestContext(slug: string) {
       slug: partners.slug,
       type: partners.type,
       displayName: partners.displayName,
+      logoUrl: partners.logoUrl,
       accountStatus: partners.accountStatus,
       responseMinutes: partners.responseMinutes,
       municipalityName: municipalities.name,

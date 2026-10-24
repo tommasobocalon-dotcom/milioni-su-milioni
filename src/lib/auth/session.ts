@@ -49,9 +49,15 @@ export async function getSessionUser(): Promise<SessionUser | null> {
   return row ?? null;
 }
 
+export async function requireUser(): Promise<SessionUser> {
+  const user = await getSessionUser();
+  if (!user) redirect("/accedi");
+  return user;
+}
+
 export type PartnerSession = {
   user: SessionUser;
-  partner: { id: string; slug: string; displayName: string; type: "agency" | "technician" | "artisan" | "b2b"; accountStatus: string };
+  partner: { id: string; slug: string; displayName: string; logoUrl: string | null; type: "agency" | "technician" | "artisan" | "b2b"; accountStatus: string };
   memberRole: "owner" | "member";
 };
 
@@ -68,6 +74,7 @@ export async function requirePartner(): Promise<PartnerSession> {
       id: partners.id,
       slug: partners.slug,
       displayName: partners.displayName,
+      logoUrl: partners.logoUrl,
       type: partners.type,
       accountStatus: partners.accountStatus,
     })
@@ -75,7 +82,7 @@ export async function requirePartner(): Promise<PartnerSession> {
     .innerJoin(partners, eq(partners.id, partnerMembers.partnerId))
     .where(eq(partnerMembers.userId, user.id))
     .limit(1);
-  if (!m) redirect("/accedi?errore=nessun-partner");
+  if (!m) redirect("/area-cliente");
   const { memberRole, ...partner } = m;
   return { user, partner, memberRole };
 }

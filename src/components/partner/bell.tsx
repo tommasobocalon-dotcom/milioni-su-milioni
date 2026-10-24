@@ -1,0 +1,28 @@
+import Link from "next/link";
+import { Bell } from "lucide-react";
+import { requirePartner } from "@/lib/auth/session";
+import { countLeadsByStatus } from "@/lib/data/partner-area";
+
+export function BellLink({ unread }: { unread: number }) {
+  return (
+    <Link
+      href="/area-partner/notifiche"
+      aria-label={unread ? `Posta in arrivo, ${unread} da leggere` : "Posta in arrivo"}
+      className="relative inline-flex size-9 items-center justify-center rounded-md text-on-brand-muted hover:bg-bosco-800 hover:text-on-brand"
+    >
+      <Bell className="size-5" aria-hidden />
+      {unread > 0 && (
+        <span className="absolute -top-0.5 -right-0.5 min-w-5 rounded-full bg-ambra-500 px-1 text-center text-caption leading-5 font-semibold text-bosco-900">
+          {unread > 99 ? "99+" : unread}
+        </span>
+      )}
+    </Link>
+  );
+}
+
+/** Campanella con il numero di lead nuovi, non ancora aperti. */
+export async function UnreadBell() {
+  const { partner } = await requirePartner();
+  const counts = await countLeadsByStatus(partner.id);
+  return <BellLink unread={counts.new ?? 0} />;
+}
