@@ -2,8 +2,9 @@ import "server-only";
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
 import * as schema from "./schema";
+import { databaseUrl } from "./url";
 
-const url = process.env.DATABASE_URL ?? "postgres://postgres:postgres@127.0.0.1:54329/postgres";
+const url = databaseUrl();
 
 // In sviluppo il modulo viene ricaricato a ogni modifica: riusa la stessa connessione.
 const globalForDb = globalThis as unknown as { sql?: postgres.Sql };
