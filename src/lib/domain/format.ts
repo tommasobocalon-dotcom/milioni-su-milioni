@@ -82,3 +82,21 @@ export function distanceKm(a: { lat: number; lng: number }, b: { lat: number; ln
   const h = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(a.lat)) * Math.cos(toRad(b.lat)) * Math.sin(dLng / 2) ** 2;
   return 2 * R * Math.asin(Math.sqrt(h));
 }
+
+/**
+ * Importo scritto da una persona ("1.200,50", "32,5", "90 €") → centesimi (o punti base per le percentuali).
+ * Null se il campo è vuoto, NaN se non è un numero valido o è negativo.
+ */
+export function parseAmount(input: string): number | null {
+  let s = input.replace(/[€%\s]/g, "");
+  if (!s) return null;
+  if (s.includes(",")) s = s.replace(/\./g, "").replace(",", ".");
+  else if (/^\d{1,3}(\.\d{3})+$/.test(s)) s = s.replace(/\./g, "");
+  if (!/^\d+(\.\d+)?$/.test(s)) return NaN;
+  return Math.round(Number(s) * 100);
+}
+
+/** Centesimi → testo per un campo modulo ("1200", "32,5"); stringa vuota se manca. */
+export function amountInput(cents: number | null): string {
+  return cents === null ? "" : String(cents / 100).replace(".", ",");
+}

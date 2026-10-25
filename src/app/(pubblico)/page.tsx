@@ -3,12 +3,13 @@ import { Suspense } from "react";
 import { ArrowRight, Check } from "lucide-react";
 import { sql } from "drizzle-orm";
 import { connection } from "next/server";
-import { CategoryIcon } from "@/components/site/category-icon";
+import { CategoryShowcase, type ShowcaseCategory } from "@/components/site/category-showcase";
 import { Geco } from "@/components/site/geco";
 import { PartnerCard } from "@/components/site/partner-card";
 import { SearchBar } from "@/components/site/search-bar";
 import { ButtonLink } from "@/components/ui/button";
-import { findPlace, getCategories, getCategoryBySlug } from "@/lib/data/catalog";
+import { findPlace, getCategories, getCategoryBySlug, getServicesForCategory } from "@/lib/data/catalog";
+import { CATEGORY_PHOTOS } from "@/lib/data/category-photos";
 import { searchPartners } from "@/lib/data/search";
 import { db } from "@/lib/db/client";
 import { formatRating } from "@/lib/domain/format";
@@ -69,13 +70,13 @@ export default function HomePage() {
         />
       </section>
 
-      <section className="container-page pb-16" aria-labelledby="categorie">
-        <div className="mb-6 flex items-end justify-between gap-4">
+      <section className="pb-16" aria-labelledby="categorie">
+        <div className="container-page flex items-end justify-between gap-4">
           <div>
             <h2 id="categorie" className="font-display text-h2">
               Lavori più richiesti in Veneto
             </h2>
-            <p className="text-body-s text-ink-2">Scegli una categoria e filtra per comune.</p>
+            <p className="text-body-s text-ink-2">Tocca una foto per vederla da vicino, poi filtra per comune.</p>
           </div>
           <Link href="/trova-professionista" className="inline-flex items-center gap-1 text-body-s font-semibold text-primary hover:underline">
             Tutte le categorie <ArrowRight className="size-4" aria-hidden />
@@ -172,25 +173,41 @@ function EntryCard(props: {
 
 async function CategoryTiles() {
   const categories = await getCategories();
+  const services = await Promise.all(categories.map((c) => getServicesForCategory(c.id)));
+  const items: ShowcaseCategory[] = categories.map((c, i) => ({
+    id: c.id,
+    pluralName: c.pluralName,
+    href: c.partnerType === "agency" ? "/trova-casa" : `/trova-professionista?categoria=${c.slug}`,
+    partnerCount: c.partnerCount,
+    services: services[i].slice(0, 3).map((s) => s.name),
+    photo: CATEGORY_PHOTOS[c.slug] ?? null,
+  }));
+  // Due nastri in versi opposti: le categorie si dividono a metà nell'ordine del catalogo.
+  const half = Math.ceil(items.length / 2);
+  const credits = items.flatMap((c) => (c.photo ? [c.photo.credit] : []));
   return (
-    <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-      {categories.map((c) => (
-        <li key={c.id}>
-          <Link
-            href={c.partnerType === "agency" ? "/trova-casa" : `/trova-professionista?categoria=${c.slug}`}
-            className="flex h-full flex-col gap-3 rounded-lg border border-line bg-surface p-4 hover:border-line-strong"
-          >
-            <span className="inline-flex size-10 items-center justify-center rounded-full bg-subtle text-primary">
-              <CategoryIcon name={c.icon} className="size-5" />
-            </span>
-            <span className="text-body font-semibold">{c.pluralName}</span>
-            <span className="text-caption text-ink-2">
-              {c.partnerCount} partner in Veneto
-            </span>
-          </Link>
-        </li>
-      ))}
-    </ul>
+    <>
+      <CategoryShowcase rows={[items.slice(0, half), items.slice(half)]} />
+      {credits.length > 0 && (
+        <details className="container-page text-body-s text-ink-2">
+          <summary className="cursor-pointer">Crediti delle foto</summary>
+          <p className="mt-2">
+            {credits.map((cr, i) => (
+              <span key={cr.page}>
+                <a href={cr.page} className="underline" rel="noopener" target="_blank">
+                  “{cr.title}”
+                </a>
+                {cr.author ? ` di ${cr.author}` : ""},{" "}
+                <a href={cr.licenseUrl} className="underline" rel="noopener license" target="_blank">
+                  {cr.license}
+                </a>
+                {i < credits.length - 1 ? "; " : "."}
+              </span>
+            ))}
+          </p>
+        </details>
+      )}
+    </>
   );
 }
 

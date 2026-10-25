@@ -18,7 +18,7 @@ Aggregatore web (Veneto → Triveneto → Nord Italia) che mette in contatto cli
 | UI | Tailwind CSS 4 con i token del Figma in `src/app/globals.css`; componenti propri in stile shadcn (cva + tailwind-merge) in `src/components/ui` |
 | DB | PostgreSQL (Supabase UE in produzione). In locale **embedded-postgres** avviato da `npm run dev` (porta 54329, dati in `.data/postgres`). Distanze calcolate in TypeScript; PostGIS e pgvector quando servono |
 | ORM | **Drizzle** (deciso): schema in `src/lib/db/schema.ts`, migrazioni SQL in `drizzle/` |
-| Auth | **Codici OTP propri + sessioni nel database** (cookie httpOnly, token salvato come hash). Stesso sistema OTP per verificare i lead via SMS e per l'accesso dei partner via email. Supabase Auth non usato per ora. Autorizzazione nell'app: ogni pagina/azione dell'Area Partner passa da `requirePartner()`; **RLS da aggiungere** prima del lancio |
+| Auth | **Email + password (hash scrypt) e accesso con Google / Apple (OpenID Connect, codice in `src/lib/auth/oauth.ts`, senza librerie) + sessioni nel database** (cookie httpOnly, token salvato come hash). L'OTP via SMS resta solo per verificare i lead. Collegamento a un account esistente solo con email verificata dal provider; blocco dopo 10 password sbagliate in 15 minuti (registro in `audit_logs`). Supabase Auth non usato per ora. Mancano recupero password e verifica email alla registrazione. Autorizzazione nell'app: ogni pagina/azione dell'Area Partner passa da `requirePartner()`; **RLS da aggiungere** prima del lancio |
 | Storage | Supabase Storage |
 | Pagamenti | Stripe Billing, Checkout, Customer Portal, webhook idempotenti e firmati |
 | Fatture | Provider SdI italiano via API |
@@ -51,7 +51,7 @@ Aggregatore web (Veneto → Triveneto → Nord Italia) che mette in contatto cli
 - Home, *Trova Casa*, *Trova Professionista* con filtri, ordinamento (punteggio PRD §7.5) e posti sponsorizzati etichettati; ricerca libera `/cerca` ("rifare il bagno a Mestre").
 - Profili pubblici agenzia e professionista con listino indicativo, portfolio, recensioni verificate, dati strutturati `LocalBusiness`/`AggregateRating`, URL del PRD §5.4.
 - Richiesta di contatto in 5 passi con domande dinamiche per categoria, verifica OTP via SMS, conteggio quota/token/duplicati/lead bloccato oltre quota (PRD §7.4), pagina di conferma con alternative.
-- Area Partner: accesso con codice, panoramica, inbox e dettaglio lead (stato, note, segnalazione entro 72 h, sblocco con token), token (registro immutabile, acquisto simulato solo in sviluppo), listino, abbonamento.
+- Area Partner: accesso con email e password o Google/Apple, panoramica, inbox e dettaglio lead (stato, note, segnalazione entro 72 h, sblocco con token), token (registro immutabile, acquisto simulato solo in sviluppo), listino, abbonamento.
 - Pagine *Come funziona* (ordinamento e recensioni spiegati), *Per i professionisti* (piani), privacy e termini in bozza, 404.
 
 **Da fare** (prossimi passi suggeriti): Stripe (abbonamenti, Checkout token, webhook, sospensione), editor della scheda/listino/portfolio con upload foto, area cliente e recensioni dopo il ricontatto, mappa MapLibre, provider reali SMS/email, RLS e rate limit per IP + Turnstile, registrazione self-service, Area Commerciale, Backoffice Admin, assistente AI, deploy (Vercel + Supabase UE).
@@ -141,6 +141,7 @@ La skill `design-taste-frontend` ha regole di stile proprie che in parte vanno c
 Tutto il resto delle regole della skill vale: niente gradienti, glow, glass, emoji, monospace, numerazioni decorative (01/02/03), accent word nei titoli; titoli su massimo due righe; contrasto AA (mai testo bianco su `--salvia-500`).
 
 **Contenuti**
+- Il geco è animato in ogni posa (componente `Geco`, fermo con "riduci movimento"). Le pose che muovono un braccio (saluto, casa, professionista, partner, recensioni) sono WebP animati in `public/geco/anim/`, generati da `design/geco/anima.mjs` (il braccio si piega alla giuntura: mai più pezzi rigidi che ruotano sopra il corpo, si vedevano staccati; controllare con `--prove`). Il razzo usa gli strati in `public/geco/parti/` (da `design/geco/split_parti.py`), le altre pose le classi `geco-*` in `globals.css`. Usare sempre `<Geco>` invece di `<Image src="/geco/...">`.
 - Il geco (illustrazioni in `design/geco/`) è l'identità del brand e resta. Non conta come "foto reale": le pagine pubbliche devono comunque avere immagini vere (portfolio dei partner, foto del Veneto da `assets.mjs` con credito nel footer).
 - Mai recensioni, clienti, numeri o loghi inventati sulle pagine pubbliche: le recensioni vengono solo da lead verificati (PRD §5.6). I dati di esempio nelle schermate vanno indicati come tali nel report.
 - Restano obbligatori: nota "prezzi indicativi" (PRD §5.4, §6.3), avviso che il geco è un'IA (AI Act), etichetta sui contenuti sponsorizzati.

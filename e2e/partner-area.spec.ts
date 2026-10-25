@@ -3,10 +3,8 @@ import { expect, test, type Page } from "@playwright/test";
 async function login(page: Page) {
   await page.goto("/accedi");
   await page.getByRole("textbox", { name: /^Email/ }).fill("mario@rossiimpianti.it");
-  await page.getByRole("button", { name: "Inviami il codice" }).click();
-  const code = await page.getByText(/Il codice è/).locator("strong").innerText();
-  await page.getByLabel("Codice di accesso").fill(code);
-  await page.getByRole("button", { name: "Accedi" }).click();
+  await page.getByLabel(/^Password/).fill("geco-demo-2026");
+  await page.locator("form").getByRole("button", { name: "Accedi" }).click();
   await expect(page).toHaveURL(/\/area-partner$/);
 }
 
@@ -15,14 +13,20 @@ test("senza accesso l'Area Partner rimanda al login", async ({ page }) => {
   await expect(page).toHaveURL(/\/accedi/);
 });
 
-test("un codice sbagliato non fa entrare", async ({ page }) => {
+test("una password sbagliata non fa entrare", async ({ page }) => {
   await page.goto("/accedi");
   await page.getByRole("textbox", { name: /^Email/ }).fill("mario@rossiimpianti.it");
-  await page.getByRole("button", { name: "Inviami il codice" }).click();
-  const code = await page.getByText(/Il codice è/).locator("strong").innerText();
-  await page.getByLabel("Codice di accesso").fill(code === "000000" ? "111111" : "000000");
-  await page.getByRole("button", { name: "Accedi" }).click();
-  await expect(page.getByText("Codice non corretto")).toBeVisible();
+  await page.getByLabel(/^Password/).fill("password-sbagliata");
+  await page.locator("form").getByRole("button", { name: "Accedi" }).click();
+  await expect(page.getByText("Email o password non corretti")).toBeVisible();
+  await expect(page).toHaveURL(/\/accedi$/);
+});
+
+test("Google e Apple non configurati rimandano al login con un avviso", async ({ page }) => {
+  await page.goto("/accedi");
+  await page.getByRole("link", { name: "Continua con Apple" }).click();
+  await expect(page).toHaveURL(/\/accedi\?errore=apple-config$/);
+  await expect(page.getByText("L'accesso con Apple non è ancora attivo. Usa email e password.")).toBeVisible();
 });
 
 test("il partner entra, gestisce un lead e sblocca quello oltre quota", async ({ page }) => {
@@ -55,20 +59,22 @@ test("il partner entra, gestisce un lead e sblocca quello oltre quota", async ({
   await expect(page.getByRole("cell", { name: /Sblocco lead/ })).toBeVisible();
 });
 
-test("un'email senza azienda entra come cliente nell'Area cliente", async ({ page }) => {
+test("chi crea un account senza azienda entra come cliente nell'Area cliente", async ({ page }) => {
   await page.goto("/accedi");
+  await page.getByRole("button", { name: "Crea account" }).click();
+  await page.getByLabel(/^Nome e cognome/).fill("Giulia Bianchi");
   await page.getByRole("textbox", { name: /^Email/ }).fill(`cliente-${Date.now()}@example.com`);
-  await page.getByRole("button", { name: "Inviami il codice" }).click();
-  const code = await page.getByText(/Il codice è/).locator("strong").innerText();
-  await page.getByLabel("Codice di accesso").fill(code);
-  await page.getByRole("button", { name: "Accedi" }).click();
+  await page.getByLabel(/^Password/).fill("corta");
+  await page.getByRole("button", { name: "Crea il tuo account" }).click();
+  await expect(page.getByText("La password deve avere almeno 8 caratteri")).toBeVisible();
+  await page.getByLabel(/^Password/).fill("una password lunga");
+  await page.getByRole("button", { name: "Crea il tuo account" }).click();
   await expect(page).toHaveURL(/\/area-cliente$/);
   await expect(page.getByRole("heading", { name: "Le tue richieste" })).toBeVisible();
   await page.goto("/area-partner");
   await expect(page).toHaveURL(/\/area-cliente$/);
 });
 
-// Un solo accesso per tutto il giro: il limite antispam ammette 3 codici ogni 10 minuti per email.
 test("campanella, profilo, boost, statistiche, assistenza e lavori svolti", async ({ page }) => {
   await login(page);
   const bell = page.getByRole("link", { name: /^Posta in arrivo, \d+ da leggere$/ });
@@ -80,9 +86,9 @@ test("campanella, profilo, boost, statistiche, assistenza e lavori svolti", asyn
   const after = before - 1;
   await expect(page.getByRole("link", { name: after ? `Posta in arrivo, ${after} da leggere` : "Posta in arrivo" }).first()).toBeVisible();
 
-  // Profilo: un file che non è un'immagine viene rifiutato, logo, foto, dati aziendali e sede vengono salvati.
-  await page.getByRole("link", { name: "Profilo" }).first().click();
-  await expect(page.getByRole("heading", { level: 1, name: "Profilo" })).toBeVisible();
+  // Modifica account: un file che non è un'immagine viene rifiutato, logo, foto, dati aziendali e sede vengono salvati.
+  await page.getByRole("link", { name: "Modifica account" }).first().click();
+  await expect(page.getByRole("heading", { level: 1, name: "Modifica account" })).toBeVisible();
   const photo = page.getByLabel(/foto profilo/);
   await photo.setInputFiles({ name: "finto.png", mimeType: "image/png", buffer: Buffer.from("<html>no</html>") });
   await page.getByRole("button", { name: "Salva" }).click();

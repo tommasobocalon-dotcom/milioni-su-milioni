@@ -2,6 +2,8 @@ import { createHash } from "node:crypto";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import * as s from "../src/lib/db/schema";
 import { slugify } from "../src/lib/domain/format";
+import { DEMO_ACCOUNT } from "../src/lib/auth/demo";
+import { hashPassword } from "../src/lib/domain/password";
 import { tokenExpiryFrom } from "../src/lib/domain/tokens";
 import {
   CATEGORIES,
@@ -260,7 +262,7 @@ export async function seed(db: Db) {
   // Utente partner per la demo dell'Area Partner
   const [mario] = await db
     .insert(s.users)
-    .values({ id: sid("user:mario@rossiimpianti.it"), email: "mario@rossiimpianti.it", name: "Mario Rossi", phone: "+393475550192", role: "partner" })
+    .values({ id: sid("user:mario@rossiimpianti.it"), email: "mario@rossiimpianti.it", name: "Mario Rossi", phone: "+393475550192", role: "partner", passwordHash: await hashPassword(DEMO_ACCOUNT.password) })
     .returning({ id: s.users.id });
   const rossiId = partnerIds.get("rossi-impianti")!;
   await db.insert(s.partnerMembers).values({ partnerId: rossiId, userId: mario.id, role: "owner" });
@@ -336,4 +338,31 @@ export async function seed(db: Db) {
     actor: "Sistema",
     createdAt: lockedAt,
   });
+
+  // Statistiche di esempio per Rossi Impianti: 90 giorni di comparse, visite e clic, con un boost passato
+  // (40–33 giorni fa) oltre a quello in corso, così il grafico mostra il salto nei giorni promossi.
+  const pastBoostStart = new Date(now.getTime() - 40 * DAY);
+  await db.insert(s.boosts).values({
+    partnerId: rossiId,
+    categoryId: categoryIds.get("idraulico")!,
+    provinceId: PROVINCES.find((pr) => pr.slug === "padova")?.id ?? PROVINCES[0].id,
+    startsAt: pastBoostStart,
+    endsAt: new Date(pastBoostStart.getTime() + 7 * DAY),
+    tokensSpent: 60,
+  });
+  const events: { partnerId: string; type: "impression" | "view" | "contact_click"; createdAt: Date }[] = [];
+  for (let d = 89; d >= 0; d--) {
+    const boosted = (d <= 40 && d > 33) || d <= 2;
+    const weekend = [0, 6].includes(new Date(now.getTime() - d * DAY).getDay());
+    const impressions = Math.round((22 + rand() * 14) * (boosted ? 2.4 : 1) * (weekend ? 0.6 : 1));
+    for (let i = 0; i < impressions; i++) {
+      const createdAt = new Date(now.getTime() - d * DAY - Math.floor(rand() * 12 * HOUR));
+      events.push({ partnerId: rossiId, type: "impression", createdAt });
+      if (rand() < 0.16) {
+        events.push({ partnerId: rossiId, type: "view", createdAt: new Date(createdAt.getTime() + 60_000) });
+        if (rand() < 0.28) events.push({ partnerId: rossiId, type: "contact_click", createdAt: new Date(createdAt.getTime() + 120_000) });
+      }
+    }
+  }
+  await insertChunks(db, s.profileEvents, events, 500);
 }

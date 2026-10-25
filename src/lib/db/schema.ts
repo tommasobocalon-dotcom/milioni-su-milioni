@@ -29,9 +29,27 @@ export const users = pgTable("users", {
   name: text("name").notNull(),
   /** Foto profilo della persona (es. titolare dell'azienda). */
   avatarUrl: text("avatar_url"),
+  /** Hash scrypt (src/lib/domain/password.ts). Null per chi entra solo con Google o Apple. */
+  passwordHash: text("password_hash"),
   role: userRole("role").notNull().default("client"),
   createdAt: createdAt(),
 });
+
+export const oauthProvider = pgEnum("oauth_provider", ["google", "apple"]);
+
+/** Account Google / Apple collegati: l'utente si riconosce dall'id del provider, non dall'email. */
+export const oauthAccounts = pgTable(
+  "oauth_accounts",
+  {
+    provider: oauthProvider("provider").notNull(),
+    providerUserId: text("provider_user_id").notNull(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    createdAt: createdAt(),
+  },
+  (t) => [primaryKey({ columns: [t.provider, t.providerUserId] }), index("oauth_accounts_user_idx").on(t.userId)],
+);
 
 /** Sessioni lato server: nel cookie c'è il token, qui solo il suo hash SHA-256. */
 export const sessions = pgTable(

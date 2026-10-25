@@ -10,6 +10,7 @@ import { Geco } from "@/components/site/geco";
 import { Button } from "@/components/ui/button";
 import { requirePartner } from "@/lib/auth/session";
 import { getLedger, getSubscription, getTokenBalance } from "@/lib/data/partner-area";
+import { demoMode } from "@/lib/demo-mode";
 import { formatEuro } from "@/lib/domain/format";
 import { TOKEN_COST_PER_LEAD } from "@/lib/domain/lead-rules";
 import { BOOST_OPTIONS, packageSaving, TOKEN_PACKAGES } from "@/lib/domain/offers";
@@ -33,7 +34,7 @@ async function Tokens() {
   await connection();
   const now = new Date();
   const [balance, ledger, sub] = await Promise.all([getTokenBalance(partner.id, now), getLedger(partner.id), getSubscription(partner.id)]);
-  const dev = process.env.NODE_ENV !== "production";
+  const dev = demoMode();
 
   return (
     <div className="flex flex-col gap-6">

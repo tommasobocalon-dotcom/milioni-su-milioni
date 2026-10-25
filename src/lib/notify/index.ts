@@ -1,4 +1,5 @@
 import "server-only";
+import { demoMode } from "@/lib/demo-mode";
 
 /**
  * Invio di SMS ed email. In sviluppo (provider "console") i messaggi vengono stampati nel
@@ -24,7 +25,7 @@ export async function sendEmail(to: string, subject: string, text: string): Prom
   throw new Error(`Provider email "${provider}" non ancora configurato`);
 }
 
-/** In sviluppo, con i messaggi stampati in console, mostriamo il codice anche a schermo per le demo. */
+/** In sviluppo e sul sito di prova, con i messaggi stampati in console, mostriamo il codice anche a schermo. */
 export function showDevCodes(): boolean {
-  return process.env.NODE_ENV !== "production" && (process.env.SMS_PROVIDER ?? "console") === "console";
+  return demoMode() && (process.env.SMS_PROVIDER ?? "console") === "console";
 }

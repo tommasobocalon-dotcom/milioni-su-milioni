@@ -18,10 +18,12 @@ export async function PortfolioManager({ partnerId, isAgency }: { partnerId: str
   const [items, places] = await Promise.all([getPortfolio(partnerId), getMunicipalities()]);
   return (
     <>
+      <PortfolioForm isAgency={isAgency} places={places.map((p) => ({ id: p.id, label: `${p.name} (${p.provinceCode})` }))} />
+
       <h2 className="text-h3 font-semibold">{isAgency ? "Immobili" : "Lavori svolti"}</h2>
       <section aria-label="Elementi del portfolio" className="rounded-lg border border-line bg-surface p-6">
         {items.length === 0 ? (
-          <p className="text-center text-body-s text-ink-2">Ancora nessun elemento: aggiungi il primo qui sotto.</p>
+          <p className="text-center text-body-s text-ink-2">Ancora nessun elemento: aggiungi il primo dal modulo qui sopra.</p>
         ) : (
           <ul className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
             {items.map((item) => (
@@ -86,8 +88,6 @@ export async function PortfolioManager({ partnerId, isAgency }: { partnerId: str
           </ul>
         )}
       </section>
-
-      <PortfolioForm isAgency={isAgency} places={places.map((p) => ({ id: p.id, label: `${p.name} (${p.provinceCode})` }))} />
     </>
   );
 }

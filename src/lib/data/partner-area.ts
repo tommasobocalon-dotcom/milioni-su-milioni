@@ -195,6 +195,7 @@ export async function getPriceList(partnerId: string) {
   return db
     .select({
       id: partnerServices.id,
+      serviceId: partnerServices.serviceId,
       serviceName: services.name,
       priceFrom: partnerServices.priceFrom,
       priceTo: partnerServices.priceTo,
@@ -205,6 +206,18 @@ export async function getPriceList(partnerId: string) {
     .innerJoin(services, eq(services.id, partnerServices.serviceId))
     .where(eq(partnerServices.partnerId, partnerId))
     .orderBy(asc(partnerServices.sortOrder));
+}
+
+export type PriceListRow = Awaited<ReturnType<typeof getPriceList>>[number];
+
+/** Servizi della categoria del partner: quelli che può mettere nel listino. */
+export async function getListableServices(partnerId: string) {
+  return db
+    .select({ id: services.id, name: services.name, defaultUnit: services.defaultUnit })
+    .from(services)
+    .innerJoin(partners, eq(partners.categoryId, services.categoryId))
+    .where(eq(partners.id, partnerId))
+    .orderBy(asc(services.name));
 }
 
 export async function getPortfolio(partnerId: string) {

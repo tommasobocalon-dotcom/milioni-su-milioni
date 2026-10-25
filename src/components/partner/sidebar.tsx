@@ -1,19 +1,19 @@
 "use client";
 
 import { Suspense } from "react";
-import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { BarChart3, Bell, Building2, Coins, CreditCard, Inbox, Landmark, LayoutDashboard, LifeBuoy, LogOut, UserRound } from "lucide-react";
 import { logout } from "@/app/accedi/actions";
+import { Geco } from "@/components/site/geco";
 import { cn } from "@/lib/utils";
 
 const NAV = [
   { href: "/area-partner", label: "Panoramica", icon: LayoutDashboard },
+  { href: "/area-partner/profilo", label: "Modifica account", icon: UserRound },
   { href: "/area-partner/lead", label: "Lead", icon: Inbox },
   { href: "/area-partner/scheda", label: "La mia scheda", icon: Building2 },
   { href: "/area-partner/listino", label: "Listino prezzi", icon: Landmark },
-  { href: "/area-partner/profilo", label: "Profilo", icon: UserRound },
   { href: "/area-partner/statistiche", label: "Statistiche", icon: BarChart3 },
   { href: "/area-partner/token", label: "Token e boost", icon: Coins },
   { href: "/area-partner/abbonamento", label: "Abbonamento", icon: CreditCard },
@@ -54,7 +54,7 @@ export function PartnerSidebar({ bell }: { bell: React.ReactNode }) {
       <div className="flex items-center justify-between px-4 py-4 lg:px-5 lg:py-6">
         <Link href="/" className="inline-flex items-center gap-2" aria-label="geco, sito pubblico">
           <span className="inline-flex size-9 items-center justify-center overflow-hidden rounded-full bg-bosco-800">
-            <Image src="/geco/saluto.png" alt="" width={36} height={36} className="translate-y-0.5 scale-125" />
+            <Geco outfit="saluto" size={36} className="translate-y-0.5 scale-125" />
           </span>
           <span className="font-display text-h3 leading-none">geco</span>
         </Link>
@@ -75,7 +75,7 @@ export function PartnerSidebar({ bell }: { bell: React.ReactNode }) {
       </nav>
       <div className="hidden flex-col gap-3 p-4 lg:flex">
         <div className="flex items-center gap-3 rounded-lg bg-bosco-800 p-3">
-          <Image src="/geco/partner.png" alt="" width={44} height={44} />
+          <Geco outfit="partner" size={44} />
           <div className="text-body-s">
             <p className="font-semibold">Serve aiuto?</p>
             <Link href="/area-partner/assistenza" className="text-caption text-on-brand-muted underline hover:text-on-brand">

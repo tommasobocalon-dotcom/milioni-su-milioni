@@ -1,5 +1,5 @@
-import Image from "next/image";
 import Link from "next/link";
+import { Geco } from "@/components/site/geco";
 import { cn } from "@/lib/utils";
 
 export function Wordmark({ inverted, className }: { inverted?: boolean; className?: string }) {
@@ -11,7 +11,7 @@ export function Wordmark({ inverted, className }: { inverted?: boolean; classNam
           inverted ? "bg-bosco-800" : "bg-brand-soft",
         )}
       >
-        <Image src="/geco/saluto.png" alt="" width={36} height={36} className="translate-y-0.5 scale-125" />
+        <Geco outfit="saluto" size={36} className="translate-y-0.5 scale-125" />
       </span>
       <span className={cn("font-display text-h3 leading-none", inverted ? "text-on-brand" : "text-brand")}>geco</span>
     </Link>

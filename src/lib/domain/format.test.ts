@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { formatEuro, formatPhone, formatPriceRange, formatResponseTime, slugify } from "./format";
+import { amountInput, formatEuro, formatPhone, formatPriceRange, formatResponseTime, parseAmount, slugify } from "./format";
 
 describe("formatEuro", () => {
   it("uses Italian separators and drops zero cents", () => {
@@ -56,5 +56,35 @@ describe("slugify", () => {
   it("makes readable URL slugs from Italian names", () => {
     expect(slugify("Rossi Impianti")).toBe("rossi-impianti");
     expect(slugify("Società Edile Città d'Este")).toBe("societa-edile-citta-d-este");
+  });
+});
+
+describe("parseAmount", () => {
+  it("legge importi scritti all'italiana e li porta in centesimi", () => {
+    expect(parseAmount("1200")).toBe(120000);
+    expect(parseAmount("1.200")).toBe(120000);
+    expect(parseAmount("1.200,50")).toBe(120050);
+    expect(parseAmount("32,5")).toBe(3250);
+    expect(parseAmount(" 90 € ")).toBe(9000);
+    expect(parseAmount("0")).toBe(0);
+  });
+  it("accetta il punto come separatore decimale se non sono migliaia", () => {
+    expect(parseAmount("32.50")).toBe(3250);
+    expect(parseAmount("2.5")).toBe(250);
+  });
+  it("campo vuoto = nessun prezzo, testo non numerico o negativo = non valido", () => {
+    expect(parseAmount("")).toBeNull();
+    expect(parseAmount("   ")).toBeNull();
+    expect(parseAmount("abc")).toBeNaN();
+    expect(parseAmount("-5")).toBeNaN();
+    expect(parseAmount("1,2,3")).toBeNaN();
+  });
+});
+
+describe("amountInput", () => {
+  it("riporta i centesimi nel formato del campo", () => {
+    expect(amountInput(120000)).toBe("1200");
+    expect(amountInput(3250)).toBe("32,5");
+    expect(amountInput(null)).toBe("");
   });
 });

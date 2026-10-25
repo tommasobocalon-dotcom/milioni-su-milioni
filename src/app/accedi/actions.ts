@@ -1,56 +1,76 @@
 "use server";
 
-import { eq } from "drizzle-orm";
+import { and, count, eq, gt } from "drizzle-orm";
 import { redirect } from "next/navigation";
 import { z } from "zod";
-import { issueOtp, OtpRateLimitError, verifyOtp } from "@/lib/auth/otp-service";
-import { createSession, destroySession } from "@/lib/auth/session";
+import { createSession, destroySession, landingPathFor } from "@/lib/auth/session";
 import { db } from "@/lib/db/client";
-import { partnerMembers, users } from "@/lib/db/schema";
+import { auditLogs, oauthAccounts, users } from "@/lib/db/schema";
 import { normalizeEmail } from "@/lib/domain/otp";
-import { sendEmail, showDevCodes } from "@/lib/notify";
+import { burnPasswordCheck, hashPassword, PASSWORD_MAX, passwordProblem, verifyPassword } from "@/lib/domain/password";
 
-async function userByEmail(email: string) {
-  const [u] = await db.select({ id: users.id, name: users.name }).from(users).where(eq(users.email, email)).limit(1);
-  return u ?? null;
+export type AuthResult = { ok: false; error: string; field?: "name" | "email" | "password" };
+
+/** Anti forza bruta per email: oltre 10 password sbagliate in 15 minuti l'accesso si ferma. */
+const FAILED_LIMIT = { attempts: 10, minutes: 15 };
+
+async function recentFailures(email: string) {
+  const since = new Date(Date.now() - FAILED_LIMIT.minutes * 60_000);
+  const [row] = await db
+    .select({ n: count() })
+    .from(auditLogs)
+    .where(and(eq(auditLogs.entity, "login"), eq(auditLogs.entityId, email), eq(auditLogs.action, "auth.login_failed"), gt(auditLogs.createdAt, since)));
+  return row?.n ?? 0;
 }
 
-/** Azienda = utente collegato a un partner in partner_members. Tutti gli altri sono clienti. */
-async function isPartnerMember(userId: string) {
-  const [m] = await db.select({ id: partnerMembers.userId }).from(partnerMembers).where(eq(partnerMembers.userId, userId)).limit(1);
-  return !!m;
+function parseEmail(raw: string) {
+  const parsed = z.email().safeParse(normalizeEmail(raw));
+  return parsed.success ? parsed.data : null;
 }
 
-export type RequestCodeResult = { ok: true; email: string; devCode?: string } | { ok: false; error: string };
-
-/** Invia il codice a qualsiasi email valida: chi non ha un account diventa cliente al primo accesso. */
-export async function requestLoginCode(rawEmail: string): Promise<RequestCodeResult> {
-  const parsed = z.email().safeParse(normalizeEmail(rawEmail));
-  if (!parsed.success) return { ok: false, error: "Controlla l'indirizzo email" };
-  const email = parsed.data;
-  const user = await userByEmail(email);
-  try {
-    const { code } = await issueOtp({ purpose: "login", channel: "email", target: email });
-    await sendEmail(email, "Il tuo codice di accesso", `Ciao${user ? ` ${user.name}` : ""}, il tuo codice per accedere a geco è ${code}. Scade tra 10 minuti.`);
-    return { ok: true, email, devCode: showDevCodes() ? code : undefined };
-  } catch (e) {
-    if (e instanceof OtpRateLimitError) return { ok: false, error: e.message };
-    throw e;
+export async function signIn(rawEmail: string, password: string): Promise<AuthResult> {
+  const email = parseEmail(rawEmail);
+  if (!email) return { ok: false, error: "Controlla l'indirizzo email", field: "email" };
+  if (!password || password.length > PASSWORD_MAX) return { ok: false, error: "Inserisci la password", field: "password" };
+  if ((await recentFailures(email)) >= FAILED_LIMIT.attempts) {
+    return { ok: false, error: `Troppi tentativi sbagliati. Riprova tra ${FAILED_LIMIT.minutes} minuti.` };
   }
+
+  const [user] = await db.select({ id: users.id, passwordHash: users.passwordHash }).from(users).where(eq(users.email, email)).limit(1);
+  // Stesso tempo e stesso messaggio se l'email non esiste o non ha password: niente indizi su chi è iscritto.
+  const valid = user?.passwordHash ? await verifyPassword(password, user.passwordHash) : await burnPasswordCheck(password);
+  if (!user || !valid) {
+    await db.insert(auditLogs).values({ actor: email, action: "auth.login_failed", entity: "login", entityId: email });
+    return { ok: false, error: "Email o password non corretti" };
+  }
+  await createSession(user.id);
+  redirect(await landingPathFor(user.id));
 }
 
-export async function verifyLoginCode(rawEmail: string, code: string): Promise<{ ok: false; error: string }> {
-  const email = normalizeEmail(rawEmail);
-  if (!/^\d{6}$/.test(code.trim())) return { ok: false, error: "Il codice è di 6 cifre" };
-  const check = await verifyOtp({ purpose: "login", target: email, code });
-  if (check === "wrong") return { ok: false, error: "Codice non corretto" };
-  if (check === "expired") return { ok: false, error: "Il codice è scaduto: chiedine uno nuovo" };
-  if (check === "locked") return { ok: false, error: "Troppi tentativi: chiedi un nuovo codice" };
-  // Primo accesso: nasce un account cliente. Le aziende vengono collegate a un partner alla registrazione.
-  if (!(await userByEmail(email))) await db.insert(users).values({ email, name: email.split("@")[0] }).onConflictDoNothing();
-  const user = (await userByEmail(email))!;
-  await createSession(user.id);
-  redirect((await isPartnerMember(user.id)) ? "/area-partner" : "/area-cliente");
+export async function signUp(rawName: string, rawEmail: string, password: string): Promise<AuthResult> {
+  const name = rawName.trim().replace(/\s+/g, " ");
+  if (name.length < 2 || name.length > 80) return { ok: false, error: "Scrivi nome e cognome", field: "name" };
+  const email = parseEmail(rawEmail);
+  if (!email) return { ok: false, error: "Controlla l'indirizzo email", field: "email" };
+  const problem = passwordProblem(password);
+  if (problem) return { ok: false, error: problem, field: "password" };
+
+  const [existing] = await db.select({ id: users.id, passwordHash: users.passwordHash }).from(users).where(eq(users.email, email)).limit(1);
+  if (existing) {
+    // Un account nato con Google/Apple non riceve una password da chi non ha dimostrato di possedere l'email.
+    const [social] = existing.passwordHash
+      ? []
+      : await db.select({ provider: oauthAccounts.provider }).from(oauthAccounts).where(eq(oauthAccounts.userId, existing.id)).limit(1);
+    const via = social ? ` con ${social.provider === "google" ? "Google" : "Apple"}` : "";
+    return { ok: false, error: `Esiste già un account con questa email: accedi${via}`, field: "email" };
+  }
+
+  const passwordHash = await hashPassword(password);
+  const [created] = await db.insert(users).values({ email, name, passwordHash }).onConflictDoNothing().returning({ id: users.id });
+  if (!created) return { ok: false, error: "Esiste già un account con questa email: accedi", field: "email" };
+  await db.insert(auditLogs).values({ actor: email, action: "auth.signup", entity: "user", entityId: created.id });
+  await createSession(created.id);
+  redirect(await landingPathFor(created.id));
 }
 
 export async function logout() {

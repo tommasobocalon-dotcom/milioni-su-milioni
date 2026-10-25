@@ -16,6 +16,31 @@ const OUTFITS = {
 
 export type GecoOutfit = keyof typeof OUTFITS;
 
+type Layer = { src: string; animation?: string; origin?: [number, number]; delay?: string };
+
+/*
+ * Ogni posa ha la sua animazione, ferma con "riduci movimento".
+ * Le pose che muovono un braccio sono WebP animati (public/geco/anim, generati da design/geco/anima.mjs):
+ * il braccio si piega alla giuntura invece di essere un pezzo staccato che ruota sopra il corpo.
+ * Il razzo usa strati della stessa misura (design/geco/parti, da split_parti.py): corpo + monete che ruotano
+ * attorno al perno (origin, 0–1). Le altre pose si muovono per intero (classi in globals.css).
+ */
+const ANIMATED = new Set<GecoOutfit>(["saluto", "casa", "professionista", "partner", "recensioni"]);
+
+const LAYERS: Partial<Record<GecoOutfit, Layer[]>> = {
+  token: [
+    { src: "token-corpo", animation: "geco-razzo", origin: [0.5, 0.6] },
+    { src: "token-moneta1", animation: "geco-moneta", origin: [0.095, 0.66] },
+    { src: "token-moneta2", animation: "geco-moneta", origin: [0.185, 0.75], delay: "-1.2s" },
+  ],
+};
+
+const WHOLE: Partial<Record<GecoOutfit, string>> = {
+  errore: "geco-aggrappato",
+  pensa: "geco-pensa",
+  arrampicata: "geco-arrampica",
+};
+
 export function Geco({
   outfit,
   size = 160,
@@ -29,14 +54,61 @@ export function Geco({
   className?: string;
   priority?: boolean;
 }) {
+  if (ANIMATED.has(outfit)) {
+    return (
+      // contents: misure e classi stanno sull'<img>, come con <Image>
+      <picture className="contents">
+        <source srcSet={`/geco/anim/${outfit}-fermo.webp`} media="(prefers-reduced-motion: reduce)" />
+        {/* WebP animato: l'ottimizzatore di next/image lo servirebbe così com'è, e <picture> serve per il fermo immagine */}
+        <img
+          src={`/geco/anim/${outfit}.webp`}
+          alt={decorative ? "" : OUTFITS[outfit]}
+          width={size}
+          height={size}
+          loading={priority ? "eager" : "lazy"}
+          fetchPriority={priority ? "high" : undefined}
+          decoding="async"
+          className={cn("select-none", className)}
+        />
+      </picture>
+    );
+  }
+  const layers = LAYERS[outfit];
+  if (!layers) {
+    return (
+      <Image
+        src={`/geco/${outfit}.png`}
+        alt={decorative ? "" : OUTFITS[outfit]}
+        width={size}
+        height={size}
+        priority={priority}
+        className={cn("select-none", WHOLE[outfit], className)}
+      />
+    );
+  }
   return (
-    <Image
-      src={`/geco/${outfit}.png`}
-      alt={decorative ? "" : OUTFITS[outfit]}
-      width={size}
-      height={size}
-      priority={priority}
-      className={cn("select-none", className)}
-    />
+    <span
+      role={decorative ? undefined : "img"}
+      aria-label={decorative ? undefined : OUTFITS[outfit]}
+      aria-hidden={decorative || undefined}
+      className={cn("relative inline-block shrink-0 select-none", className)}
+      style={{ width: size, height: size }}
+    >
+      {layers.map((layer) => (
+        <Image
+          key={layer.src}
+          src={`/geco/parti/${layer.src}.webp`}
+          alt=""
+          width={size}
+          height={size}
+          priority={priority}
+          className={cn("absolute inset-0 size-full", layer.animation)}
+          style={{
+            transformOrigin: layer.origin && `${layer.origin[0] * 100}% ${layer.origin[1] * 100}%`,
+            animationDelay: layer.delay,
+          }}
+        />
+      ))}
+    </span>
   );
 }

@@ -8,7 +8,10 @@ import { revalidatePath, updateTag } from "next/cache";
 import { z } from "zod";
 import { requirePartner } from "@/lib/auth/session";
 import { db } from "@/lib/db/client";
-import { auditLogs, leadEvents, leads, partners, portfolioItems, subscriptions, tokenLedger, users } from "@/lib/db/schema";
+import { auditLogs, leadEvents, leads, partners, partnerServices, portfolioItems, priceUnit, subscriptions, tokenLedger, users } from "@/lib/db/schema";
+import { getListableServices, getPriceList, getSubscription } from "@/lib/data/partner-area";
+import { demoMode } from "@/lib/demo-mode";
+import { parseAmount } from "@/lib/domain/format";
 import { canReportLead, REPORT_REASONS } from "@/lib/domain/lead-rules";
 import { TOKEN_PACKAGES } from "@/lib/domain/offers";
 import { tokenExpiryFrom } from "@/lib/domain/tokens";
@@ -97,11 +100,11 @@ export async function unlockLeadAction(leadId: string): Promise<UnlockState> {
 }
 
 /**
- * Solo in sviluppo: accredita un pacchetto senza pagamento, per provare il flusso dei token.
- * In produzione l'accredito arriva dal webhook Stripe checkout.session.completed.
+ * Solo in sviluppo e sul sito di prova: accredita un pacchetto senza pagamento, per provare il flusso
+ * dei token. In produzione l'accredito arriva dal webhook Stripe checkout.session.completed.
  */
 export async function simulateTokenPurchase(code: string) {
-  if (process.env.NODE_ENV === "production") return;
+  if (!demoMode()) return;
   const { user, partner } = await requirePartner();
   const pkg = TOKEN_PACKAGES.find((p) => p.code === code);
   if (!pkg) return;
@@ -299,4 +302,87 @@ export async function deletePortfolioItem(itemId: string) {
   await db.delete(portfolioItems).where(and(eq(portfolioItems.id, itemId), eq(portfolioItems.partnerId, partner.id)));
   updateTag(`partner:${partner.slug}`);
   revalidatePath("/area-partner/scheda");
+}
+
+const PriceItemSchema = z.object({
+  id: z.union([z.literal(""), z.uuid()]).optional(),
+  serviceId: z.uuid("Scegli un servizio"),
+  unit: z.enum(priceUnit.enumValues, "Scegli l'unità di prezzo"),
+  notes: z.string().trim().max(160, "Le note possono avere al massimo 160 caratteri").optional(),
+});
+
+/** Aggiunge o modifica una voce del listino. Il servizio deve essere della categoria del partner. */
+export async function savePriceItem(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const { user, partner } = await requirePartner();
+  const parsed = PriceItemSchema.safeParse({
+    id: formData.get("id") ?? undefined,
+    serviceId: formData.get("serviceId"),
+    unit: formData.get("unit"),
+    notes: formData.get("notes") ?? undefined,
+  });
+  if (!parsed.success) return { error: parsed.error.issues[0].message };
+  const priceFrom = parseAmount(String(formData.get("priceFrom") ?? ""));
+  const priceTo = parseAmount(String(formData.get("priceTo") ?? ""));
+  if (Number.isNaN(priceFrom) || Number.isNaN(priceTo)) return { error: "Scrivi i prezzi come numeri, ad esempio 1.200 o 32,50" };
+  if (priceFrom !== null && priceTo !== null && priceTo < priceFrom) return { error: "Il prezzo massimo non può essere più basso del minimo" };
+  if (priceFrom !== null && priceFrom > 1_000_000_000) return { error: "Importo troppo alto" };
+  if (priceTo !== null && priceTo > 1_000_000_000) return { error: "Importo troppo alto" };
+
+  const d = parsed.data;
+  const [allowed, rows, sub] = await Promise.all([getListableServices(partner.id), getPriceList(partner.id), getSubscription(partner.id)]);
+  if (!allowed.some((s) => s.id === d.serviceId)) return { error: "Servizio non disponibile per la tua categoria" };
+  const editing = d.id ? rows.find((r) => r.id === d.id) : undefined;
+  if (d.id && !editing) return { error: "Voce del listino non trovata" };
+  if (rows.some((r) => r.serviceId === d.serviceId && r.id !== d.id)) return { error: "Questo servizio è già nel listino: modifica la voce esistente" };
+  if (!editing && sub?.maxServices && rows.length >= sub.maxServices) {
+    return { error: `Il piano ${sub.planName} permette fino a ${sub.maxServices} servizi nel listino` };
+  }
+
+  const values = { serviceId: d.serviceId, unit: d.unit, priceFrom, priceTo, notes: d.notes || null };
+  if (editing) {
+    await db.update(partnerServices).set(values).where(and(eq(partnerServices.id, editing.id), eq(partnerServices.partnerId, partner.id)));
+  } else {
+    const [{ last }] = await db.select({ last: max(partnerServices.sortOrder) }).from(partnerServices).where(eq(partnerServices.partnerId, partner.id));
+    await db.insert(partnerServices).values({ ...values, partnerId: partner.id, sortOrder: (last ?? -1) + 1 });
+  }
+  await db.insert(auditLogs).values({
+    actor: user.email,
+    action: editing ? "price_list.updated" : "price_list.added",
+    entity: "partner",
+    entityId: partner.id,
+    data: { serviceId: d.serviceId, priceFrom, priceTo, unit: d.unit },
+  });
+  updateTag(`partner:${partner.slug}`);
+  revalidatePath("/area-partner", "layout");
+  return { ok: editing ? "Prezzo aggiornato" : "Servizio aggiunto al listino" };
+}
+
+export async function deletePriceItem(itemId: string) {
+  const { user, partner } = await requirePartner();
+  if (!Id.safeParse(itemId).success) return;
+  const removed = await db
+    .delete(partnerServices)
+    .where(and(eq(partnerServices.id, itemId), eq(partnerServices.partnerId, partner.id)))
+    .returning({ serviceId: partnerServices.serviceId });
+  if (removed.length === 0) return;
+  await db.insert(auditLogs).values({ actor: user.email, action: "price_list.removed", entity: "partner", entityId: partner.id, data: removed[0] });
+  updateTag(`partner:${partner.slug}`);
+  revalidatePath("/area-partner", "layout");
+}
+
+/** Sposta una voce di un posto in su o in giù: l'ordine è quello mostrato sul profilo pubblico. */
+export async function movePriceItem(itemId: string, direction: "up" | "down") {
+  const { partner } = await requirePartner();
+  const rows = await getPriceList(partner.id);
+  const i = rows.findIndex((r) => r.id === itemId);
+  const j = direction === "up" ? i - 1 : i + 1;
+  if (i < 0 || j < 0 || j >= rows.length) return;
+  [rows[i], rows[j]] = [rows[j], rows[i]];
+  await db.transaction(async (tx) => {
+    for (const [order, r] of rows.entries()) {
+      await tx.update(partnerServices).set({ sortOrder: order }).where(and(eq(partnerServices.id, r.id), eq(partnerServices.partnerId, partner.id)));
+    }
+  });
+  updateTag(`partner:${partner.slug}`);
+  revalidatePath("/area-partner/listino");
 }

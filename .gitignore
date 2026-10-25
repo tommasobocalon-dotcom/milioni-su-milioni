@@ -51,3 +51,6 @@ next-env.d.ts
 # eccezione: l'esempio di configurazione va versionato
 !.env.example
 /public/uploads
+
+# fotogrammi di controllo di design/geco/anima.mjs --prove
+/design/geco/prove/

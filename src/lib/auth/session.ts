@@ -26,6 +26,12 @@ export async function createSession(userId: string) {
   });
 }
 
+/** Dopo l'accesso: le aziende (membri di un partner) vanno nell'Area Partner, tutti gli altri nell'Area cliente. */
+export async function landingPathFor(userId: string): Promise<"/area-partner" | "/area-cliente"> {
+  const [m] = await db.select({ id: partnerMembers.userId }).from(partnerMembers).where(eq(partnerMembers.userId, userId)).limit(1);
+  return m ? "/area-partner" : "/area-cliente";
+}
+
 export async function destroySession() {
   const store = await cookies();
   const token = store.get(COOKIE)?.value;
