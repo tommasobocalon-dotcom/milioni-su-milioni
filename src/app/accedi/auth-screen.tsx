@@ -28,13 +28,27 @@ function oauthMessage(code: string | undefined): string | null {
   }
 }
 
+/** Avvisi di ritorno dai link via email (?avviso=...). */
+const NOTICES: Record<string, { text: string; tone: "ok" | "error" }> = {
+  "email-confermata": { text: "Email confermata. Ora puoi accedere.", tone: "ok" },
+  "link-scaduto": { text: "Il link non è più valido. Accedi e chiedine uno nuovo dalla tua area.", tone: "error" },
+};
+
 async function OAuthNotice({ searchParams }: { searchParams: SearchParams }) {
-  const { errore } = await searchParams;
-  const message = oauthMessage(typeof errore === "string" ? errore : undefined);
-  if (!message) return null;
+  const { errore, avviso } = await searchParams;
+  const oauth = oauthMessage(typeof errore === "string" ? errore : undefined);
+  const notice = oauth ? { text: oauth, tone: "error" as const } : typeof avviso === "string" ? NOTICES[avviso] : undefined;
+  if (!notice) return null;
   return (
-    <p role="alert" className="rounded-md border border-error bg-error-soft px-3.5 py-2.5 text-body-s text-error">
-      {message}
+    <p
+      role={notice.tone === "error" ? "alert" : "status"}
+      className={
+        notice.tone === "error"
+          ? "rounded-md border border-error bg-error-soft px-3.5 py-2.5 text-body-s text-error"
+          : "rounded-md border border-success bg-brand-soft px-3.5 py-2.5 text-body-s text-ink"
+      }
+    >
+      {notice.text}
     </p>
   );
 }
@@ -62,26 +76,36 @@ export function AuthScreen({ audience, searchParams }: { audience: Audience; sea
   // Il conto di prova è un'azienda: lo mostriamo solo dove serve.
   const demo = demoMode() && audience === "business" ? DEMO_ACCOUNT : undefined;
   return (
+    <AuthShell audience={audience}>
+      {/* Un solo modulo, mai sostituito dopo il caricamento: quello che si scrive non va perso. */}
+      <LoginForm
+        audience={audience}
+        demo={demo}
+        notice={
+          <Suspense fallback={null}>
+            <OAuthNotice searchParams={searchParams} />
+          </Suspense>
+        }
+      />
+      <p className="text-body-s text-ink-2">
+        {screen.switchText}{" "}
+        <Link href={screen.switchLink.href} className="font-semibold text-primary underline">
+          {screen.switchLink.label}
+        </Link>
+      </p>
+    </AuthShell>
+  );
+}
+
+/** Cornice delle pagine di accesso: modulo a sinistra, geco e punti di forza a destra. */
+export function AuthShell({ audience = "client", children }: { audience?: Audience; children: React.ReactNode }) {
+  const screen = SCREEN[audience];
+  return (
     <div className="grid min-h-dvh lg:grid-cols-[minmax(0,1fr)_minmax(0,0.9fr)]">
       <div className="flex flex-col gap-10 px-4 py-6 sm:px-10 lg:px-16 lg:py-8">
         <Wordmark />
         <main id="contenuto" className="mx-auto flex w-full max-w-sm flex-1 flex-col justify-center gap-8">
-          {/* Un solo modulo, mai sostituito dopo il caricamento: quello che si scrive non va perso. */}
-          <LoginForm
-            audience={audience}
-            demo={demo}
-            notice={
-              <Suspense fallback={null}>
-                <OAuthNotice searchParams={searchParams} />
-              </Suspense>
-            }
-          />
-          <p className="text-body-s text-ink-2">
-            {screen.switchText}{" "}
-            <Link href={screen.switchLink.href} className="font-semibold text-primary underline">
-              {screen.switchLink.label}
-            </Link>
-          </p>
+          {children}
         </main>
         <p className="mx-auto w-full max-w-sm text-caption text-ink-2">
           Continuando accetti i{" "}

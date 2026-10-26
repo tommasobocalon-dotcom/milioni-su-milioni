@@ -1,7 +1,7 @@
 import "server-only";
 import { randomBytes } from "node:crypto";
 import { createRemoteJWKSet, jwtVerify } from "jose";
-import { and, eq } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { db } from "@/lib/db/client";
 import { auditLogs, oauthAccounts, users } from "@/lib/db/schema";
 import type { Audience } from "@/lib/auth/session";
@@ -189,7 +189,9 @@ export async function userForOAuthProfile(profile: OAuthProfile): Promise<string
     const [existing] = await tx.select({ id: users.id }).from(users).where(eq(users.email, email)).limit(1);
     const userId =
       existing?.id ??
-      (await tx.insert(users).values({ email, name: profile.name?.trim() || email.split("@")[0] }).returning({ id: users.id }))[0].id;
+      (await tx.insert(users).values({ email, name: profile.name?.trim() || email.split("@")[0], emailVerifiedAt: new Date() }).returning({ id: users.id }))[0].id;
+    // Il provider ha verificato l'email: vale come conferma anche per un account nato con la password.
+    if (existing) await tx.update(users).set({ emailVerifiedAt: sql`coalesce(${users.emailVerifiedAt}, now())` }).where(eq(users.id, userId));
     await tx.insert(oauthAccounts).values({ provider: profile.provider, providerUserId: profile.subject, userId }).onConflictDoNothing();
     await tx.insert(auditLogs).values({ actor: email, action: existing ? "auth.oauth_linked" : "auth.oauth_signup", entity: "user", entityId: userId, data: { provider: profile.provider } });
     return userId;

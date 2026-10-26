@@ -3,6 +3,7 @@ import { Suspense } from "react";
 import { and, desc, eq, isNotNull } from "drizzle-orm";
 import { LogOut } from "lucide-react";
 import { logout } from "@/app/accedi/actions";
+import { EmailVerifyBanner } from "@/components/site/email-verify-banner";
 import { ButtonLink } from "@/components/ui/button";
 import { requireUser } from "@/lib/auth/session";
 import { db } from "@/lib/db/client";
@@ -19,6 +20,9 @@ const clientStatus = (s: string) => (s === "new" ? "Inviata" : s === "seen" ? "V
 export default function ClientAreaPage() {
   return (
     <div className="container-page flex flex-col gap-8 py-10">
+      <Suspense fallback={null}>
+        <EmailVerifyBanner />
+      </Suspense>
       <Suspense fallback={<div className="h-64 animate-pulse rounded-lg bg-muted" />}>
         <ClientArea />
       </Suspense>

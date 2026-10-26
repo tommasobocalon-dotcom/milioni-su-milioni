@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Suspense } from "react";
 import { BellLink, UnreadBell } from "@/components/partner/bell";
 import { PartnerSidebar } from "@/components/partner/sidebar";
+import { EmailVerifyBanner } from "@/components/site/email-verify-banner";
 
 export const metadata: Metadata = { title: { default: "Area Partner", template: "%s · Area Partner" }, robots: { index: false } };
 
@@ -16,6 +17,11 @@ export default function PartnerLayout({ children }: LayoutProps<"/area-partner">
         }
       />
       <main id="contenuto" className="min-w-0 flex-1 px-4 py-6 sm:px-8 lg:py-8">
+        <Suspense fallback={null}>
+          <div className="mb-6 empty:hidden">
+            <EmailVerifyBanner />
+          </div>
+        </Suspense>
         {children}
       </main>
     </div>

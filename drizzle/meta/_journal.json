@@ -43,6 +43,13 @@
       "when": 1793022259458,
       "tag": "0005_stripe_billing",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1793047922338,
+      "tag": "0006_auth_email_tokens",
+      "breakpoints": true
     }
   ]
 }

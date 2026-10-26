@@ -34,6 +34,8 @@ export default defineConfig({
     reuseExistingServer: true,
     env: {
       DATABASE_URL: E2E_DATABASE_URL,
+      // I link assoluti (email, Stripe, Google/Apple) devono tornare al server dei test, non a quello sulla 3000.
+      APP_URL: `http://localhost:${E2E_PORT}`,
       NEXT_DIST_DIR: ".next-e2e",
       STRIPE_WEBHOOK_SECRET: E2E_STRIPE_WEBHOOK_SECRET,
     },

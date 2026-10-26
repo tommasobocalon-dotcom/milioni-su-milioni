@@ -31,9 +31,29 @@ export const users = pgTable("users", {
   avatarUrl: text("avatar_url"),
   /** Hash scrypt (src/lib/domain/password.ts). Null per chi entra solo con Google o Apple. */
   passwordHash: text("password_hash"),
+  /** Email confermata con il link (o da Google/Apple). Null finché non è confermata. */
+  emailVerifiedAt: timestamp("email_verified_at", { withTimezone: true }),
   role: userRole("role").notNull().default("client"),
   createdAt: createdAt(),
 });
+
+export const authTokenPurpose = pgEnum("auth_token_purpose", ["password_reset", "email_verify"]);
+
+/** Link monouso inviati per email (recupero password, conferma email). Si salva solo l'hash del token. */
+export const authTokens = pgTable(
+  "auth_tokens",
+  {
+    id: text("id").primaryKey(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    purpose: authTokenPurpose("purpose").notNull(),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    usedAt: timestamp("used_at", { withTimezone: true }),
+    createdAt: createdAt(),
+  },
+  (t) => [index("auth_tokens_user_idx").on(t.userId, t.purpose)],
+);
 
 export const oauthProvider = pgEnum("oauth_provider", ["google", "apple"]);
 

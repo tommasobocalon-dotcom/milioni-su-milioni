@@ -1,12 +1,13 @@
 "use server";
 
-import { and, count, eq, gt } from "drizzle-orm";
+import { and, count, eq, gt, sql } from "drizzle-orm";
 import { redirect } from "next/navigation";
 import { z } from "zod";
-import { createSession, destroySession, landingPathFor, type Audience } from "@/lib/auth/session";
+import { consumeAuthToken, sendEmailVerificationLink, sendPasswordResetLink } from "@/lib/auth/email-links";
+import { createSession, destroySession, landingPathFor, requireUser, type Audience } from "@/lib/auth/session";
 import { ipRateLimited } from "@/lib/security/ip-limit";
 import { db } from "@/lib/db/client";
-import { auditLogs, oauthAccounts, users } from "@/lib/db/schema";
+import { auditLogs, oauthAccounts, sessions, users } from "@/lib/db/schema";
 import { safeNextPath } from "@/lib/domain/format";
 import { normalizeEmail } from "@/lib/domain/otp";
 import { burnPasswordCheck, hashPassword, PASSWORD_MAX, passwordProblem, verifyPassword } from "@/lib/domain/password";
@@ -77,6 +78,8 @@ export async function signUp(rawName: string, rawEmail: string, password: string
   const [created] = await db.insert(users).values({ email, name, passwordHash }).onConflictDoNothing().returning({ id: users.id });
   if (!created) return { ok: false, error: "Esiste già un account con questa email: accedi", field: "email" };
   await db.insert(auditLogs).values({ actor: email, action: "auth.signup", entity: "user", entityId: created.id });
+  // Un intoppo del provider email non deve bloccare la registrazione: il link si può rimandare dall'area personale.
+  await sendEmailVerificationLink({ id: created.id, email, name }).catch((e) => console.error("[auth] email di conferma non inviata:", e));
   await createSession(created.id);
   redirect(await landingFor(created.id, audience, next));
 }
@@ -84,4 +87,43 @@ export async function signUp(rawName: string, rawEmail: string, password: string
 export async function logout() {
   await destroySession();
   redirect("/accedi");
+}
+
+export type LinkResult = { ok: true; devLink?: string } | AuthResult;
+
+/** "Password dimenticata": stessa risposta che l'email sia iscritta o no. */
+export async function requestPasswordReset(rawEmail: string): Promise<LinkResult> {
+  const email = parseEmail(rawEmail);
+  if (!email) return { ok: false, error: "Controlla l'indirizzo email", field: "email" };
+  if (await ipRateLimited("password_reset", 10, 60)) return { ok: false, error: "Troppe richieste da questo dispositivo. Riprova tra un'ora." };
+  const { devLink } = await sendPasswordResetLink(email);
+  return { ok: true, devLink };
+}
+
+/** Nuova password dal link: vale una volta sola, chiude le sessioni aperte altrove e fa entrare. */
+export async function resetPassword(token: string, password: string): Promise<AuthResult> {
+  const problem = passwordProblem(password);
+  if (problem) return { ok: false, error: problem, field: "password" };
+  const passwordHash = await hashPassword(password);
+  const userId = await db.transaction(async (tx) => {
+    const id = await consumeAuthToken(tx, token, "password_reset");
+    if (!id) return null;
+    // Chi apre il link dimostra di avere l'email: la consideriamo confermata.
+    await tx.update(users).set({ passwordHash, emailVerifiedAt: sql`coalesce(${users.emailVerifiedAt}, now())` }).where(eq(users.id, id));
+    await tx.delete(sessions).where(eq(sessions.userId, id));
+    await tx.insert(auditLogs).values({ actor: id, action: "auth.password_reset", entity: "user", entityId: id });
+    return id;
+  });
+  if (!userId) return { ok: false, error: "Il link non è più valido: chiedine uno nuovo." };
+  await createSession(userId);
+  redirect(await landingPathFor(userId));
+}
+
+/** Rimanda il link di conferma dell'email a chi è dentro e non l'ha ancora confermata. */
+export async function resendEmailVerification(): Promise<LinkResult> {
+  const user = await requireUser();
+  const [row] = await db.select({ verified: users.emailVerifiedAt }).from(users).where(eq(users.id, user.id)).limit(1);
+  if (row?.verified) return { ok: true };
+  const { devLink } = await sendEmailVerificationLink(user);
+  return { ok: true, devLink };
 }

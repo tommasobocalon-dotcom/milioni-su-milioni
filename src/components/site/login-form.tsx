@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useSyncExternalStore, useTransition } from "react";
+import Link from "next/link";
 import { ArrowRight, Eye, EyeOff } from "lucide-react";
 import { signIn, signUp, type AuthResult } from "@/app/accedi/actions";
 import type { Audience } from "@/lib/auth/session";
@@ -187,6 +188,11 @@ export function LoginForm({
             </button>
           </div>
         </Field>
+        {!signup && (
+          <Link href="/accedi/password" className="-mt-2 self-end text-body-s font-semibold text-primary underline">
+            Password dimenticata?
+          </Link>
+        )}
 
         {error && !error.field && (
           <p role="alert" className="rounded-md border border-error bg-error-soft px-3.5 py-2.5 text-body-s text-error">

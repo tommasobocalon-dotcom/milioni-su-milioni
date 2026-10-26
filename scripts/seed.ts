@@ -262,7 +262,7 @@ export async function seed(db: Db) {
   // Utente partner per la demo dell'Area Partner
   const [mario] = await db
     .insert(s.users)
-    .values({ id: sid("user:mario@rossiimpianti.it"), email: "mario@rossiimpianti.it", name: "Mario Rossi", phone: "+393475550192", role: "partner", passwordHash: await hashPassword(DEMO_ACCOUNT.password) })
+    .values({ id: sid("user:mario@rossiimpianti.it"), email: "mario@rossiimpianti.it", name: "Mario Rossi", phone: "+393475550192", role: "partner", passwordHash: await hashPassword(DEMO_ACCOUNT.password), emailVerifiedAt: new Date() })
     .returning({ id: s.users.id });
   const rossiId = partnerIds.get("rossi-impianti")!;
   await db.insert(s.partnerMembers).values({ partnerId: rossiId, userId: mario.id, role: "owner" });
