@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useSyncExternalStore, useTransition } from "react";
 import { ArrowRight, Eye, EyeOff } from "lucide-react";
 import { signIn, signUp, type AuthResult } from "@/app/accedi/actions";
+import type { Audience } from "@/lib/auth/session";
 import { AppleIcon, GoogleIcon } from "@/components/site/provider-icons";
 import { Button } from "@/components/ui/button";
 import { Field, Input } from "@/components/ui/field";
@@ -10,21 +11,50 @@ import { cn } from "@/lib/utils";
 
 type Mode = "login" | "signup";
 
+export type { Audience };
+
+const noSubscribe = () => () => {};
+
+/** ?next= letto nel browser: la pagina resta statica e il modulo non viene rimontato. */
+function useNextParam() {
+  return useSyncExternalStore(
+    noSubscribe,
+    () => new URLSearchParams(window.location.search).get("next") ?? undefined,
+    () => undefined,
+  );
+}
+
+const COPY = {
+  client: {
+    login: { title: "Bentornato su geco", text: "Accedi per seguire le tue richieste e lasciare le recensioni." },
+    signup: { title: "Crea il tuo account", text: "Ti serve un minuto: nome, email e una password." },
+    signupTab: "Crea account",
+    signupButton: "Crea il tuo account",
+  },
+  business: {
+    login: { title: "Area aziende", text: "Entra per gestire richieste, token e abbonamento della tua attività." },
+    signup: { title: "Registra la tua attività", text: "Prima il tuo account personale, poi i dati dell'attività e il piano." },
+    signupTab: "Registra l'attività",
+    signupButton: "Continua con i dati dell'attività",
+  },
+} as const;
+
 const providerLink =
   "inline-flex h-11 w-full items-center justify-center gap-3 rounded-md px-5 text-body font-semibold transition-colors [&_svg]:size-5 [&_svg]:shrink-0";
 
 export function LoginForm({
+  audience,
   demo,
   notice,
-  next,
 }: {
+  audience: Audience;
   demo?: { email: string; password: string };
   notice?: React.ReactNode;
-  /** Pagina a cui tornare dopo l'accesso (es. la registrazione partner). */
-  next?: string;
 }) {
+  const next = useNextParam();
+  const [chosen, setMode] = useState<Mode | null>(null);
   // Chi arriva dalla registrazione partner di solito non ha ancora un account.
-  const [mode, setMode] = useState<Mode>(next === "/registrazione-partner" ? "signup" : "login");
+  const mode = chosen ?? (next === "/registrazione-partner" ? "signup" : "login");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -32,9 +62,12 @@ export function LoginForm({
   const [error, setError] = useState<AuthResult | null>(null);
   const [pending, start] = useTransition();
   const signup = mode === "signup";
+  const copy = COPY[audience];
+  // Google e Apple riportano chi parte dall'accesso aziende alla pagina aziende (vedi /auth/[provider]).
+  const providerQuery = audience === "business" ? "?per=azienda" : "";
 
-  function switchMode(next: Mode) {
-    setMode(next);
+  function switchMode(to: Mode) {
+    setMode(to);
     setError(null);
   }
 
@@ -43,7 +76,7 @@ export function LoginForm({
     setError(null);
     start(async () => {
       // Se va tutto bene l'azione fa redirect e non torna qui.
-      const res = signup ? await signUp(name, email, password, next) : await signIn(email, password, next);
+      const res = signup ? await signUp(name, email, password, next, audience) : await signIn(email, password, next, audience);
       if (res && !res.ok) setError(res);
     });
   }
@@ -54,19 +87,15 @@ export function LoginForm({
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-2">
-        <h1 className="font-display text-h1">{signup ? "Crea il tuo account" : "Bentornato su geco"}</h1>
-        <p className="text-body text-ink-2">
-          {signup
-            ? "Ti serve un minuto: nome, email e una password."
-            : "Clienti e aziende entrano dallo stesso posto: ti portiamo nella tua area."}
-        </p>
+        <h1 className="font-display text-h1">{copy[mode].title}</h1>
+        <p className="text-body text-ink-2">{copy[mode].text}</p>
       </div>
       {notice}
       <div role="group" aria-label="Accedi o crea un account" className="grid grid-cols-2 gap-1 rounded-md bg-muted p-1">
         {(
           [
             ["login", "Accedi"],
-            ["signup", "Crea account"],
+            ["signup", copy.signupTab],
           ] as const
         ).map(([value, label]) => (
           <button
@@ -86,12 +115,10 @@ export function LoginForm({
 
       {/* Link normali, non <Link>: le route /auth/* rimandano al sito del provider con una navigazione completa. */}
       <div className="flex flex-col gap-3">
-        {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
-        <a href="/auth/google" className={cn(providerLink, "border border-line bg-surface text-ink hover:bg-crema-100")}>
+        <a href={`/auth/google${providerQuery}`} className={cn(providerLink, "border border-line bg-surface text-ink hover:bg-crema-100")}>
           <GoogleIcon /> Continua con Google
         </a>
-        {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
-        <a href="/auth/apple" className={cn(providerLink, "bg-black text-white hover:bg-neutro-900")}>
+        <a href={`/auth/apple${providerQuery}`} className={cn(providerLink, "bg-black text-white hover:bg-neutro-900")}>
           <AppleIcon /> Continua con Apple
         </a>
       </div>
@@ -164,18 +191,27 @@ export function LoginForm({
         {error && !error.field && (
           <p role="alert" className="rounded-md border border-error bg-error-soft px-3.5 py-2.5 text-body-s text-error">
             {error.error}
+            {/* Lo stesso invito per ogni errore di accesso: non rivela se l'email è iscritta. */}
+            {!signup && (
+              <>
+                {" "}
+                Non hai ancora un account?{" "}
+                <button type="button" onClick={() => switchMode("signup")} className="font-semibold underline">
+                  Crealo adesso
+                </button>
+              </>
+            )}
           </p>
         )}
 
         <Button type="submit" disabled={pending} className="mt-1">
-          {pending ? (signup ? "Creazione account…" : "Accesso…") : signup ? "Crea il tuo account" : "Accedi"} <ArrowRight aria-hidden />
+          {pending ? (signup ? "Creazione account…" : "Accesso…") : signup ? copy.signupButton : "Accedi"} <ArrowRight aria-hidden />
         </Button>
       </form>
 
       {demo && !signup && (
         <p className="rounded-md border border-dashed border-info bg-info-soft p-3 text-body-s text-info">
-          Ambiente di prova: azienda <strong>{demo.email}</strong> con password <strong>{demo.password}</strong>. Per entrare come
-          cliente crea un account con qualsiasi email.
+          Ambiente di prova: azienda <strong>{demo.email}</strong> con password <strong>{demo.password}</strong>.
         </p>
       )}
     </div>

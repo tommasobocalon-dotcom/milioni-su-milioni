@@ -26,10 +26,17 @@ export async function createSession(userId: string) {
   });
 }
 
-/** Dopo l'accesso: le aziende (membri di un partner) vanno nell'Area Partner, tutti gli altri nell'Area cliente. */
-export async function landingPathFor(userId: string): Promise<"/area-partner" | "/area-cliente"> {
+/** Da quale pagina si entra: /accedi (clienti) o /accedi/azienda. */
+export type Audience = "client" | "business";
+
+/**
+ * Dopo l'accesso: le aziende (membri di un partner) vanno nell'Area Partner. Gli altri vanno nell'Area cliente,
+ * oppure alla registrazione partner se sono entrati dall'accesso aziende.
+ */
+export async function landingPathFor(userId: string, audience: Audience = "client") {
   const [m] = await db.select({ id: partnerMembers.userId }).from(partnerMembers).where(eq(partnerMembers.userId, userId)).limit(1);
-  return m ? "/area-partner" : "/area-cliente";
+  if (m) return "/area-partner";
+  return audience === "business" ? "/registrazione-partner" : "/area-cliente";
 }
 
 export async function destroySession() {
@@ -73,7 +80,7 @@ export type PartnerSession = {
  */
 export async function requirePartner(): Promise<PartnerSession> {
   const user = await getSessionUser();
-  if (!user) redirect("/accedi");
+  if (!user) redirect("/accedi/azienda");
   const [m] = await db
     .select({
       memberRole: partnerMembers.role,

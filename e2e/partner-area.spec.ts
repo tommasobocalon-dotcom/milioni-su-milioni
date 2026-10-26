@@ -29,6 +29,14 @@ test("Google e Apple non configurati rimandano al login con un avviso", async ({
   await expect(page.getByText("L'accesso con Apple non è ancora attivo. Usa email e password.")).toBeVisible();
 });
 
+test("Google dall'accesso aziende riporta alla pagina aziende", async ({ page }) => {
+  await page.goto("/accedi/azienda");
+  await page.getByRole("link", { name: "Continua con Google" }).click();
+  await expect(page).toHaveURL(/\/accedi\/azienda\?errore=google-config$/);
+  await expect(page.getByRole("heading", { level: 1, name: "Area aziende" })).toBeVisible();
+  await expect(page.getByText("L'accesso con Google non è ancora attivo. Usa email e password.")).toBeVisible();
+});
+
 test("il partner entra, gestisce un lead e sblocca quello oltre quota", async ({ page }) => {
   await login(page);
   await expect(page.getByRole("heading", { level: 1, name: /, Mario$/ })).toBeVisible();

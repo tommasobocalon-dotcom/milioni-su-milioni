@@ -7,12 +7,12 @@ test("un'azienda si registra, la scheda resta nascosta fino all'attivazione del 
   await page.goto("/per-i-professionisti#piani");
   await page.getByRole("link", { name: "Attiva Media" }).click();
   await page.getByRole("link", { name: "Crea account o accedi" }).click();
-  await expect(page).toHaveURL(/\/accedi\?next=\/registrazione-partner$/);
-  await expect(page.getByRole("heading", { level: 1, name: "Crea il tuo account" })).toBeVisible();
+  await expect(page).toHaveURL(/\/accedi\/azienda\?next=\/registrazione-partner$/);
+  await expect(page.getByRole("heading", { level: 1, name: "Registra la tua attività" })).toBeVisible();
   await page.getByLabel(/^Nome e cognome/).fill("Giulia Verdi");
   await page.getByRole("textbox", { name: /^Email/ }).fill(email);
   await page.getByLabel(/^Password/).fill("password-di-prova-2026");
-  await page.getByRole("button", { name: "Crea il tuo account" }).click();
+  await page.getByRole("button", { name: "Continua con i dati dell'attività" }).click();
   await expect(page).toHaveURL(/\/registrazione-partner$/);
   await expect(page.getByText(email)).toBeVisible();
 

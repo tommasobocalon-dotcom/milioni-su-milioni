@@ -16,7 +16,7 @@ const COLUMNS = [
     links: [
       { href: "/per-i-professionisti", label: "Diventa partner" },
       { href: "/per-i-professionisti#piani", label: "Piani e prezzi" },
-      { href: "/accedi", label: "Accedi all'Area Partner" },
+      { href: "/accedi/azienda", label: "Accedi all'Area Partner" },
     ],
   },
   {

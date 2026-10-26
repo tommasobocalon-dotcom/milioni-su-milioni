@@ -1,5 +1,15 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { finishOAuth, isOAuthProvider, OAUTH_COOKIE, OAuthError, userForOAuthProfile, type OAuthProvider } from "@/lib/auth/oauth";
+import {
+  audienceFromParam,
+  finishOAuth,
+  isOAuthProvider,
+  loginPathFor,
+  OAUTH_AUDIENCE_COOKIE,
+  OAUTH_COOKIE,
+  OAuthError,
+  userForOAuthProfile,
+  type OAuthProvider,
+} from "@/lib/auth/oauth";
 import { createSession, landingPathFor } from "@/lib/auth/session";
 
 async function complete(
@@ -7,7 +17,9 @@ async function complete(
   provider: string,
   input: { code: string | null; state: string | null; error: string | null; appleUser?: string | null },
 ) {
-  if (!isOAuthProvider(provider)) return NextResponse.redirect(new URL("/accedi", request.url), 303);
+  const audience = audienceFromParam(request.cookies.get(OAUTH_AUDIENCE_COOKIE)?.value);
+  const loginPath = loginPathFor(audience);
+  if (!isOAuthProvider(provider)) return NextResponse.redirect(new URL(loginPath, request.url), 303);
   let target: string;
   try {
     const profile = await finishOAuth(provider as OAuthProvider, {
@@ -17,13 +29,14 @@ async function complete(
     });
     const userId = await userForOAuthProfile(profile);
     await createSession(userId);
-    target = await landingPathFor(userId);
+    target = await landingPathFor(userId, audience);
   } catch (e) {
     if (!(e instanceof OAuthError)) console.error("[auth] accesso con", provider, "non riuscito:", e);
-    target = `/accedi?errore=${provider}-${e instanceof OAuthError ? e.code : "token"}`;
+    target = `${loginPath}?errore=${provider}-${e instanceof OAuthError ? e.code : "token"}`;
   }
   const response = NextResponse.redirect(new URL(target, request.url), 303);
   response.cookies.delete({ name: OAUTH_COOKIE, path: "/auth" });
+  response.cookies.delete({ name: OAUTH_AUDIENCE_COOKIE, path: "/auth" });
   return response;
 }
 

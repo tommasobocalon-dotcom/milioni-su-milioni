@@ -3,7 +3,7 @@
 import { and, count, eq, gt } from "drizzle-orm";
 import { redirect } from "next/navigation";
 import { z } from "zod";
-import { createSession, destroySession, landingPathFor } from "@/lib/auth/session";
+import { createSession, destroySession, landingPathFor, type Audience } from "@/lib/auth/session";
 import { ipRateLimited } from "@/lib/security/ip-limit";
 import { db } from "@/lib/db/client";
 import { auditLogs, oauthAccounts, users } from "@/lib/db/schema";
@@ -12,6 +12,10 @@ import { normalizeEmail } from "@/lib/domain/otp";
 import { burnPasswordCheck, hashPassword, PASSWORD_MAX, passwordProblem, verifyPassword } from "@/lib/domain/password";
 
 export type AuthResult = { ok: false; error: string; field?: "name" | "email" | "password" };
+
+async function landingFor(userId: string, audience: Audience, next?: string) {
+  return safeNextPath(next) ?? (await landingPathFor(userId, audience));
+}
 
 /** Anti forza bruta per email: oltre 10 password sbagliate in 15 minuti l'accesso si ferma. */
 const FAILED_LIMIT = { attempts: 10, minutes: 15 };
@@ -30,7 +34,7 @@ function parseEmail(raw: string) {
   return parsed.success ? parsed.data : null;
 }
 
-export async function signIn(rawEmail: string, password: string, next?: string): Promise<AuthResult> {
+export async function signIn(rawEmail: string, password: string, next?: string, audience: Audience = "client"): Promise<AuthResult> {
   const email = parseEmail(rawEmail);
   if (!email) return { ok: false, error: "Controlla l'indirizzo email", field: "email" };
   if (!password || password.length > PASSWORD_MAX) return { ok: false, error: "Inserisci la password", field: "password" };
@@ -47,10 +51,10 @@ export async function signIn(rawEmail: string, password: string, next?: string):
     return { ok: false, error: "Email o password non corretti" };
   }
   await createSession(user.id);
-  redirect(safeNextPath(next) ?? (await landingPathFor(user.id)));
+  redirect(await landingFor(user.id, audience, next));
 }
 
-export async function signUp(rawName: string, rawEmail: string, password: string, next?: string): Promise<AuthResult> {
+export async function signUp(rawName: string, rawEmail: string, password: string, next?: string, audience: Audience = "client"): Promise<AuthResult> {
   const name = rawName.trim().replace(/\s+/g, " ");
   if (name.length < 2 || name.length > 80) return { ok: false, error: "Scrivi nome e cognome", field: "name" };
   const email = parseEmail(rawEmail);
@@ -74,7 +78,7 @@ export async function signUp(rawName: string, rawEmail: string, password: string
   if (!created) return { ok: false, error: "Esiste già un account con questa email: accedi", field: "email" };
   await db.insert(auditLogs).values({ actor: email, action: "auth.signup", entity: "user", entityId: created.id });
   await createSession(created.id);
-  redirect(safeNextPath(next) ?? (await landingPathFor(created.id)));
+  redirect(await landingFor(created.id, audience, next));
 }
 
 export async function logout() {

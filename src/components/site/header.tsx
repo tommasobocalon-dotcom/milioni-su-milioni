@@ -25,6 +25,9 @@ export function SiteHeader() {
           <Link href="/accedi" className="text-body-s font-semibold text-primary hover:underline">
             Accedi
           </Link>
+          <Link href="/accedi/azienda" className="text-body-s font-semibold text-primary hover:underline">
+            Area aziende
+          </Link>
           <ButtonLink href="/per-i-professionisti" size="s">
             Sei un professionista?
           </ButtonLink>
@@ -43,6 +46,9 @@ export function SiteHeader() {
             ))}
             <Link href="/accedi" className="rounded-md px-3 py-2.5 text-body font-semibold text-primary hover:bg-subtle">
               Accedi
+            </Link>
+            <Link href="/accedi/azienda" className="rounded-md px-3 py-2.5 text-body font-semibold text-primary hover:bg-subtle">
+              Area aziende
             </Link>
             <ButtonLink href="/per-i-professionisti" size="s" className="mt-1">
               Sei un professionista?

@@ -28,7 +28,7 @@ export default async function ForProfessionalsPage() {
               <ButtonLink href="#piani" variant="light">
                 Scegli il piano
               </ButtonLink>
-              <ButtonLink href="/accedi" variant="ghost" className="text-on-brand hover:bg-bosco-800">
+              <ButtonLink href="/accedi/azienda" variant="ghost" className="text-on-brand hover:bg-bosco-800">
                 Sei già partner? Accedi
               </ButtonLink>
             </div>

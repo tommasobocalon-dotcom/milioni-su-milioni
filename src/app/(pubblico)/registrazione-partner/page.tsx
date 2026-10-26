@@ -67,7 +67,7 @@ async function SignupStep() {
           <p className="text-body-s text-ink-2">
             Serve per entrare nell&apos;Area Partner: email e password, oppure Google o Apple. Se hai già un account, accedi.
           </p>
-          <ButtonLink href="/accedi?next=/registrazione-partner" className="self-start">
+          <ButtonLink href="/accedi/azienda?next=/registrazione-partner" className="self-start">
             Crea account o accedi
           </ButtonLink>
         </div>
