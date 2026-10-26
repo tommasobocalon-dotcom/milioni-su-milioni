@@ -6,6 +6,7 @@ import { ArrowRight, Eye, EyeOff } from "lucide-react";
 import { signIn, signUp, type AuthResult } from "@/app/accedi/actions";
 import type { Audience } from "@/lib/auth/session";
 import { AppleIcon, GoogleIcon } from "@/components/site/provider-icons";
+import { Turnstile } from "@/components/site/turnstile";
 import { Button } from "@/components/ui/button";
 import { Field, Input } from "@/components/ui/field";
 import { cn } from "@/lib/utils";
@@ -60,6 +61,8 @@ export function LoginForm({
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [turnstileToken, setTurnstileToken] = useState("");
+  const [turnstileReset, setTurnstileReset] = useState(0);
   const [error, setError] = useState<AuthResult | null>(null);
   const [pending, start] = useTransition();
   const signup = mode === "signup";
@@ -77,8 +80,11 @@ export function LoginForm({
     setError(null);
     start(async () => {
       // Se va tutto bene l'azione fa redirect e non torna qui.
-      const res = signup ? await signUp(name, email, password, next, audience) : await signIn(email, password, next, audience);
-      if (res && !res.ok) setError(res);
+      const res = signup ? await signUp(name, email, password, next, audience, turnstileToken) : await signIn(email, password, next, audience);
+      if (res && !res.ok) {
+        setError(res);
+        if (signup) setTurnstileReset((n) => n + 1);
+      }
     });
   }
 
@@ -188,6 +194,8 @@ export function LoginForm({
             </button>
           </div>
         </Field>
+        {/* Antispam solo sulla creazione dell'account: l'accesso ha già i suoi limiti di tentativi. */}
+        {signup && <Turnstile onToken={setTurnstileToken} resetKey={turnstileReset} />}
         {!signup && (
           <Link href="/accedi/password" className="-mt-2 self-end text-body-s font-semibold text-primary underline">
             Password dimenticata?

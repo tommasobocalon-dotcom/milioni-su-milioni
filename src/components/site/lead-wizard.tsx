@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, ArrowRight, Lock, ShieldCheck } from "lucide-react";
 import { resendLeadCode, submitLeadRequest, verifyLeadRequest } from "@/app/(pubblico)/richiesta/actions";
+import { Turnstile } from "@/components/site/turnstile";
 import { Button } from "@/components/ui/button";
 import { Field, Input, Select, Textarea } from "@/components/ui/field";
 import type { RequestContext } from "@/lib/data/partners";
@@ -36,6 +37,8 @@ export function LeadWizard({ ctx, places, initialServiceSlug }: Props) {
   const [privacy, setPrivacy] = useState(false);
   const [marketing, setMarketing] = useState(false);
   const [website, setWebsite] = useState("");
+  const [turnstileToken, setTurnstileToken] = useState("");
+  const [turnstileReset, setTurnstileReset] = useState(0);
   const [leadId, setLeadId] = useState<string | null>(null);
   const [maskedPhone, setMaskedPhone] = useState("");
   const [devCode, setDevCode] = useState<string | undefined>();
@@ -85,9 +88,12 @@ export function LeadWizard({ ctx, places, initialServiceSlug }: Props) {
         privacy: true,
         marketing,
         website,
+        turnstileToken,
       });
       if (!res.ok) {
         setError(res.error);
+        // Il token Turnstile vale una volta: dopo un errore se ne chiede uno nuovo.
+        setTurnstileReset((n) => n + 1);
         if (res.field === "municipality") setStep(2);
         return;
       }
@@ -256,6 +262,9 @@ export function LeadWizard({ ctx, places, initialServiceSlug }: Props) {
             <input type="checkbox" className="mt-0.5 size-5 accent-primary" checked={marketing} onChange={(e) => setMarketing(e.target.checked)} />
             <span>Facoltativo: voglio ricevere consigli e novità per la casa via email.</span>
           </label>
+          <div className="sm:col-span-2">
+            <Turnstile onToken={setTurnstileToken} resetKey={turnstileReset} />
+          </div>
         </div>
       )}
 

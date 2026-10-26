@@ -4,6 +4,7 @@ import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { issueOtp, OtpRateLimitError, verifyOtp } from "@/lib/auth/otp-service";
 import { ipRateLimited } from "@/lib/security/ip-limit";
+import { TURNSTILE_ERROR, turnstileOk } from "@/lib/security/turnstile";
 import { findPlace } from "@/lib/data/catalog";
 import { getRequestContext } from "@/lib/data/partners";
 import { db } from "@/lib/db/client";
@@ -29,6 +30,8 @@ const RequestSchema = z.object({
   marketing: z.boolean(),
   /** Campo esca per i bot: deve restare vuoto. */
   website: z.string().max(0).optional(),
+  /** Token di Cloudflare Turnstile (assente se il controllo è spento). */
+  turnstileToken: z.string().max(4096).optional(),
 });
 
 export type LeadRequestInput = z.input<typeof RequestSchema>;
@@ -46,6 +49,7 @@ export async function submitLeadRequest(input: LeadRequestInput): Promise<Submit
   const data = parsed.data;
 
   if (await ipRateLimited("lead", 30, 15)) return { ok: false, error: "Troppe richieste da questo dispositivo. Riprova tra qualche minuto." };
+  if (!(await turnstileOk(data.turnstileToken))) return { ok: false, error: TURNSTILE_ERROR };
 
   const ctx = await getRequestContext(data.partnerSlug);
   if (!ctx) return { ok: false, error: "Partner non trovato" };

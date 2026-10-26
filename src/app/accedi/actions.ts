@@ -6,6 +6,7 @@ import { z } from "zod";
 import { consumeAuthToken, sendEmailVerificationLink, sendPasswordResetLink } from "@/lib/auth/email-links";
 import { createSession, destroySession, landingPathFor, requireUser, type Audience } from "@/lib/auth/session";
 import { ipRateLimited } from "@/lib/security/ip-limit";
+import { TURNSTILE_ERROR, turnstileOk } from "@/lib/security/turnstile";
 import { db } from "@/lib/db/client";
 import { auditLogs, oauthAccounts, sessions, users } from "@/lib/db/schema";
 import { safeNextPath } from "@/lib/domain/format";
@@ -55,7 +56,14 @@ export async function signIn(rawEmail: string, password: string, next?: string, 
   redirect(await landingFor(user.id, audience, next));
 }
 
-export async function signUp(rawName: string, rawEmail: string, password: string, next?: string, audience: Audience = "client"): Promise<AuthResult> {
+export async function signUp(
+  rawName: string,
+  rawEmail: string,
+  password: string,
+  next?: string,
+  audience: Audience = "client",
+  turnstileToken?: string,
+): Promise<AuthResult> {
   const name = rawName.trim().replace(/\s+/g, " ");
   if (name.length < 2 || name.length > 80) return { ok: false, error: "Scrivi nome e cognome", field: "name" };
   const email = parseEmail(rawEmail);
@@ -63,6 +71,7 @@ export async function signUp(rawName: string, rawEmail: string, password: string
   const problem = passwordProblem(password);
   if (problem) return { ok: false, error: problem, field: "password" };
   if (await ipRateLimited("signup", 20, 60)) return { ok: false, error: "Troppi tentativi da questo dispositivo. Riprova tra qualche minuto." };
+  if (!(await turnstileOk(turnstileToken))) return { ok: false, error: TURNSTILE_ERROR };
 
   const [existing] = await db.select({ id: users.id, passwordHash: users.passwordHash }).from(users).where(eq(users.email, email)).limit(1);
   if (existing) {
@@ -92,10 +101,11 @@ export async function logout() {
 export type LinkResult = { ok: true; devLink?: string } | AuthResult;
 
 /** "Password dimenticata": stessa risposta che l'email sia iscritta o no. */
-export async function requestPasswordReset(rawEmail: string): Promise<LinkResult> {
+export async function requestPasswordReset(rawEmail: string, turnstileToken?: string): Promise<LinkResult> {
   const email = parseEmail(rawEmail);
   if (!email) return { ok: false, error: "Controlla l'indirizzo email", field: "email" };
   if (await ipRateLimited("password_reset", 10, 60)) return { ok: false, error: "Troppe richieste da questo dispositivo. Riprova tra un'ora." };
+  if (!(await turnstileOk(turnstileToken))) return { ok: false, error: TURNSTILE_ERROR };
   const { devLink } = await sendPasswordResetLink(email);
   return { ok: true, devLink };
 }

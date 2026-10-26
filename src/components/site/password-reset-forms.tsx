@@ -6,11 +6,14 @@ import { ArrowRight, Eye, EyeOff } from "lucide-react";
 import { requestPasswordReset, resetPassword, type AuthResult } from "@/app/accedi/actions";
 import { Button } from "@/components/ui/button";
 import { Field, Input } from "@/components/ui/field";
+import { Turnstile } from "./turnstile";
 
 /** "Password dimenticata": chiede l'email e risponde sempre allo stesso modo. */
 export function RequestResetForm() {
   const [error, setError] = useState<AuthResult | null>(null);
   const [sent, setSent] = useState<{ email: string; devLink?: string } | null>(null);
+  const [turnstileToken, setTurnstileToken] = useState("");
+  const [turnstileReset, setTurnstileReset] = useState(0);
   const [pending, start] = useTransition();
 
   function submit(e: React.FormEvent<HTMLFormElement>) {
@@ -19,9 +22,12 @@ export function RequestResetForm() {
     // Campo non controllato: quello che si scrive prima che la pagina sia pronta non va perso.
     const email = String(new FormData(e.currentTarget).get("email") ?? "");
     start(async () => {
-      const res = await requestPasswordReset(email);
+      const res = await requestPasswordReset(email, turnstileToken);
       if (res.ok) setSent({ email, devLink: res.devLink });
-      else setError(res);
+      else {
+        setError(res);
+        setTurnstileReset((n) => n + 1);
+      }
     });
   }
 
@@ -59,6 +65,7 @@ export function RequestResetForm() {
           aria-describedby={error?.field === "email" ? "email-error" : undefined}
         />
       </Field>
+      <Turnstile onToken={setTurnstileToken} resetKey={turnstileReset} />
       {error && !error.field && (
         <p role="alert" className="rounded-md border border-error bg-error-soft px-3.5 py-2.5 text-body-s text-error">
           {error.error}

@@ -13,8 +13,10 @@ const csp = [
   "font-src 'self' data:",
   // Tailwind e Next iniettano stili inline: senza nonce 'unsafe-inline' evita di rompere la UI.
   "style-src 'self' 'unsafe-inline'",
-  `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ""}`,
-  `connect-src 'self'${isDev ? " ws:" : ""}`,
+  // Cloudflare Turnstile (antispam): script e iframe del widget, verifica dal browser.
+  `script-src 'self' 'unsafe-inline' https://challenges.cloudflare.com${isDev ? " 'unsafe-eval'" : ""}`,
+  "frame-src https://challenges.cloudflare.com",
+  `connect-src 'self' https://challenges.cloudflare.com${isDev ? " ws:" : ""}`,
   ...(isDev ? [] : ["upgrade-insecure-requests"]),
 ].join("; ");
 
