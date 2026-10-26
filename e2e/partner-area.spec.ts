@@ -125,7 +125,8 @@ test("campanella, profilo, boost, statistiche, assistenza e lavori svolti", asyn
   await page.getByRole("button", { name: /3 giorni · 30 token/ }).click();
   await expect(page.getByText(/Boost attivo fino al/)).toBeVisible();
   await page.goto("/area-partner/statistiche");
-  await expect(page.getByText("Comparse nei risultati")).toBeVisible();
+  // L'etichetta c'è anche nel percorso "Dalla ricerca alla richiesta": si controlla il riquadro degli indicatori.
+  await expect(page.getByRole("region", { name: "Indicatori" }).getByText("Comparse nei risultati")).toBeVisible();
   await expect(page.getByRole("cell", { name: "Attivo" })).toBeVisible();
 
   // Assistenza.
