@@ -52,9 +52,10 @@ Aggregatore web (Veneto → Triveneto → Nord Italia) che mette in contatto cli
 - Profili pubblici agenzia e professionista con listino indicativo, portfolio, recensioni verificate, dati strutturati `LocalBusiness`/`AggregateRating`, URL del PRD §5.4.
 - Richiesta di contatto in 5 passi con domande dinamiche per categoria, verifica OTP via SMS, conteggio quota/token/duplicati/lead bloccato oltre quota (PRD §7.4), pagina di conferma con alternative.
 - Area Partner: accesso con email e password o Google/Apple, panoramica, inbox e dettaglio lead (stato, note, segnalazione entro 72 h, sblocco con token), token (registro immutabile, acquisto simulato solo in sviluppo), listino, abbonamento.
+- Stripe (codice in `src/lib/billing/stripe.ts`, webhook `/api/stripe/webhook`): Checkout abbonamento mensile/annuale e pacchetti token (carta + SEPA, IVA 22%), Customer Portal, webhook firmato e idempotente (tabella `stripe_processed`), sospensione immediata al pagamento fallito e riattivazione automatica, azzeramento quota e token omaggio a ogni periodo pagato. Prezzi creati in Stripe da `npm run stripe:setup`. Configurazione in `DEPLOY.md`.
 - Pagine *Come funziona* (ordinamento e recensioni spiegati), *Per i professionisti* (piani), privacy e termini in bozza, 404.
 
-**Da fare** (prossimi passi suggeriti): Stripe (abbonamenti, Checkout token, webhook, sospensione), editor della scheda/listino/portfolio con upload foto, area cliente e recensioni dopo il ricontatto, mappa MapLibre, provider reali SMS/email, RLS e rate limit per IP + Turnstile, registrazione self-service, Area Commerciale, Backoffice Admin, assistente AI, deploy (Vercel + Supabase UE).
+**Da fare** (prossimi passi suggeriti): fatturazione elettronica SdI collegata al webhook Stripe, Area Partner ridotta al solo pagamento quando l'account è sospeso, editor della scheda/listino/portfolio con upload foto, area cliente e recensioni dopo il ricontatto, mappa MapLibre, provider reali SMS/email, RLS e rate limit per IP + Turnstile, registrazione self-service, Area Commerciale, Backoffice Admin, assistente AI, deploy (Vercel + Supabase UE).
 
 **Valori provvisori presi dal Figma** (da confermare, PRD §20): nome "geco", prezzi piani (annuale = 10 mensilità), 8 token per lead oltre quota con sblocco entro 48 h, pacchetti token 50/120/300 a 49/99/219 €, tono "tu" anche verso i partner.
 

@@ -32,6 +32,8 @@ const POSES = {
   saluto: {
     lato: 520,
     src: "scontornati/geco-v2-saluto.png",
+    // dietro il braccio c'è il petto/spalla: lo ricostruiamo, così alzando il braccio non si apre un vuoto
+    riempi: poly([0.6, 0.48], [0.78, 0.48], [0.78, 0.7], [0.6, 0.7]),
     durata: 3.2,
     zone: [
       {
@@ -39,7 +41,7 @@ const POSES = {
         blur: 2,
         giuntura: { from: [0.66, 0.565], to: [0.735, 0.5] },
         perno: [0.71, 0.545],
-        chiavi: [[0, 0], [0.1, -12], [0.2, 8], [0.3, -12], [0.4, 8], [0.55, 0], [1, 0]],
+        chiavi: [[0, 0], [0.12, -7], [0.24, 5], [0.36, -7], [0.48, 5], [0.6, 0], [1, 0]],
       },
     ],
   },
@@ -53,7 +55,7 @@ const POSES = {
         blur: 2,
         giuntura: { from: [0.36, 0.4], to: [0.28, 0.4] },
         perno: [0.33, 0.405],
-        chiavi: [[0, 0], [0.15, -6], [0.3, 5], [0.45, -3], [0.6, 0], [1, 0]],
+        chiavi: [[0, 0], [0.15, -4], [0.3, 3], [0.45, -2], [0.6, 0], [1, 0]],
       },
     ],
   },
@@ -67,7 +69,7 @@ const POSES = {
         blur: 2,
         giuntura: { from: [0.31, 0.55], to: [0.22, 0.53] },
         perno: [0.29, 0.545],
-        chiavi: [[0, 0], [0.4, 8], [0.55, -12], [0.65, -9], [0.85, 0], [1, 0]],
+        chiavi: [[0, 0], [0.4, 5], [0.55, -7], [0.65, -5], [0.85, 0], [1, 0]],
       },
     ],
   },

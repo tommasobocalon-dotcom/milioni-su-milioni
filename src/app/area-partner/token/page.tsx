@@ -2,13 +2,15 @@ import { Suspense } from "react";
 import Link from "next/link";
 import { Rocket } from "lucide-react";
 import { connection } from "next/server";
-import { setAutoUseTokens, simulateTokenPurchase } from "@/app/area-partner/actions";
+import { setAutoUseTokens, simulateTokenPurchase, startTokenCheckout } from "@/app/area-partner/actions";
+import { CheckoutButton, PaymentNotice } from "@/components/partner/checkout-button";
 import { BoostButtons } from "@/components/partner/boost-buttons";
 import { PartnerPageHeader } from "@/components/partner/page-header";
 import { PartnerSkeleton } from "@/components/partner/skeleton";
 import { Geco } from "@/components/site/geco";
 import { Button } from "@/components/ui/button";
 import { requirePartner } from "@/lib/auth/session";
+import { stripeConfigured } from "@/lib/billing/stripe";
 import { getLedger, getSubscription, getTokenBalance } from "@/lib/data/partner-area";
 import { demoMode } from "@/lib/demo-mode";
 import { formatEuro } from "@/lib/domain/format";
@@ -21,20 +23,23 @@ export const metadata = { title: "Token e boost" };
 const dateFmt = new Intl.DateTimeFormat("it-IT", { day: "numeric", month: "short", year: "numeric", timeZone: "Europe/Rome" });
 const KIND: Record<string, string> = { purchase: "Acquisto", credit: "Accredito", consume: "Consumo", expire: "Scadenza", refund: "Rimborso" };
 
-export default function TokenPage() {
+export default function TokenPage({ searchParams }: PageProps<"/area-partner/token">) {
   return (
     <Suspense fallback={<PartnerSkeleton />}>
-      <Tokens />
+      {searchParams.then((sp) => (
+        <Tokens paid={sp.pagamento === "ok"} />
+      ))}
     </Suspense>
   );
 }
 
-async function Tokens() {
+async function Tokens({ paid }: { paid: boolean }) {
   const { partner, memberRole } = await requirePartner();
   await connection();
   const now = new Date();
   const [balance, ledger, sub] = await Promise.all([getTokenBalance(partner.id, now), getLedger(partner.id), getSubscription(partner.id)]);
   const dev = demoMode();
+  const stripeOn = stripeConfigured();
 
   return (
     <div className="flex flex-col gap-6">
@@ -44,6 +49,8 @@ async function Tokens() {
         partnerName={partner.displayName} logoUrl={partner.logoUrl}
         planCode={sub?.planCode}
       />
+
+      {paid && <PaymentNotice>I token compaiono nel saldo appena Stripe conferma il pagamento: con la carta in pochi secondi, con l&apos;addebito SEPA in qualche giorno lavorativo.</PaymentNotice>}
 
       <div className="grid gap-6 xl:grid-cols-[340px_1fr]">
         <section className="flex flex-col gap-4 rounded-lg bg-brand p-6 text-on-brand">
@@ -94,7 +101,17 @@ async function Tokens() {
                     {p.tokens} <span className="text-body text-ink-2">token</span>
                   </p>
                   <p className="text-body-s">{formatEuro(p.priceCents)} + IVA</p>
-                  {dev ? (
+                  {stripeOn ? (
+                    <CheckoutButton
+                      action={startTokenCheckout.bind(null, p.code)}
+                      size="s"
+                      variant={"highlight" in p && p.highlight ? "primary" : "secondary"}
+                      className="w-full"
+                      disabled={memberRole !== "owner"}
+                    >
+                      Acquista
+                    </CheckoutButton>
+                  ) : dev ? (
                     <form action={simulateTokenPurchase.bind(null, p.code)}>
                       <Button type="submit" size="s" variant={"highlight" in p && p.highlight ? "primary" : "secondary"} className="w-full">
                         Simula acquisto
@@ -110,9 +127,9 @@ async function Tokens() {
             })}
           </ul>
           <p className="text-caption text-ink-2">
-            {dev
+            {!stripeOn && dev
               ? "Ambiente di prova: l'acquisto accredita i token senza pagamento. In produzione il pagamento passa da Stripe Checkout e arriva la fattura elettronica."
-              : "Pagamento anticipato con Stripe, fattura elettronica emessa all'acquisto."}
+              : "Pagamento anticipato con Stripe (carta o addebito SEPA), con ricevuta via email."}
           </p>
         </section>
       </div>

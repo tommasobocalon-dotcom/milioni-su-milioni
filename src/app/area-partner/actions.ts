@@ -2,11 +2,11 @@
 
 import { and, eq, isNotNull, max } from "drizzle-orm";
 import { randomUUID } from "node:crypto";
-import { mkdir, writeFile } from "node:fs/promises";
-import path from "node:path";
 import { revalidatePath, updateTag } from "next/cache";
 import { z } from "zod";
 import { requirePartner } from "@/lib/auth/session";
+import { putImage } from "@/lib/storage";
+import { BillingError, createPortalSession, createSubscriptionCheckout, createTokenCheckout, stripeConfigured } from "@/lib/billing/stripe";
 import { db } from "@/lib/db/client";
 import { auditLogs, leadEvents, leads, partners, partnerServices, portfolioItems, priceUnit, subscriptions, tokenLedger, users } from "@/lib/db/schema";
 import { getListableServices, getPriceList, getSubscription } from "@/lib/data/partner-area";
@@ -180,11 +180,8 @@ async function saveImage(folder: "partners" | "avatars" | "portfolio", partnerId
   if (file.size > IMAGE_MAX_BYTES) return { error: "La foto può pesare al massimo 2 MB" };
   const ext = await sniffImage(file);
   if (!ext) return { error: "La foto deve essere JPG, PNG o WebP" };
-  const dir = path.join(process.cwd(), "public", "uploads", folder);
-  await mkdir(dir, { recursive: true });
-  const name = `${partnerId}-${randomUUID()}.${ext}`;
-  await writeFile(path.join(dir, name), Buffer.from(await file.arrayBuffer()));
-  return { url: `/uploads/${folder}/${name}` };
+  const key = `${folder}/${partnerId}-${randomUUID()}.${ext}`;
+  return putImage(key, Buffer.from(await file.arrayBuffer()), ext);
 }
 
 /** Profilo: dati della persona (nome, foto) e dell'azienda (logo, dati fiscali, sede, presentazione). */
@@ -385,4 +382,35 @@ export async function movePriceItem(itemId: string, direction: "up" | "down") {
   });
   updateTag(`partner:${partner.slug}`);
   revalidatePath("/area-partner/listino");
+}
+
+export type CheckoutState = { url?: string; error?: string };
+
+/** Pagamenti e portale Stripe: solo il titolare dell'account. L'esito arriva dal webhook, non da qui. */
+async function billingAction(run: (payer: { partnerId: string; email: string; name: string }) => Promise<string>, action: string): Promise<CheckoutState> {
+  const { user, partner, memberRole } = await requirePartner();
+  if (memberRole !== "owner") return { error: "Solo il titolare dell'account può gestire i pagamenti" };
+  if (!stripeConfigured()) return { error: "I pagamenti online non sono ancora attivi" };
+  try {
+    const url = await run({ partnerId: partner.id, email: user.email, name: user.name });
+    await db.insert(auditLogs).values({ actor: user.email, action, entity: "partner", entityId: partner.id });
+    return { url };
+  } catch (e) {
+    if (e instanceof BillingError) return { error: e.message };
+    console.error("[stripe]", action, e);
+    return { error: "Stripe non risponde, riprova tra poco" };
+  }
+}
+
+export async function startTokenCheckout(code: string): Promise<CheckoutState> {
+  return billingAction((payer) => createTokenCheckout(payer, code), "billing.token_checkout");
+}
+
+export async function startSubscriptionCheckout(planCode: string, period: "monthly" | "yearly"): Promise<CheckoutState> {
+  if (period !== "monthly" && period !== "yearly") return { error: "Periodo non valido" };
+  return billingAction((payer) => createSubscriptionCheckout(payer, planCode, period), "billing.subscription_checkout");
+}
+
+export async function openBillingPortal(): Promise<CheckoutState> {
+  return billingAction((payer) => createPortalSession(payer.partnerId), "billing.portal");
 }

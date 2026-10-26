@@ -47,21 +47,39 @@ export function Geco({
   decorative = true,
   className,
   priority,
+  still,
 }: {
   outfit: GecoOutfit;
   size?: number;
   decorative?: boolean;
   className?: string;
   priority?: boolean;
+  /** Mostra la mascotte ferma, senza animazione (usa il fotogramma fermo). */
+  still?: boolean;
 }) {
   if (ANIMATED.has(outfit)) {
+    if (still) {
+      // niente animazione: solo il fotogramma fermo (lo stesso usato per "riduci movimento")
+      return (
+        <img
+          src={`/geco/anim/${outfit}-fermo.webp?v=2`}
+          alt={decorative ? "" : OUTFITS[outfit]}
+          width={size}
+          height={size}
+          loading={priority ? "eager" : "lazy"}
+          fetchPriority={priority ? "high" : undefined}
+          decoding="async"
+          className={cn("select-none", className)}
+        />
+      );
+    }
     return (
       // contents: misure e classi stanno sull'<img>, come con <Image>
       <picture className="contents">
-        <source srcSet={`/geco/anim/${outfit}-fermo.webp`} media="(prefers-reduced-motion: reduce)" />
+        <source srcSet={`/geco/anim/${outfit}-fermo.webp?v=2`} media="(prefers-reduced-motion: reduce)" />
         {/* WebP animato: l'ottimizzatore di next/image lo servirebbe così com'è, e <picture> serve per il fermo immagine */}
         <img
-          src={`/geco/anim/${outfit}.webp`}
+          src={`/geco/anim/${outfit}.webp?v=2`}
           alt={decorative ? "" : OUTFITS[outfit]}
           width={size}
           height={size}

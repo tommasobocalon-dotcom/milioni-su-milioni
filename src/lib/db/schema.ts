@@ -225,6 +225,8 @@ export const partners = pgTable(
     verificationStatus: verificationStatus("verification_status").notNull().default("pending"),
     accountStatus: accountStatus("account_status").notNull().default("activating"),
     completeness: smallint("completeness").notNull().default(0),
+    /** Cliente Stripe del partner, creato al primo pagamento. */
+    stripeCustomerId: text("stripe_customer_id").unique(),
     createdAt: createdAt(),
   },
   (t) => [
@@ -468,11 +470,21 @@ export const subscriptions = pgTable(
     currentPeriodEnd: timestamp("current_period_end", { withTimezone: true }).notNull(),
     leadsUsed: integer("leads_used").notNull().default(0),
     autoUseTokens: boolean("auto_use_tokens").notNull().default(false),
-    stripeSubscriptionId: text("stripe_subscription_id"),
+    stripeSubscriptionId: text("stripe_subscription_id").unique(),
     createdAt: createdAt(),
   },
   (t) => [index("subscriptions_partner_idx").on(t.partnerId)],
 );
+
+/**
+ * Operazioni Stripe già eseguite: id degli eventi webhook e chiavi di evasione (es. accredito di un
+ * Checkout). La riga si inserisce nella stessa transazione dell'effetto, così un evento ripetuto
+ * non accredita due volte.
+ */
+export const stripeProcessed = pgTable("stripe_processed", {
+  key: text("key").primaryKey(),
+  createdAt: createdAt(),
+});
 
 export const tokenEntryKind = pgEnum("token_entry_kind", ["purchase", "credit", "consume", "expire", "refund"]);
 

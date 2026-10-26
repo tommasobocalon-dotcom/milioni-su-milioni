@@ -3,6 +3,8 @@ import { hasSiteAccess, parseSiteAccess } from "@/lib/domain/site-access";
 
 /** Sito di prova visibile solo al team: con SITE_ACCESS impostata ogni richiesta chiede nome e password. */
 export function proxy(request: NextRequest) {
+  // Stripe non conosce le credenziali del team: il webhook è protetto dalla firma (route.ts).
+  if (request.nextUrl.pathname === "/api/stripe/webhook") return NextResponse.next();
   const logins = parseSiteAccess(process.env.SITE_ACCESS);
   if (!logins || hasSiteAccess(request.headers.get("authorization"), logins)) return NextResponse.next();
   return new NextResponse("Sito di prova riservato al team.", {

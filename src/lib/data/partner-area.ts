@@ -44,6 +44,7 @@ export async function getSubscription(partnerId: string) {
       autoUseTokens: subscriptions.autoUseTokens,
       currentPeriodStart: subscriptions.currentPeriodStart,
       currentPeriodEnd: subscriptions.currentPeriodEnd,
+      stripeSubscriptionId: subscriptions.stripeSubscriptionId,
     })
     .from(subscriptions)
     .innerJoin(plans, eq(plans.id, subscriptions.planId))

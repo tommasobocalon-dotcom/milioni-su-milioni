@@ -45,7 +45,7 @@ export default function HomePage() {
           <p className="absolute -top-6 -left-24 max-w-52 rounded-lg border border-line bg-surface px-4 py-3 text-body-s shadow-float">
             Ciao! Sono il geco. Ti aiuto a trovare la persona giusta.
           </p>
-          <Geco outfit="saluto" size={260} priority />
+          <Geco outfit="saluto" size={260} priority still />
         </div>
       </section>
 

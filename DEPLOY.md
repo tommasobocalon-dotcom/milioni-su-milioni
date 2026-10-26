@@ -111,11 +111,69 @@ Manda a ogni persona:
 - **Caricamento foto** (logo, portfolio, foto profilo): in locale le foto vanno su disco, ma su Vercel il disco è di sola lettura. Serve Supabase Storage.
 - **SMS ed email** non partono: i codici compaiono a schermo (`DEMO_MODE`).
 - **Accesso con Google/Apple**: funziona solo dopo aver inserito le variabili `GOOGLE_*` / `APPLE_*` su Vercel, con URI di ritorno `https://gecoitalia.it/auth/google/callback` e `https://gecoitalia.it/auth/apple/callback`.
-- **Pagamenti Stripe**: non ancora collegati (acquisto token simulato).
+- **Pagamenti Stripe**: spenti finché non imposti le variabili `STRIPE_*` (vedi sotto); fino ad allora l'acquisto token è simulato.
 - I dati sono **di esempio** (partner e recensioni inventati): vanno bene finché il sito è riservato al team, **non al lancio** (PRD §5.6).
+
+## Pagamenti con Stripe
+
+Abbonamenti (mensile o annuale), pacchetti token e portale clienti passano da Stripe. Sul sito di prova usa **solo la modalità test** (chiavi `sk_test_...`): nessun addebito vero, carta di prova `4242 4242 4242 4242`.
+
+1. **Account e metodi di pagamento.** Su https://dashboard.stripe.com attiva la modalità test. In **Settings → Payment methods** lascia attive *Cards* e attiva *SEPA Direct Debit*.
+2. **Chiave segreta.** **Developers → API keys**: copia la *Secret key* in `STRIPE_SECRET_KEY` (in `.env.local` per il locale, su Vercel per il sito).
+3. **Piani e IVA.** Nel terminale, con il database a cui punta `.env.local`:
+   ```
+   npm run stripe:setup
+   ```
+   Crea in Stripe un prodotto con prezzo mensile e annuale per ogni piano (prezzi della tabella `plans`), li collega al database e crea l'aliquota IVA 22%. Copia il valore `STRIPE_TAX_RATE_ID` che stampa. Si può rilanciare quando si vuole; va rilanciato dopo `npm run db:reset`. Per il database su Supabase, lancialo con `DATABASE_URL` di Supabase.
+4. **Webhook.** **Developers → Webhooks → Add endpoint**, URL `https://gecoitalia.it/api/stripe/webhook`, eventi:
+   `checkout.session.completed`, `checkout.session.async_payment_succeeded`, `customer.subscription.created`, `customer.subscription.updated`, `customer.subscription.deleted`, `customer.subscription.paused`, `customer.subscription.resumed`, `invoice.paid`.
+   Copia il *Signing secret* (`whsec_...`) in `STRIPE_WEBHOOK_SECRET`. Il webhook non chiede la password del sito di prova: è protetto dalla firma.
+5. **Portale clienti.** **Settings → Billing → Customer portal**: attiva aggiornamento del metodo di pagamento, storico fatture, disdetta *a fine periodo* e cambio piano tra i tre prodotti `Piano ...`.
+6. **Tentativi e sospensione.** **Settings → Billing → Subscriptions and emails**: lascia i tentativi automatici (Smart Retries) e le email di pagamento fallito. Dopo l'ultimo tentativo scegli *cancel the subscription*. Al primo pagamento fallito l'app sospende subito la scheda e la riattiva da sola quando un tentativo va a buon fine.
+7. Su Vercel aggiungi `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_TAX_RATE_ID` e fai **Redeploy**.
+
+**In locale** il webhook si riceve con la [Stripe CLI](https://docs.stripe.com/stripe-cli):
+```
+stripe listen --forward-to localhost:3000/api/stripe/webhook
+```
+Il comando stampa un `whsec_...` da mettere in `STRIPE_WEBHOOK_SECRET` in `.env.local`, poi riavvia `npm run dev`.
+
+**Cosa succede quando:**
+- *Checkout pagato con carta*: il piano o i token arrivano in pochi secondi. *Con SEPA*: dopo la conferma della banca (qualche giorno lavorativo).
+- *Rinnovo pagato*: la quota lead del periodo si azzera e arrivano i token omaggio del piano.
+- *Pagamento fallito*: scheda nascosta dai risultati e richieste disattivate finché il pagamento non riesce.
+- *Disdetta dal portale*: il piano resta attivo fino a fine periodo pagato, poi la scheda esce dai risultati.
+
+**Fatture elettroniche**: Stripe emette ricevute e fatture "di cortesia". La fattura elettronica verso lo SdI non è ancora collegata: serve un provider italiano via API prima di incassare davvero.
 
 ## Al lancio pubblico
 
 1. Togli `SITE_ACCESS` e `DEMO_MODE` da Vercel. Senza `SITE_ACCESS` le scorciatoie demo si spengono comunque da sole.
 2. In `vercel.json` togli `npm run db:seed` dal *buildCommand* e svuota i dati di esempio dal database.
-3. Prima del lancio servono anche RLS, rate limit e Turnstile, provider SMS ed email reali, Stripe (vedi CLAUDE.md, "Da fare").
+3. Prima del lancio servono anche RLS, rate limit e Turnstile, provider SMS ed email reali, fatturazione elettronica SdI (vedi CLAUDE.md, "Da fare"). Per Stripe passa alle chiavi **live** e crea il webhook anche in modalità live.
+
+## Sicurezza: protezione da flood e DDoS
+
+L'applicazione ha limiti anti-abuso nel codice (OTP per contatto, tentativi di accesso per email e
+per IP, invio richieste per IP: vedi `src/lib/security/ip-limit.ts`). Questi fermano lo spam e il
+credential stuffing, **ma non un vero attacco DDoS**: un flood di richieste va assorbito al bordo,
+prima che arrivi all'applicazione.
+
+In produzione, configurare (dalla dashboard Vercel, non dal codice):
+
+- **Vercel Firewall → Attack Challenge Mode**: da attivare in caso di attacco in corso; presenta una
+  sfida ai client sospetti.
+- **Vercel Firewall → Rate Limiting**: regola per IP sulle rotte sensibili (`/accedi`, `/auth/*`,
+  l'invio richiesta), ad esempio 100 richieste/minuto per IP.
+- In alternativa o in aggiunta, mettere **Cloudflare** davanti al dominio (proxy arancione) con
+  protezione DDoS e rate limiting.
+
+La CSP e gli altri header di sicurezza sono in `next.config.ts`. La `Content-Security-Policy` usa
+`'unsafe-inline'` per gli script: come irrobustimento successivo si può passare a una CSP con nonce.
+
+### Storage dei file in produzione
+
+Su Vercel il filesystem è di sola lettura, quindi gli upload non possono andare su `public/uploads`.
+Impostare `STORAGE_PROVIDER=supabase` e le variabili `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`,
+`SUPABASE_STORAGE_BUCKET` (bucket pubblico). Senza `STORAGE_PROVIDER` in produzione l'app si ferma
+all'avvio dell'upload, per non fallire in modo silenzioso.

@@ -4,6 +4,7 @@ import { and, count, eq, gt } from "drizzle-orm";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { createSession, destroySession, landingPathFor } from "@/lib/auth/session";
+import { ipRateLimited } from "@/lib/security/ip-limit";
 import { db } from "@/lib/db/client";
 import { auditLogs, oauthAccounts, users } from "@/lib/db/schema";
 import { normalizeEmail } from "@/lib/domain/otp";
@@ -32,6 +33,7 @@ export async function signIn(rawEmail: string, password: string): Promise<AuthRe
   const email = parseEmail(rawEmail);
   if (!email) return { ok: false, error: "Controlla l'indirizzo email", field: "email" };
   if (!password || password.length > PASSWORD_MAX) return { ok: false, error: "Inserisci la password", field: "password" };
+  if (await ipRateLimited("login", 50, 15)) return { ok: false, error: "Troppi tentativi da questo dispositivo. Riprova tra qualche minuto." };
   if ((await recentFailures(email)) >= FAILED_LIMIT.attempts) {
     return { ok: false, error: `Troppi tentativi sbagliati. Riprova tra ${FAILED_LIMIT.minutes} minuti.` };
   }
@@ -54,6 +56,7 @@ export async function signUp(rawName: string, rawEmail: string, password: string
   if (!email) return { ok: false, error: "Controlla l'indirizzo email", field: "email" };
   const problem = passwordProblem(password);
   if (problem) return { ok: false, error: problem, field: "password" };
+  if (await ipRateLimited("signup", 20, 60)) return { ok: false, error: "Troppi tentativi da questo dispositivo. Riprova tra qualche minuto." };
 
   const [existing] = await db.select({ id: users.id, passwordHash: users.passwordHash }).from(users).where(eq(users.email, email)).limit(1);
   if (existing) {

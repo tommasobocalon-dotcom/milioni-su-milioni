@@ -1,9 +1,19 @@
 import type { Metadata, Viewport } from "next";
-import { DM_Sans, Fraunces } from "next/font/google";
+import localFont from "next/font/local";
 import "./globals.css";
 
-const fraunces = Fraunces({ variable: "--font-fraunces", subsets: ["latin"], weight: ["600"] });
-const dmSans = DM_Sans({ variable: "--font-dm-sans", subsets: ["latin"] });
+const fraunces = localFont({
+  variable: "--font-fraunces",
+  src: "./fonts/fraunces-latin-600-normal.woff2",
+  weight: "600",
+  display: "swap",
+});
+const dmSans = localFont({
+  variable: "--font-dm-sans",
+  src: "./fonts/dm-sans-latin-wght-normal.woff2",
+  weight: "100 1000",
+  display: "swap",
+});
 
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.APP_URL ?? "http://localhost:3000"),

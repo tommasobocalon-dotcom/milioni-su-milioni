@@ -1,9 +1,10 @@
 import "server-only";
 import { randomBytes } from "node:crypto";
+import { createRemoteJWKSet, jwtVerify } from "jose";
 import { and, eq } from "drizzle-orm";
 import { db } from "@/lib/db/client";
 import { auditLogs, oauthAccounts, users } from "@/lib/db/schema";
-import { appleClientSecret, checkIdTokenClaims, decodeJwtPayload, pkceChallenge, type JwtClaims } from "@/lib/domain/oauth";
+import { appleClientSecret, pkceChallenge, type JwtClaims } from "@/lib/domain/oauth";
 import { normalizeEmail } from "@/lib/domain/otp";
 
 /**
@@ -13,6 +14,12 @@ import { normalizeEmail } from "@/lib/domain/otp";
 
 export type OAuthProvider = "google" | "apple";
 export const OAUTH_COOKIE = "geco_oauth";
+
+// Chiavi pubbliche dei provider per verificare la firma dell'id_token (jose le scarica e le mette in cache).
+const jwks = {
+  google: createRemoteJWKSet(new URL("https://www.googleapis.com/oauth2/v3/certs")),
+  apple: createRemoteJWKSet(new URL("https://appleid.apple.com/auth/keys")),
+};
 
 type Flow = { provider: OAuthProvider; state: string; nonce: string; verifier: string };
 
@@ -126,9 +133,17 @@ export async function finishOAuth(
     cache: "no-store",
   });
   const json = (await res.json().catch(() => ({}))) as { id_token?: string };
-  const claims: JwtClaims | null = res.ok && json.id_token ? decodeJwtPayload(json.id_token) : null;
-  const issuers = provider === "google" ? ["https://accounts.google.com", "accounts.google.com"] : ["https://appleid.apple.com"];
-  if (!claims || checkIdTokenClaims(claims, { issuers, audience: cfg.clientId, nonce: flow.nonce, now: new Date() })) {
+  if (!res.ok || !json.id_token) throw new OAuthError("token");
+  // Verifica crittografica dell'id_token: firma con le chiavi del provider, piu emittente, destinatario e scadenza.
+  let claims: JwtClaims;
+  try {
+    const { payload } = await jwtVerify(json.id_token, jwks[provider], {
+      issuer: provider === "google" ? ["https://accounts.google.com", "accounts.google.com"] : "https://appleid.apple.com",
+      audience: cfg.clientId,
+    });
+    if (payload.nonce !== flow.nonce) throw new Error("nonce");
+    claims = payload as JwtClaims;
+  } catch {
     throw new OAuthError("token");
   }
 
