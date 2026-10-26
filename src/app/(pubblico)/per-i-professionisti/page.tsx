@@ -88,7 +88,7 @@ export default async function ForProfessionalsPage() {
                       </li>
                     ))}
                 </ul>
-                <ButtonLink href="/area-partner/abbonamento" variant={featured ? "primary" : "secondary"} className="mt-auto">
+                <ButtonLink href="/registrazione-partner" variant={featured ? "primary" : "secondary"} className="mt-auto">
                   Attiva {p.name}
                 </ButtonLink>
               </li>
@@ -96,8 +96,8 @@ export default async function ForProfessionalsPage() {
           })}
         </ul>
         <p className="text-body-s text-ink-2">
-          Sei già partner? Accedi e attiva il piano dall&apos;Area Partner, con pagamento sicuro su Stripe (carta o addebito SEPA).
-          La registrazione online dei nuovi partner arriva a breve: nel frattempo l&apos;account lo apre il commerciale della tua zona.
+          Registri la tua attività in pochi minuti e paghi in anticipo su Stripe, con carta o addebito SEPA. La scheda compare nei
+          risultati appena il pagamento è confermato.
         </p>
       </section>
     </>

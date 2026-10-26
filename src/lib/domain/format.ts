@@ -64,6 +64,12 @@ export function formatPhone(e164: string): string {
   return m ? `+39 ${m[1]} ${m[2]} ${m[3]}` : e164;
 }
 
+/** Pagina a cui tornare dopo l'accesso (?next=): solo percorsi di questo sito, mai un altro dominio. */
+export function safeNextPath(raw: string | undefined | null): string | null {
+  if (!raw || !raw.startsWith("/") || raw.startsWith("//") || raw.includes("\\")) return null;
+  return raw;
+}
+
 export function slugify(input: string): string {
   return input
     .normalize("NFD")

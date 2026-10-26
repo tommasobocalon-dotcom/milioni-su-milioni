@@ -49,14 +49,16 @@ export default function LoginPage({ searchParams }: PageProps<"/accedi">) {
       <div className="flex flex-col gap-10 px-4 py-6 sm:px-10 lg:px-16 lg:py-8">
         <Wordmark />
         <main id="contenuto" className="mx-auto flex w-full max-w-sm flex-1 flex-col justify-center gap-8">
-          <LoginForm
-            demo={dev ? DEMO_ACCOUNT : undefined}
-            notice={
-              <Suspense fallback={null}>
-                <OAuthNotice searchParams={searchParams} />
-              </Suspense>
-            }
-          />
+          {/* Il modulo si mostra subito; ?next= arriva appena letti i parametri della richiesta. */}
+          <Suspense fallback={<LoginForm demo={dev ? DEMO_ACCOUNT : undefined} />}>
+            {searchParams.then((sp) => (
+              <LoginForm
+                demo={dev ? DEMO_ACCOUNT : undefined}
+                next={typeof sp.next === "string" ? sp.next : undefined}
+                notice={<OAuthNotice searchParams={searchParams} />}
+              />
+            ))}
+          </Suspense>
           <p className="text-body-s text-ink-2">
             Hai un&apos;attività?{" "}
             <Link href="/per-i-professionisti" className="font-semibold text-primary underline">

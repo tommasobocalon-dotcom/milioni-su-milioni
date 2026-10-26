@@ -1,14 +1,15 @@
 import { Suspense } from "react";
 import { Check, CreditCard, FileText } from "lucide-react";
-import { openBillingPortal, startSubscriptionCheckout } from "@/app/area-partner/actions";
+import { openBillingPortal, simulateSubscription, startSubscriptionCheckout } from "@/app/area-partner/actions";
 import { CheckoutButton, PaymentNotice } from "@/components/partner/checkout-button";
 import { PartnerPageHeader } from "@/components/partner/page-header";
 import { PartnerSkeleton } from "@/components/partner/skeleton";
-import { ButtonLink } from "@/components/ui/button";
+import { Button, ButtonLink } from "@/components/ui/button";
 import { requirePartner } from "@/lib/auth/session";
 import { stripeConfigured } from "@/lib/billing/stripe";
 import { getSubscription } from "@/lib/data/partner-area";
 import { getPlans } from "@/lib/data/plans";
+import { demoMode } from "@/lib/demo-mode";
 import { formatEuro } from "@/lib/domain/format";
 
 export const metadata = { title: "Abbonamento" };
@@ -26,14 +27,17 @@ export default function SubscriptionPage({ searchParams }: PageProps<"/area-part
   return (
     <Suspense fallback={<PartnerSkeleton />}>
       {searchParams.then((sp) => (
-        <Subscription paid={sp.pagamento === "ok"} />
+        <Subscription paid={sp.pagamento === "ok"} welcome={sp.benvenuto === "1"} />
       ))}
     </Suspense>
   );
 }
 
-/** Scelta del piano con pagamento su Stripe Checkout (carta o addebito SEPA). */
-async function PlanChooser({ owner }: { owner: boolean }) {
+/**
+ * Scelta del piano con pagamento su Stripe Checkout (carta o addebito SEPA). Senza Stripe, in sviluppo e
+ * sul sito di prova, il piano si attiva senza pagamento.
+ */
+async function PlanChooser({ owner, demo }: { owner: boolean; demo: boolean }) {
   const plans = await getPlans();
   return (
     <section className="flex flex-col gap-4">
@@ -43,16 +47,37 @@ async function PlanChooser({ owner }: { owner: boolean }) {
           <li key={p.code} className="flex flex-col gap-3 rounded-lg border border-line bg-surface p-5">
             <p className="font-display text-h2">{p.name}</p>
             <p className="text-body-s text-ink-2">{p.leadsIncluded} lead inclusi ogni periodo</p>
-            <CheckoutButton action={startSubscriptionCheckout.bind(null, p.code, "monthly")} size="s" disabled={!owner}>
-              {formatEuro(p.monthlyPriceCents)} + IVA al mese
-            </CheckoutButton>
-            <CheckoutButton action={startSubscriptionCheckout.bind(null, p.code, "yearly")} size="s" variant="secondary" disabled={!owner}>
-              {formatEuro(p.yearlyPriceCents)} + IVA all&apos;anno
-            </CheckoutButton>
+            {demo ? (
+              <>
+                <form action={simulateSubscription.bind(null, p.code, "monthly")}>
+                  <Button type="submit" size="s" className="w-full" disabled={!owner}>
+                    Prova mensile senza pagare
+                  </Button>
+                </form>
+                <form action={simulateSubscription.bind(null, p.code, "yearly")}>
+                  <Button type="submit" size="s" variant="secondary" className="w-full" disabled={!owner}>
+                    Prova annuale senza pagare
+                  </Button>
+                </form>
+                <p className="text-caption text-ink-2">
+                  {formatEuro(p.monthlyPriceCents)} al mese o {formatEuro(p.yearlyPriceCents)} all&apos;anno, + IVA
+                </p>
+              </>
+            ) : (
+              <>
+                <CheckoutButton action={startSubscriptionCheckout.bind(null, p.code, "monthly")} size="s" disabled={!owner}>
+                  {formatEuro(p.monthlyPriceCents)} + IVA al mese
+                </CheckoutButton>
+                <CheckoutButton action={startSubscriptionCheckout.bind(null, p.code, "yearly")} size="s" variant="secondary" disabled={!owner}>
+                  {formatEuro(p.yearlyPriceCents)} + IVA all&apos;anno
+                </CheckoutButton>
+              </>
+            )}
           </li>
         ))}
       </ul>
       <p className="text-caption text-ink-2">
+        {demo && "Ambiente di prova: i pagamenti Stripe non sono configurati, il piano si attiva senza addebito. "}
         Pagamento anticipato con rinnovo automatico. Con l&apos;addebito SEPA l&apos;attivazione arriva alla conferma della banca, di solito
         in qualche giorno lavorativo; con la carta è immediata.
         {!owner && " Solo il titolare dell'account può attivare un piano."}
@@ -61,11 +86,12 @@ async function PlanChooser({ owner }: { owner: boolean }) {
   );
 }
 
-async function Subscription({ paid }: { paid: boolean }) {
+async function Subscription({ paid, welcome }: { paid: boolean; welcome: boolean }) {
   const { partner, memberRole } = await requirePartner();
   const sub = await getSubscription(partner.id);
   const stripeOn = stripeConfigured();
   const owner = memberRole === "owner";
+  const demo = !stripeOn && demoMode();
   const notice = paid && (
     <PaymentNotice>Il piano si attiva appena Stripe conferma il pagamento: con la carta in pochi secondi, con l&apos;addebito SEPA in qualche giorno lavorativo.</PaymentNotice>
   );
@@ -75,9 +101,15 @@ async function Subscription({ paid }: { paid: boolean }) {
       <div className="flex flex-col gap-6">
         <PartnerPageHeader title="Abbonamento" partnerName={partner.displayName} logoUrl={partner.logoUrl} />
         {notice}
+        {welcome && (
+          <p role="status" className="rounded-lg bg-subtle p-4 text-body-s">
+            <strong>Scheda creata.</strong> Ultimo passo: scegli il piano. Dopo il pagamento la scheda compare nei risultati e puoi
+            completarla con descrizione, listino e foto.
+          </p>
+        )}
         <p className="text-body">Nessun abbonamento attivo: la tua scheda non compare nei risultati.</p>
-        {stripeOn ? (
-          <PlanChooser owner={owner} />
+        {stripeOn || demo ? (
+          <PlanChooser owner={owner} demo={demo} />
         ) : (
           <ButtonLink href="/per-i-professionisti#piani" className="self-start">
             Scegli un piano
@@ -179,7 +211,7 @@ async function Subscription({ paid }: { paid: boolean }) {
           </section>
         </aside>
       </div>
-      {stripeOn && !sub.stripeSubscriptionId && <PlanChooser owner={owner} />}
+      {stripeOn && !sub.stripeSubscriptionId && <PlanChooser owner={owner} demo={false} />}
     </div>
   );
 }

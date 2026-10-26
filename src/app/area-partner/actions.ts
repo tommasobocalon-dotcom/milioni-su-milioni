@@ -8,7 +8,7 @@ import { requirePartner } from "@/lib/auth/session";
 import { putImage } from "@/lib/storage";
 import { BillingError, createPortalSession, createSubscriptionCheckout, createTokenCheckout, stripeConfigured } from "@/lib/billing/stripe";
 import { db } from "@/lib/db/client";
-import { auditLogs, leadEvents, leads, partners, partnerServices, portfolioItems, priceUnit, subscriptions, tokenLedger, users } from "@/lib/db/schema";
+import { auditLogs, leadEvents, leads, partners, partnerServices, plans, portfolioItems, priceUnit, subscriptions, tokenLedger, users } from "@/lib/db/schema";
 import { getListableServices, getPriceList, getSubscription } from "@/lib/data/partner-area";
 import { demoMode } from "@/lib/demo-mode";
 import { parseAmount } from "@/lib/domain/format";
@@ -413,4 +413,40 @@ export async function startSubscriptionCheckout(planCode: string, period: "month
 
 export async function openBillingPortal(): Promise<CheckoutState> {
   return billingAction((payer) => createPortalSession(payer.partnerId), "billing.portal");
+}
+
+/**
+ * Solo in sviluppo e sul sito di prova, senza Stripe: attiva il piano senza pagamento, per provare il
+ * percorso di registrazione. In produzione l'abbonamento nasce dal webhook di Stripe.
+ */
+export async function simulateSubscription(planCode: string, period: "monthly" | "yearly") {
+  if (!demoMode() || stripeConfigured()) return;
+  const { user, partner, memberRole } = await requirePartner();
+  if (memberRole !== "owner" || (period !== "monthly" && period !== "yearly")) return;
+  const [plan] = await db.select({ id: plans.id, name: plans.name, renewalTokens: plans.renewalTokens }).from(plans).where(eq(plans.code, planCode));
+  if (!plan) return;
+  const start = new Date();
+  const end = new Date(start);
+  if (period === "yearly") end.setFullYear(end.getFullYear() + 1);
+  else end.setMonth(end.getMonth() + 1);
+  await db.transaction(async (tx) => {
+    await tx.update(subscriptions).set({ status: "cancelled" }).where(eq(subscriptions.partnerId, partner.id));
+    await tx.insert(subscriptions).values({ partnerId: partner.id, planId: plan.id, period, status: "active", currentPeriodStart: start, currentPeriodEnd: end });
+    await tx.update(partners).set({ accountStatus: "active" }).where(eq(partners.id, partner.id));
+    // Come il webhook Stripe a ogni periodo pagato: token omaggio del piano.
+    if (plan.renewalTokens > 0) {
+      await tx.insert(tokenLedger).values({
+        partnerId: partner.id,
+        kind: "credit",
+        amount: plan.renewalTokens,
+        expiresAt: tokenExpiryFrom(start),
+        reference: `Token omaggio del piano ${plan.name} (attivazione di prova)`,
+        createdAt: start,
+      });
+    }
+    await tx.insert(auditLogs).values({ actor: user.email, action: "billing.simulated_subscription", entity: "partner", entityId: partner.id, data: { planCode, period } });
+  });
+  updateTag(`partner:${partner.slug}`);
+  updateTag("catalog");
+  revalidatePath("/area-partner", "layout");
 }

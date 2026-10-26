@@ -128,7 +128,7 @@ async function Tokens({ paid }: { paid: boolean }) {
           </ul>
           <p className="text-caption text-ink-2">
             {!stripeOn && dev
-              ? "Ambiente di prova: l'acquisto accredita i token senza pagamento. In produzione il pagamento passa da Stripe Checkout e arriva la fattura elettronica."
+              ? "Ambiente di prova: l'acquisto accredita i token senza pagamento. Con Stripe configurato il pagamento passa dal Checkout di Stripe, con ricevuta via email."
               : "Pagamento anticipato con Stripe (carta o addebito SEPA), con ricevuta via email."}
           </p>
         </section>

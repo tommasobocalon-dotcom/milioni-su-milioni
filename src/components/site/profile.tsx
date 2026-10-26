@@ -91,7 +91,11 @@ export function ProfileView({ p }: { p: PartnerProfile }) {
           <div className="flex min-w-0 flex-col gap-6">
             <section id="panoramica" className="flex flex-col gap-4 rounded-lg border border-line bg-surface p-6">
               <h2 className="font-display text-h2">Chi siamo</h2>
-              <p className="text-body">{p.description}</p>
+              {p.description ? (
+                <p className="text-body">{p.description}</p>
+              ) : (
+                <p className="text-body-s text-ink-2">{p.tagline}. Il partner non ha ancora scritto una presentazione completa.</p>
+              )}
               <ul className="flex flex-wrap gap-2" aria-label="Specializzazioni">
                 {p.specialties.map((s) => (
                   <li key={s}>

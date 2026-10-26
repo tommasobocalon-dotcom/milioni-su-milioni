@@ -13,8 +13,18 @@ type Mode = "login" | "signup";
 const providerLink =
   "inline-flex h-11 w-full items-center justify-center gap-3 rounded-md px-5 text-body font-semibold transition-colors [&_svg]:size-5 [&_svg]:shrink-0";
 
-export function LoginForm({ demo, notice }: { demo?: { email: string; password: string }; notice?: React.ReactNode }) {
-  const [mode, setMode] = useState<Mode>("login");
+export function LoginForm({
+  demo,
+  notice,
+  next,
+}: {
+  demo?: { email: string; password: string };
+  notice?: React.ReactNode;
+  /** Pagina a cui tornare dopo l'accesso (es. la registrazione partner). */
+  next?: string;
+}) {
+  // Chi arriva dalla registrazione partner di solito non ha ancora un account.
+  const [mode, setMode] = useState<Mode>(next === "/registrazione-partner" ? "signup" : "login");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -33,7 +43,7 @@ export function LoginForm({ demo, notice }: { demo?: { email: string; password: 
     setError(null);
     start(async () => {
       // Se va tutto bene l'azione fa redirect e non torna qui.
-      const res = signup ? await signUp(name, email, password) : await signIn(email, password);
+      const res = signup ? await signUp(name, email, password, next) : await signIn(email, password, next);
       if (res && !res.ok) setError(res);
     });
   }

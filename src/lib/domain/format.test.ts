@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { amountInput, formatEuro, formatPhone, formatPriceRange, formatResponseTime, parseAmount, slugify } from "./format";
+import { amountInput, formatEuro, formatPhone, formatPriceRange, formatResponseTime, parseAmount, safeNextPath, slugify } from "./format";
 
 describe("formatEuro", () => {
   it("uses Italian separators and drops zero cents", () => {
@@ -86,5 +86,21 @@ describe("amountInput", () => {
     expect(amountInput(120000)).toBe("1200");
     expect(amountInput(3250)).toBe("32,5");
     expect(amountInput(null)).toBe("");
+  });
+});
+
+describe("safeNextPath", () => {
+  it("accetta solo percorsi interni al sito", () => {
+    expect(safeNextPath("/registrazione-partner")).toBe("/registrazione-partner");
+    expect(safeNextPath("/area-partner/abbonamento?piano=media")).toBe("/area-partner/abbonamento?piano=media");
+  });
+
+  it("rifiuta indirizzi esterni e trucchi per uscire dal sito", () => {
+    expect(safeNextPath("https://esempio.com")).toBeNull();
+    expect(safeNextPath("//esempio.com")).toBeNull();
+    expect(safeNextPath("/\\esempio.com")).toBeNull();
+    expect(safeNextPath("javascript:alert(1)")).toBeNull();
+    expect(safeNextPath(undefined)).toBeNull();
+    expect(safeNextPath("")).toBeNull();
   });
 });

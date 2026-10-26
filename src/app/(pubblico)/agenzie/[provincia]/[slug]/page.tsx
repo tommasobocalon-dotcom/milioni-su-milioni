@@ -14,7 +14,8 @@ export async function generateStaticParams() {
 export async function generateMetadata({ params }: PageProps<"/agenzie/[provincia]/[slug]">): Promise<Metadata> {
   const { slug } = await params;
   const p = await getPartnerProfile(slug);
-  if (!p) return {};
+  // Schede non attive (in attivazione, sospese): nessun dato nel titolo, come per la pagina 404.
+  if (!p || p.accountStatus !== "active") return {};
   return {
     title: `${p.displayName} — agenzia immobiliare a ${p.municipalityName}`,
     description: `${p.tagline}. Valutazioni verificate, portfolio immobili e richiesta di contatto gratuita.`,

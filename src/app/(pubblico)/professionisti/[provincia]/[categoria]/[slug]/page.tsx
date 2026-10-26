@@ -14,7 +14,8 @@ export async function generateStaticParams() {
 export async function generateMetadata({ params }: PageProps<"/professionisti/[provincia]/[categoria]/[slug]">): Promise<Metadata> {
   const { slug } = await params;
   const p = await getPartnerProfile(slug);
-  if (!p) return {};
+  // Schede non attive (in attivazione, sospese): nessun dato nel titolo, come per la pagina 404.
+  if (!p || p.accountStatus !== "active") return {};
   return {
     title: `${p.displayName} — ${p.categoryName} a ${p.municipalityName}`,
     description: `${p.tagline}. Prezzi indicativi, recensioni verificate e richiesta di contatto gratuita.`,
