@@ -13,6 +13,9 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Skill di terze parti e loro output (non si modificano: `npx skills update` li sovrascrive).
+    ".claude/**",
+    ".taste-skill/**",
   ]),
 ]);
 

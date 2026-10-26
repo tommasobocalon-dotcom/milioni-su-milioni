@@ -1,0 +1,71 @@
+# Controlli a ogni push e pull request: lint, tipi, test unitari, build di produzione e test end-to-end.
+# PostgreSQL gira come servizio sulla stessa porta di quello locale (54329), così gli script non cambiano.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports:
+          - 54329:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgres://postgres:postgres@127.0.0.1:54329/postgres
+      NEXT_TELEMETRY_DISABLED: "1"
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Tipi
+        run: npm run typecheck
+
+      - name: Test unitari
+        run: npm test
+
+      - name: Database con i dati di esempio
+        run: npm run db:reset
+
+      - name: Build di produzione
+        run: npm run build
+
+      - name: Test end-to-end
+        run: npx playwright test
+        env:
+          CI: "1"
+
+      - name: Rapporto dei test end-to-end
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright
+          path: test-results/
+          retention-days: 7
