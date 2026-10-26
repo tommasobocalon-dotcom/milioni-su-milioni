@@ -1,7 +1,9 @@
 import Image from "next/image";
 import Link from "next/link";
 import { BadgeCheck, CalendarDays, Clock, Home, Image as ImageIcon, MapPin, MessageCircle, ShieldCheck } from "lucide-react";
+import { Suspense } from "react";
 import { Geco } from "@/components/site/geco";
+import { GoogleReviewsSection } from "@/components/site/google-reviews";
 import { Badge, planBadge } from "@/components/ui/badge";
 import { ButtonLink } from "@/components/ui/button";
 import { Chip } from "@/components/ui/chip";
@@ -188,6 +190,14 @@ export function ProfileView({ p }: { p: PartnerProfile }) {
               )}
             </section>
 
+            {p.googlePlaceId && (
+              <Suspense fallback={null}>
+                <GoogleReviewsSection placeId={p.googlePlaceId} />
+              </Suspense>
+            )}
+
+            {/* Con la scheda Google collegata le recensioni interne compaiono solo se ce ne sono. */}
+            {(p.rating.count > 0 || !p.googlePlaceId) && (
             <section id="recensioni" className="flex flex-col gap-5 rounded-lg border border-line bg-surface p-6">
               <div className="flex items-center gap-3">
                 <h2 className="font-display text-h2">Recensioni verificate</h2>
@@ -261,6 +271,7 @@ export function ProfileView({ p }: { p: PartnerProfile }) {
                 </>
               )}
             </section>
+            )}
           </div>
 
           <aside className="flex flex-col gap-6 lg:sticky lg:top-24 lg:self-start">

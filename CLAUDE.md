@@ -57,7 +57,7 @@ Aggregatore web (Veneto → Triveneto → Nord Italia) che mette in contatto cli
 - Registrazione partner self-service `/registrazione-partner` (PRD §6.1): account con ritorno automatico (`/accedi?next=`), dati azienda con controllo P.IVA, SDI o PEC, scheda creata "in attivazione" e nascosta finché il piano non è pagato; senza Stripe, in sviluppo e sul sito di prova, attivazione del piano senza pagamento.
 - Pagine *Come funziona* (ordinamento e recensioni spiegati), *Per i professionisti* (piani), privacy e termini in bozza, 404.
 
-**Da fare** (prossimi passi suggeriti): fatturazione elettronica SdI collegata al webhook Stripe, Area Partner ridotta al solo pagamento quando l'account è sospeso, verifica partner (badge) dal Backoffice, invito dei commerciali con piano precompilato, editor della scheda/listino/portfolio con upload foto, area cliente e recensioni dopo il ricontatto, mappa MapLibre, provider reali SMS/email, RLS, Area Commerciale, Backoffice Admin, assistente AI, deploy (Vercel + Supabase UE).
+**Da fare** (prossimi passi suggeriti): fatturazione elettronica SdI collegata al webhook Stripe, Area Partner ridotta al solo pagamento quando l'account è sospeso, verifica partner (badge) dal Backoffice, invito dei commerciali con piano precompilato, editor della scheda/listino/portfolio con upload foto, chiave Google Places (recensioni Google gia pronte nel codice), mappa MapLibre, provider reali SMS/email, RLS, Area Commerciale, Backoffice Admin, assistente AI, deploy (Vercel + Supabase UE).
 
 **Valori provvisori presi dal Figma** (da confermare, PRD §20): nome "geco", prezzi piani (annuale = 10 mensilità), 8 token per lead oltre quota con sblocco entro 48 h, pacchetti token 50/120/300 a 49/99/219 €, tono "tu" anche verso i partner.
 

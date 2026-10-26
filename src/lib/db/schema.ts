@@ -247,6 +247,8 @@ export const partners = pgTable(
     completeness: smallint("completeness").notNull().default(0),
     /** Cliente Stripe del partner, creato al primo pagamento. */
     stripeCustomerId: text("stripe_customer_id").unique(),
+    /** Scheda Google Maps collegata dal partner: le recensioni si leggono da Google, qui solo l'id (regole Google). */
+    googlePlaceId: text("google_place_id"),
     createdAt: createdAt(),
   },
   (t) => [

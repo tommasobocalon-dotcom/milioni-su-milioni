@@ -50,6 +50,13 @@
       "when": 1793047922338,
       "tag": "0006_auth_email_tokens",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1793048943809,
+      "tag": "0007_partner_google_place",
+      "breakpoints": true
     }
   ]
 }

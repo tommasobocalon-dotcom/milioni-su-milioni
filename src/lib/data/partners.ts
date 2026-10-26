@@ -46,6 +46,7 @@ export async function getPartnerProfile(slug: string) {
       email: partners.email,
       verified: sql<boolean>`${partners.verificationStatus} = 'verified'`,
       accountStatus: partners.accountStatus,
+      googlePlaceId: partners.googlePlaceId,
       categoryId: categories.id,
       categoryName: categories.name,
       categoryPlural: categories.pluralName,

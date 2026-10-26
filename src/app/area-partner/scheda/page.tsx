@@ -4,11 +4,14 @@ import { ComingSoon } from "@/components/partner/coming-soon";
 import { PartnerPageHeader } from "@/components/partner/page-header";
 import { PortfolioManager } from "@/components/partner/portfolio-manager";
 import { PartnerSkeleton } from "@/components/partner/skeleton";
+import { GoogleLink, GoogleUnlinkButton } from "@/components/partner/google-link";
 import { ButtonLink } from "@/components/ui/button";
 import { Chip } from "@/components/ui/chip";
 import { requirePartner } from "@/lib/auth/session";
 import { getSubscription } from "@/lib/data/partner-area";
 import { getPartnerProfile } from "@/lib/data/partners";
+import { formatRating } from "@/lib/domain/format";
+import { getGoogleReviews, googlePlacesEnabled } from "@/lib/google/places";
 
 export const metadata = { title: "La mia scheda" };
 
@@ -49,6 +52,7 @@ async function Profile() {
           <span className="font-semibold">Zone servite:</span> {p.areas.join(", ")}
         </p>
       </section>
+      <GoogleReviewsCard placeId={p.googlePlaceId} defaultQuery={`${p.displayName} ${p.municipalityName}`} href={p.href} />
       <PortfolioManager partnerId={partner.id} isAgency={partner.type === "agency"} />
       <ComingSoon
         title="Prossimamente"
@@ -60,5 +64,43 @@ async function Profile() {
         ]}
       />
     </div>
+  );
+}
+
+/** Collegamento alla scheda Google Maps: da lì arrivano le recensioni mostrate sulla scheda pubblica. */
+async function GoogleReviewsCard({ placeId, defaultQuery, href }: { placeId: string | null; defaultQuery: string; href: string }) {
+  const linked = placeId ? await getGoogleReviews(placeId) : null;
+  return (
+    <section aria-labelledby="google-titolo" className="flex flex-col gap-4 rounded-lg border border-line bg-surface p-6">
+      <div className="flex flex-col gap-1">
+        <h2 id="google-titolo" className="text-h3 font-semibold">
+          Recensioni Google
+        </h2>
+        <p className="text-body-s text-ink-2">
+          Collega la tua scheda Google Maps: voto e ultime recensioni compaiono sulla tua scheda geco, con il link a Google.
+        </p>
+      </div>
+      {!googlePlacesEnabled() ? (
+        <p className="rounded-md bg-subtle p-3 text-body-s text-ink-2">Il collegamento con Google non è ancora attivo: torna presto.</p>
+      ) : placeId ? (
+        <div className="flex flex-col gap-3 rounded-md bg-subtle p-4 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-body-s">
+            {linked ? (
+              <>
+                Collegata: <strong>{formatRating(linked.rating)} su 5</strong> con {linked.count.toLocaleString("it-IT")} recensioni.{" "}
+                <a href={`${href}#recensioni-google`} target="_blank" className="font-semibold text-primary underline">
+                  Vedi sulla scheda
+                </a>
+              </>
+            ) : (
+              "Scheda Google collegata, ma per ora Google non ha voti da mostrare."
+            )}
+          </p>
+          <GoogleUnlinkButton />
+        </div>
+      ) : (
+        <GoogleLink defaultQuery={defaultQuery} />
+      )}
+    </section>
   );
 }
