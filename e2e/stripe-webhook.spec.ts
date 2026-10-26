@@ -1,12 +1,12 @@
 import { expect, test } from "@playwright/test";
 import postgres from "postgres";
 import Stripe from "stripe";
-import { E2E_STRIPE_WEBHOOK_SECRET } from "../playwright.config";
+import { E2E_DATABASE_URL, E2E_STRIPE_WEBHOOK_SECRET } from "../playwright.config";
 
-const sql = postgres("postgres://postgres:postgres@127.0.0.1:54329/postgres", { max: 1, onnotice: () => {} });
+const sql = postgres(E2E_DATABASE_URL, { max: 1, onnotice: () => {} });
 test.afterAll(() => sql.end());
 
-const NO_SECRET = "server avviato senza STRIPE_WEBHOOK_SECRET di test: chiudi `npm run dev` e rilancia i test";
+const NO_SECRET = "server avviato senza STRIPE_WEBHOOK_SECRET di test: chiudi il server dei test sulla porta 3100 e rilancia i test";
 
 /** Evento firmato come lo firmerebbe Stripe con il segreto del webhook. */
 function signed(event: object, secret = E2E_STRIPE_WEBHOOK_SECRET) {

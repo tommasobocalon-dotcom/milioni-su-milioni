@@ -41,6 +41,7 @@ Aggregatore web (Veneto → Triveneto → Nord Italia) che mette in contatto cli
 - **Accessibilità**: WCAG 2.1 AA. Palette: non usare `--salvia-500` come sfondo per testo bianco.
 - **Mobile-first**, PWA per partner e commerciali.
 - **Test**: TDD dove possibile (Vitest unit, Playwright E2E). Non modificare i test per farli passare (plugin `protect-tests` attivo).
+- **E2E isolati**: `npx playwright test` avvia un proprio server sulla porta 3100 (cartella `.next-e2e`) con il database `geco_e2e` e azzera solo quello (`db-reset` rifiuta gli altri). Il database `postgres` di `npm run dev` non viene mai toccato.
 - Ambiente: **Windows 11**, shell PowerShell 5.1 (niente `&&`) oppure Git Bash.
 - Repo git nella cartella del progetto (branch `main`), Git per Windows installato. In PowerShell 5.1 non riscrivere file con `Get-Content`/`Set-Content` (rompe gli accenti UTF-8): usare gli strumenti di modifica file.
 - Con Cache Components: letture di cookie, `searchParams`, `params` e dati non in cache vanno dentro `<Suspense>`; prima di `new Date()` in un componente chiamare `await connection()`. Verificare sempre con `npm run build` e controllando la console (insight di Next).

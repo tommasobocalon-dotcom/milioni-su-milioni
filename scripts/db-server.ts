@@ -7,7 +7,7 @@ import { existsSync } from "node:fs";
 import { connect as tcpConnect } from "node:net";
 import { migrate } from "drizzle-orm/postgres-js/migrator";
 import EmbeddedPostgres from "embedded-postgres";
-import { connect } from "./db-connection";
+import { connect, ensureDatabase } from "./db-connection";
 import { seed } from "./seed";
 
 const portInUse = (port: number) =>
@@ -19,6 +19,22 @@ const portInUse = (port: number) =>
     socket.on("error", () => resolve(false));
   });
 
+/**
+ * Primo avvio: crea il database di DATABASE_URL (es. quello dei test), le tabelle e i dati di esempio,
+ * così `npm run dev` basta da solo. Poi applica sempre le migrazioni nuove.
+ */
+async function prepareDatabase() {
+  await ensureDatabase();
+  const { sql, db } = connect();
+  const [{ exists }] = await sql<{ exists: boolean }[]>`select to_regclass('public.partners') is not null as exists`;
+  await migrate(db, { migrationsFolder: "drizzle" });
+  if (!exists) {
+    await seed(db);
+    console.log("[db] tabelle create e dati di esempio caricati");
+  }
+  await sql.end();
+}
+
 async function main() {
   const databaseDir = process.env.PG_DATA_DIR ?? ".data/postgres";
   const port = Number(process.env.PG_PORT ?? 54329);
@@ -26,6 +42,7 @@ async function main() {
   if (await portInUse(port)) {
     // Un database è già in ascolto (per esempio avviato da un'altra finestra): lo riusiamo.
     console.log(`[db] PostgreSQL già in esecuzione su 127.0.0.1:${port}`);
+    await prepareDatabase();
     setInterval(() => {}, 1 << 30);
     return;
   }
@@ -45,18 +62,7 @@ async function main() {
   }
   await pg.start();
   console.log(`[db] PostgreSQL pronto su 127.0.0.1:${port} — dati in ${databaseDir}`);
-
-  // Primo avvio: crea le tabelle e carica i dati di esempio, così `npm run dev` basta da solo.
-  const { sql, db } = connect();
-  const [{ exists }] = await sql<{ exists: boolean }[]>`select to_regclass('public.partners') is not null as exists`;
-  if (!exists) {
-    await migrate(db, { migrationsFolder: "drizzle" });
-    await seed(db);
-    console.log("[db] tabelle create e dati di esempio caricati");
-  } else {
-    await migrate(db, { migrationsFolder: "drizzle" });
-  }
-  await sql.end();
+  await prepareDatabase();
 
   const shutdown = async () => {
     await pg.stop();
