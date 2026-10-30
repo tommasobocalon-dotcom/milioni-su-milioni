@@ -7,6 +7,7 @@ import {
   pgEnum,
   pgTable,
   primaryKey,
+  serial,
   smallint,
   text,
   timestamp,
@@ -552,6 +553,59 @@ export const boosts = pgTable(
     createdAt: createdAt(),
   },
   (t) => [index("boosts_lookup_idx").on(t.categoryId, t.provinceId, t.endsAt)],
+);
+
+// ---------------------------------------------------------------------------
+// Assistenza: ticket da modulo del sito, Area Partner ed email
+// ---------------------------------------------------------------------------
+
+export const ticketStatus = pgEnum("ticket_status", ["open", "waiting", "resolved"]);
+export const ticketChannel = pgEnum("ticket_channel", ["web", "email", "partner_area"]);
+/** inbound: da cliente o partner; reply: risposta dell'assistenza (va anche per email); note: interna, mai mostrata. */
+export const ticketMessageKind = pgEnum("ticket_message_kind", ["inbound", "reply", "note"]);
+
+export const supportTickets = pgTable(
+  "support_tickets",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    /** Numero mostrato a chi scrive e messo nell'oggetto delle email ([geco #12]) per legare le risposte. */
+    number: serial("number").notNull().unique(),
+    subject: text("subject").notNull(),
+    topic: text("topic").notNull().default("other"),
+    status: ticketStatus("status").notNull().default("open"),
+    channel: ticketChannel("channel").notNull(),
+    requesterName: text("requester_name").notNull(),
+    requesterEmail: text("requester_email").notNull(),
+    /** Account e azienda di chi scrive, riconosciuti dall'email o dalla sessione. */
+    userId: uuid("user_id").references(() => users.id, { onDelete: "set null" }),
+    partnerId: uuid("partner_id").references(() => partners.id, { onDelete: "set null" }),
+    assigneeId: uuid("assignee_id").references(() => users.id, { onDelete: "set null" }),
+    lastMessageAt: timestamp("last_message_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    index("support_tickets_status_idx").on(t.status, t.lastMessageAt),
+    index("support_tickets_partner_idx").on(t.partnerId),
+    index("support_tickets_requester_idx").on(t.requesterEmail),
+  ],
+);
+
+export const supportMessages = pgTable(
+  "support_messages",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    ticketId: uuid("ticket_id")
+      .notNull()
+      .references(() => supportTickets.id, { onDelete: "cascade" }),
+    kind: ticketMessageKind("kind").notNull(),
+    authorName: text("author_name").notNull(),
+    authorUserId: uuid("author_user_id").references(() => users.id, { onDelete: "set null" }),
+    body: text("body").notNull(),
+    /** Message-ID dell'email in arrivo: la stessa email consegnata due volte non crea due messaggi. */
+    emailMessageId: text("email_message_id").unique(),
+    createdAt: createdAt(),
+  },
+  (t) => [index("support_messages_ticket_idx").on(t.ticketId, t.createdAt)],
 );
 
 // ---------------------------------------------------------------------------

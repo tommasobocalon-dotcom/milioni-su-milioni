@@ -1,6 +1,6 @@
 import { sql as raw } from "drizzle-orm";
 import { connect } from "./db-connection";
-import { seed } from "./seed";
+import { ensureDemoAdmin, seed } from "./seed";
 
 async function main() {
   const { sql, db } = connect();
@@ -10,6 +10,12 @@ async function main() {
   } else {
     await seed(db);
     console.log("[db] dati di esempio inseriti");
+  }
+  // Sito di prova (protetto da SITE_ACCESS, con DEMO_MODE=1): l'amministratore di prova del gestionale
+  // si aggiunge anche se il database era già pieno. Sul sito pubblico queste variabili non ci sono.
+  if (process.env.DEMO_MODE === "1" && process.env.SITE_ACCESS?.trim()) {
+    await ensureDemoAdmin(db);
+    console.log("[db] amministratore di prova del gestionale presente");
   }
   await sql.end();
 }

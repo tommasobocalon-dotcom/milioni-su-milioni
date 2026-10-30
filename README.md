@@ -22,6 +22,7 @@ Apri http://localhost:3000. Al primo avvio il database locale viene creato in `.
 
 - **Area Partner**: http://localhost:3000/accedi con `mario@rossiimpianti.it` e password `geco-demo-2026` (Rossi Impianti). Per entrare come cliente: "Crea account" con qualsiasi email. Google e Apple funzionano solo dopo aver compilato le variabili `GOOGLE_*` / `APPLE_*` in `.env.local` (istruzioni in `.env.example`); in sviluppo SMS ed email non partono: i codici compaiono a schermo e nel terminale.
 - **Richiesta di contatto**: da qualsiasi profilo, "Richiedi contatto". Anche qui il codice SMS compare a schermo.
+- **Gestionale** (Backoffice): http://localhost:3000/admin con `admin@gecoitalia.it` e la stessa password `geco-demo-2026`. Assistenza (richieste dal sito, dall'Area Partner e per email), partner (verifica, sospensione, token omaggio), segnalazioni dei lead, recensioni, registro attività. Sul sito di prova (con `SITE_ACCESS` e `DEMO_MODE=1`) lo stesso account viene creato al deploy; sul sito pubblico si entra con le email di `ADMIN_EMAILS` ([ATTIVAZIONE-SERVIZI.md](ATTIVAZIONE-SERVIZI.md), sezione 4).
 
 ## Sito di prova online
 
@@ -43,12 +44,15 @@ https://gecoitalia.it, riservato al team con nome e password: come pubblicarlo i
 
 ```
 src/app/(pubblico)/     pagine pubbliche: home, ricerca, profili, richiesta di contatto
-src/app/area-partner/   Area Partner: panoramica, lead, token, listino, abbonamento
+src/app/area-partner/   Area Partner: panoramica, lead, token, listino, abbonamento, assistenza
+src/app/admin/          gestionale: assistenza, partner, segnalazioni, recensioni, registro attività
+src/app/api/            webhook Stripe e email in arrivo all'assistenza
 src/app/accedi/         accesso e registrazione con email e password
 src/app/auth/           ritorno da Google e Apple (OAuth)
 src/lib/domain/         regole di business pure e testate (lead, token, OTP, ordinamento)
 src/lib/data/           letture dal database (server-only)
 src/lib/leads/          consegna dei lead: quota, token, duplicati, sblocco
+src/lib/support/        ticket di assistenza: apertura, email in arrivo, risposte del team
 src/lib/auth/           codici OTP, sessioni, Google/Apple
 src/lib/db/             schema Drizzle e connessione
 scripts/                database locale, migrazioni, dati di esempio

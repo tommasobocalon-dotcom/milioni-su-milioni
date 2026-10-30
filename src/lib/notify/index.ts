@@ -16,25 +16,27 @@ export async function sendSms(to: string, text: string): Promise<void> {
   throw new Error(`Provider SMS "${provider}" non ancora configurato`);
 }
 
-export async function sendEmail(to: string, subject: string, text: string): Promise<void> {
+/** `replyTo`: dove arrivano le risposte (es. la casella dell'assistenza, che apre o aggiorna i ticket). */
+export async function sendEmail(to: string, subject: string, text: string, options: { replyTo?: string } = {}): Promise<void> {
   const provider = process.env.EMAIL_PROVIDER ?? "console";
   if (provider === "console") {
-    console.log(`\n[email → ${to}] ${subject}\n${text}\n`);
+    const replyTo = options.replyTo ? ` (rispondi a ${options.replyTo})` : "";
+    console.log(`\n[email → ${to}]${replyTo} ${subject}\n${text}\n`);
     return;
   }
-  if (provider === "resend") return sendWithResend(to, subject, text);
+  if (provider === "resend") return sendWithResend(to, subject, text, options.replyTo);
   throw new Error(`Provider email "${provider}" non ancora configurato`);
 }
 
 /** Resend (server UE disponibili): una chiamata HTTP, senza librerie. */
-async function sendWithResend(to: string, subject: string, text: string): Promise<void> {
+async function sendWithResend(to: string, subject: string, text: string, replyTo?: string): Promise<void> {
   const key = process.env.RESEND_API_KEY;
   const from = process.env.EMAIL_FROM;
   if (!key || !from) throw new Error("RESEND_API_KEY o EMAIL_FROM mancanti");
   const res = await fetch("https://api.resend.com/emails", {
     method: "POST",
     headers: { authorization: `Bearer ${key}`, "content-type": "application/json" },
-    body: JSON.stringify({ from, to: [to], subject, text }),
+    body: JSON.stringify({ from, to: [to], subject, text, ...(replyTo ? { reply_to: replyTo } : {}) }),
   });
   if (!res.ok) throw new Error(`Invio email non riuscito (${res.status}): ${await res.text()}`);
 }

@@ -9,6 +9,7 @@ const COLUMNS = [
       { href: "/trova-professionista", label: "Trova Professionista" },
       { href: "/come-funziona", label: "Come funziona" },
       { href: "/come-funziona#recensioni", label: "Recensioni verificate" },
+      { href: "/assistenza", label: "Assistenza" },
     ],
   },
   {
