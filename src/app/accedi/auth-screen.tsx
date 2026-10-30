@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Suspense } from "react";
+import { preload } from "react-dom";
 import { Check } from "lucide-react";
 import { Geco } from "@/components/site/geco";
 import { LoginForm, type Audience } from "@/components/site/login-form";
@@ -100,6 +101,8 @@ export function AuthScreen({ audience, searchParams }: { audience: Audience; sea
 /** Cornice delle pagine di accesso: modulo a sinistra, geco e punti di forza a destra. */
 export function AuthShell({ audience = "client", children }: { audience?: Audience; children: React.ReactNode }) {
   const screen = SCREEN[audience];
+  // Il geco della transizione dopo l'accesso (components/site/welcome.tsx): pronto prima di entrare.
+  preload("/geco/anim/cammina.webp", { as: "image", fetchPriority: "low" });
   return (
     <div className="grid min-h-dvh lg:grid-cols-[minmax(0,1fr)_minmax(0,0.9fr)]">
       <div className="flex flex-col gap-10 px-4 py-6 sm:px-10 lg:px-16 lg:py-8">

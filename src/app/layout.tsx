@@ -1,5 +1,8 @@
 import type { Metadata, Viewport } from "next";
 import localFont from "next/font/local";
+import { Suspense } from "react";
+import { WelcomeOverlay, WelcomeTransition } from "@/components/site/welcome";
+import { WELCOME_HEAD_SCRIPT } from "@/lib/auth/welcome";
 import "./globals.css";
 
 const fraunces = localFont({
@@ -28,8 +31,18 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="it" className={`${fraunces.variable} ${dmSans.variable} h-full antialiased`}>
-      <body className="flex min-h-full flex-col">{children}</body>
+    // suppressHydrationWarning: lo script in <head> può aggiungere data-benvenuto a <html> prima di React.
+    <html lang="it" className={`${fraunces.variable} ${dmSans.variable} h-full antialiased`} suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: WELCOME_HEAD_SCRIPT }} />
+      </head>
+      <body className="flex min-h-full flex-col">
+        <WelcomeOverlay />
+        <Suspense fallback={null}>
+          <WelcomeTransition />
+        </Suspense>
+        {children}
+      </body>
     </html>
   );
 }

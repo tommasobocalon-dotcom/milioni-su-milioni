@@ -67,6 +67,8 @@ export function LoginForm({
   const [pending, start] = useTransition();
   const signup = mode === "signup";
   const copy = COPY[audience];
+  // Arriva dalla barra di ricerca della Home: dopo l'accesso torna all'elenco delle aziende (/cerca).
+  const fromSearch = !!next && /^\/trova-(casa|professionista)\b/.test(next);
   // Google e Apple riportano chi parte dall'accesso aziende alla pagina aziende (vedi /auth/[provider]).
   const providerQuery = audience === "business" ? "?per=azienda" : "";
 
@@ -97,6 +99,11 @@ export function LoginForm({
         <h1 className="font-display text-h1">{copy[mode].title}</h1>
         <p className="text-body text-ink-2">{copy[mode].text}</p>
       </div>
+      {fromSearch && (
+        <p role="status" className="rounded-md bg-subtle px-3.5 py-2.5 text-body-s text-ink">
+          Accedi o crea un account: subito dopo ti mostriamo tutte le aziende disponibili per la tua ricerca.
+        </p>
+      )}
       {notice}
       <div role="group" aria-label="Accedi o crea un account" className="grid grid-cols-2 gap-1 rounded-md bg-muted p-1">
         {(

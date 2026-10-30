@@ -90,6 +90,47 @@ const POSES = {
       },
     ],
   },
+  cammina: {
+    // transizione dopo l'accesso: il geco attraversa lo schermo, zampe a coppie diagonali come una lucertola vera
+    lato: 320,
+    fps: 16,
+    src: "scontornati/geco-v1-arrampicata.png",
+    durata: 0.75,
+    zone: [
+      {
+        // braccio a sinistra nell'immagine: avanti = in senso orario, verso la testa
+        mask: poly([0.06, 0.25], [0.25, 0.25], [0.28, 0.35], [0.315, 0.36], [0.315, 0.45], [0.2, 0.46], [0.06, 0.45]),
+        blur: 2,
+        giuntura: { from: [0.315, 0.4], to: [0.25, 0.4] },
+        perno: [0.305, 0.4],
+        chiavi: [[0, 12], [0.5, -12], [1, 12]],
+      },
+      {
+        // braccio a destra: in diagonale con la zampa posteriore sinistra
+        mask: poly([0.532, 0.21], [0.54, 0.14], [0.7, 0.14], [0.7, 0.31], [0.6, 0.32], [0.56, 0.39], [0.495, 0.39], [0.5, 0.3], [0.522, 0.26]),
+        blur: 2,
+        giuntura: { from: [0.495, 0.34], to: [0.56, 0.3] },
+        perno: [0.5, 0.345],
+        chiavi: [[0, 12], [0.5, -12], [1, 12]],
+      },
+      {
+        // zampa posteriore a destra: in coppia con il braccio sinistro
+        mask: poly([0.51, 0.54], [0.58, 0.53], [0.77, 0.53], [0.77, 0.76], [0.62, 0.76], [0.56, 0.71], [0.51, 0.71]),
+        blur: 2,
+        giuntura: { from: [0.51, 0.63], to: [0.57, 0.6] },
+        perno: [0.515, 0.64],
+        chiavi: [[0, -12], [0.5, 12], [1, -12]],
+      },
+      {
+        // zampa posteriore a sinistra
+        mask: poly([0.11, 0.74], [0.26, 0.7], [0.38, 0.71], [0.39, 0.8], [0.33, 0.98], [0.11, 0.98]),
+        blur: 2,
+        giuntura: { from: [0.385, 0.75], to: [0.3, 0.77] },
+        perno: [0.37, 0.75],
+        chiavi: [[0, -12], [0.5, 12], [1, -12]],
+      },
+    ],
+  },
   recensioni: {
     lato: 192,
     fps: 12, // piccola (96 px) e lenta: bastano meno fotogrammi, e il file resta leggero

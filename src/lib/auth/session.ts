@@ -6,6 +6,7 @@ import { redirect } from "next/navigation";
 import { connection } from "next/server";
 import { db } from "@/lib/db/client";
 import { partnerMembers, partners, sessions, users } from "@/lib/db/schema";
+import { WELCOME_COOKIE } from "./welcome";
 
 const COOKIE = "geco_session";
 const TTL_DAYS = 30;
@@ -23,6 +24,13 @@ export async function createSession(userId: string) {
     sameSite: "lax",
     path: "/",
     expires: expiresAt,
+  });
+  // Leggibile dal browser e di un minuto: fa partire la transizione di benvenuto sulla pagina successiva.
+  (await cookies()).set(WELCOME_COOKIE, "1", {
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    path: "/",
+    maxAge: 60,
   });
 }
 

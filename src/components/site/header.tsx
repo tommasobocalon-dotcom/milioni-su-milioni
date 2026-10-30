@@ -6,6 +6,8 @@ import { Wordmark } from "./wordmark";
 const NAV = [
   { href: "/trova-casa", label: "Trova Casa" },
   { href: "/trova-professionista", label: "Trova Professionista" },
+  { href: "/confronta-prezzi", label: "Confronta prezzi" },
+  { href: "/vicino-a-te", label: "Vicino a te" },
   { href: "/come-funziona", label: "Come funziona" },
 ];
 
@@ -14,14 +16,14 @@ export function SiteHeader() {
     <header className="sticky top-0 z-30 border-b border-line bg-surface">
       <div className="container-page flex h-16 items-center justify-between gap-6">
         <Wordmark />
-        <nav aria-label="Principale" className="hidden items-center gap-7 md:flex">
+        <nav aria-label="Principale" className="hidden items-center gap-6 xl:flex">
           {NAV.map((n) => (
             <Link key={n.href} href={n.href} className="text-body-s font-semibold text-ink hover:text-primary">
               {n.label}
             </Link>
           ))}
         </nav>
-        <div className="hidden items-center gap-4 md:flex">
+        <div className="hidden items-center gap-4 xl:flex">
           <Link href="/accedi" className="text-body-s font-semibold text-primary hover:underline">
             Accedi
           </Link>
@@ -33,7 +35,7 @@ export function SiteHeader() {
           </ButtonLink>
         </div>
         {/* Menu mobile senza JavaScript */}
-        <details className="relative md:hidden">
+        <details className="relative xl:hidden">
           <summary className="flex size-11 cursor-pointer list-none items-center justify-center rounded-md hover:bg-subtle [&::-webkit-details-marker]:hidden">
             <Menu className="size-6" aria-hidden />
             <span className="sr-only">Apri il menu</span>

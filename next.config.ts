@@ -25,7 +25,8 @@ const securityHeaders = [
   { key: "X-Content-Type-Options", value: "nosniff" },
   { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
   { key: "X-Frame-Options", value: "DENY" },
-  { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=()" },
+  // La posizione serve solo a "Vicino a te", e solo se la persona la concede (pulsante "Usa la mia posizione").
+  { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=(self)" },
   { key: "Cross-Origin-Opener-Policy", value: "same-origin" },
   // HSTS: i browser lo applicano solo su HTTPS (ignorato su localhost http).
   { key: "Strict-Transport-Security", value: "max-age=63072000; includeSubDomains; preload" },
