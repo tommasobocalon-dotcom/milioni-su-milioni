@@ -145,7 +145,7 @@ Ogni collegamento e scollegamento viene registrato (tabella `audit_logs`, azioni
 
 ## 4. Gestionale e assistenza
 
-Il gestionale è su `/admin` (stesso sito, stesso database: non va collegato a niente). Le richieste di assistenza ci arrivano da tre strade:
+Il gestionale è un'app a sé su `admin.gecoitalia.it` (oppure `/admin` del sito finché il dominio non è configurato: DEPLOY.md, passo 4b). Usa lo stesso database del sito: non va collegato a niente. Le richieste di assistenza ci arrivano da tre strade:
 
 1. il modulo pubblico `/assistenza` (link "Assistenza" nel footer);
 2. l'Area Partner → **Assistenza** (il partner vede anche le risposte);
@@ -158,7 +158,7 @@ Su Vercel aggiungi la tua email (più indirizzi separati da virgola):
 ```
 ADMIN_EMAILS=tuaemail@esempio.it
 ```
-Poi registrati su `/accedi` con quella email (o con Google) e **conferma l'email** dal link che ti arriva: senza conferma il gestionale resta chiuso, così nessuno può spacciarsi per te registrandosi con il tuo indirizzo. Dopo l'accesso finisci direttamente su `/admin`.
+Poi registrati sul sito (`/accedi`) con quella email e **conferma l'email** dal link che ti arriva: senza conferma il gestionale resta chiuso, così nessuno può spacciarsi per te registrandosi con il tuo indirizzo. Poi entra dalla pagina del gestionale (`admin.gecoitalia.it`, oppure `/admin/accedi`) con email e password.
 
 In locale e sul sito di prova (con `SITE_ACCESS` e `DEMO_MODE=1`) c'è già l'amministratore `admin@gecoitalia.it`, password `geco-demo-2026`: viene creato al deploy e sparisce dal processo quando, al lancio, si toglie `npm run db:seed` (DEPLOY.md). Prima del lancio cancellalo dal database.
 

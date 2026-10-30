@@ -4,7 +4,7 @@ import { Suspense } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Flag, Globe, LayoutDashboard, LifeBuoy, LogOut, ScrollText, Star, Store } from "lucide-react";
-import { logout } from "@/app/accedi/actions";
+import { logoutAdmin } from "@/app/admin/actions";
 import { Geco } from "@/components/site/geco";
 import { cn } from "@/lib/utils";
 
@@ -45,7 +45,7 @@ function ActiveNavList({ badge }: { badge: React.ReactNode }) {
 }
 
 /** Barra del Backoffice, come la sidebar partner; su telefono diventa una fila di schede scorrevole. */
-export function AdminSidebar({ ticketBadge }: { ticketBadge: React.ReactNode }) {
+export function AdminSidebar({ ticketBadge, siteHref }: { ticketBadge: React.ReactNode; siteHref: string }) {
   return (
     <aside className="flex shrink-0 flex-col bg-brand text-on-brand lg:sticky lg:top-0 lg:h-screen lg:w-64">
       <div className="flex items-center justify-between px-4 py-4 lg:px-5 lg:py-6">
@@ -58,7 +58,7 @@ export function AdminSidebar({ ticketBadge }: { ticketBadge: React.ReactNode }) 
             <span className="text-caption text-on-brand-muted">Gestionale</span>
           </span>
         </Link>
-        <form action={logout} className="lg:hidden">
+        <form action={logoutAdmin} className="lg:hidden">
           <button className="inline-flex items-center gap-1.5 rounded-md px-2 py-1.5 text-body-s text-on-brand-muted hover:text-on-brand">
             <LogOut className="size-4" aria-hidden /> Esci
           </button>
@@ -70,10 +70,10 @@ export function AdminSidebar({ ticketBadge }: { ticketBadge: React.ReactNode }) 
         </Suspense>
       </nav>
       <div className="hidden flex-col gap-1 p-4 lg:flex">
-        <Link href="/" className="inline-flex items-center gap-2 rounded-md px-3 py-2 text-body-s text-on-brand-muted hover:bg-bosco-800 hover:text-on-brand">
+        <a href={siteHref} className="inline-flex items-center gap-2 rounded-md px-3 py-2 text-body-s text-on-brand-muted hover:bg-bosco-800 hover:text-on-brand">
           <Globe className="size-4" aria-hidden /> Vai al sito
-        </Link>
-        <form action={logout}>
+        </a>
+        <form action={logoutAdmin}>
           <button className="inline-flex w-full items-center gap-2 rounded-md px-3 py-2 text-body-s text-on-brand-muted hover:bg-bosco-800 hover:text-on-brand">
             <LogOut className="size-4" aria-hidden /> Esci
           </button>

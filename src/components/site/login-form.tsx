@@ -136,7 +136,7 @@ export function LoginForm({
         <span className="h-px flex-1 bg-line" />
       </div>
 
-      <form onSubmit={submit} className="flex flex-col gap-4" noValidate>
+      <form method="post" onSubmit={submit} className="flex flex-col gap-4" noValidate>
         {signup && (
           <Field label="Nome e cognome" htmlFor="name" required error={fieldError("name")}>
             <Input

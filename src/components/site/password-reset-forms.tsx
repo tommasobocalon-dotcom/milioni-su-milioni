@@ -52,7 +52,7 @@ export function RequestResetForm() {
   }
 
   return (
-    <form onSubmit={submit} className="flex flex-col gap-4" noValidate>
+    <form method="post" onSubmit={submit} className="flex flex-col gap-4" noValidate>
       <Field label="Email" htmlFor="email" required error={error?.field === "email" ? error.error : undefined}>
         <Input
           id="email"
@@ -97,7 +97,7 @@ export function NewPasswordForm({ token }: { token: string }) {
 
   const fieldError = error?.field === "password" ? error.error : undefined;
   return (
-    <form onSubmit={submit} className="flex flex-col gap-4" noValidate>
+    <form method="post" onSubmit={submit} className="flex flex-col gap-4" noValidate>
       <Field label="Nuova password" htmlFor="password" required error={fieldError} help="Almeno 8 caratteri. Meglio una frase che ricordi facilmente.">
         <div className="relative">
           <Input
