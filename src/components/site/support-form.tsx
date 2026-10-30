@@ -51,7 +51,7 @@ export function SupportForm({ user }: { user: { name: string; email: string } | 
   const aria = (f: SupportField) => ({ "aria-invalid": error?.field === f, "aria-describedby": error?.field === f ? `${f}-error` : undefined });
 
   return (
-    <form onSubmit={submit} className="flex flex-col gap-4" noValidate>
+    <form method="post" onSubmit={submit} className="flex flex-col gap-4" noValidate>
       <div className="grid gap-4 sm:grid-cols-2">
         <Field label="Nome e cognome" htmlFor="name" required error={err("name")}>
           <Input id="name" name="name" autoComplete="name" required defaultValue={user?.name} {...aria("name")} />

@@ -10,6 +10,15 @@ const ADMIN = "admin@gecoitalia.it";
 const PARTNER = "mario@rossiimpianti.it";
 
 async function login(page: Page, email: string) {
+  if (email === ADMIN) {
+    // Il gestionale ha una pagina di accesso sua.
+    await page.goto("/admin/accedi");
+    await page.getByRole("textbox", { name: /^Email/ }).fill(email);
+    await page.getByLabel(/^Password/).fill("geco-demo-2026");
+    await page.getByRole("button", { name: "Entra nel gestionale" }).click();
+    await page.waitForURL(/\/admin$/);
+    return;
+  }
   await page.goto("/accedi");
   await page.getByRole("textbox", { name: /^Email/ }).fill(email);
   await page.getByLabel(/^Password/).fill("geco-demo-2026");
@@ -19,13 +28,31 @@ async function login(page: Page, email: string) {
 
 test("il gestionale è riservato agli amministratori", async ({ page }) => {
   await page.goto("/admin");
-  await expect(page).toHaveURL(/\/accedi\?next=%2Fadmin|\/accedi\?next=\/admin/);
+  await expect(page).toHaveURL(/\/admin\/accedi$/);
+  await expect(page.getByRole("heading", { level: 1, name: "Gestionale geco" })).toBeVisible();
 
   await login(page, PARTNER);
   await expect(page).toHaveURL(/\/area-partner$/);
   await page.goto("/admin/assistenza");
   await expect(page.getByRole("heading", { level: 1, name: "Questa pagina non c'è" })).toBeVisible();
   await expect(page.getByRole("navigation", { name: "Gestionale" })).toHaveCount(0);
+
+  // Dalla pagina di accesso del gestionale il partner può solo uscire e cambiare account.
+  await page.goto("/admin/accedi");
+  await expect(page.getByText("questo account non ha accesso al gestionale")).toBeVisible();
+  await page.getByRole("button", { name: "Esci e cambia account" }).click();
+  await expect(page.getByRole("button", { name: "Entra nel gestionale" })).toBeVisible();
+});
+
+test("il gestionale si installa come app e ha un'uscita sua", async ({ page, request }) => {
+  const manifest = await (await request.get("/gestionale/manifest.webmanifest")).json();
+  expect(manifest).toMatchObject({ start_url: "/admin", scope: "/admin", display: "standalone" });
+  expect((await request.get(manifest.icons[1].src)).status()).toBe(200);
+
+  await login(page, ADMIN);
+  await expect(page.locator('link[rel="manifest"]')).toHaveAttribute("href", "/gestionale/manifest.webmanifest");
+  await page.getByRole("button", { name: "Esci" }).filter({ visible: true }).click();
+  await expect(page).toHaveURL(/\/admin\/accedi$/);
 });
 
 test("l'amministratore risponde e il partner legge la risposta nell'Area Partner, senza le note interne", async ({ browser }) => {

@@ -1,0 +1,17 @@
+{
+  "name": "geco · Gestionale",
+  "short_name": "Gestionale",
+  "description": "Assistenza, partner, segnalazioni e recensioni di geco.",
+  "id": "/admin",
+  "start_url": "/admin",
+  "scope": "/admin",
+  "display": "standalone",
+  "lang": "it",
+  "background_color": "#F6F5EF",
+  "theme_color": "#1F3A2B",
+  "icons": [
+    { "src": "/gestionale/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/gestionale/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/gestionale/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

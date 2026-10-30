@@ -36,7 +36,8 @@ export type Audience = "client" | "business";
  * oppure alla registrazione partner se sono entrati dall'accesso aziende.
  */
 export async function landingPathFor(userId: string, audience: Audience = "client") {
-  if (await userIsAdmin(userId)) return "/admin";
+  // Con il gestionale su un indirizzo suo (ADMIN_URL) il cookie del sito non vale lì: sul sito l'admin resta un utente normale.
+  if (!process.env.ADMIN_URL && (await userIsAdmin(userId))) return "/admin";
   const [m] = await db.select({ id: partnerMembers.userId }).from(partnerMembers).where(eq(partnerMembers.userId, userId)).limit(1);
   if (m) return "/area-partner";
   return audience === "business" ? "/registrazione-partner" : "/area-cliente";
@@ -72,18 +73,18 @@ export async function requireUser(): Promise<SessionUser> {
 }
 
 /** Ruolo "admin" nel database, oppure email in ADMIN_EMAILS già confermata (src/lib/domain/admin.ts). */
-async function userIsAdmin(userId: string): Promise<boolean> {
+export async function userIsAdmin(userId: string): Promise<boolean> {
   const [u] = await db.select({ role: users.role, email: users.email, verifiedAt: users.emailVerifiedAt }).from(users).where(eq(users.id, userId)).limit(1);
   return !!u && isAdmin({ role: u.role, email: u.email, emailVerified: !!u.verifiedAt }, parseEmailList(process.env.ADMIN_EMAILS));
 }
 
 /**
- * Backoffice: ogni pagina e azione di /admin passa da qui. Chi non è entrato va al login; chi è entrato
+ * Backoffice: ogni pagina e azione di /admin passa da qui. Chi non è entrato va al login del gestionale; chi è entrato
  * ma non è amministratore riceve un 404, così il Backoffice non si rivela.
  */
 export async function requireAdmin(): Promise<SessionUser> {
   const user = await getSessionUser();
-  if (!user) redirect("/accedi?next=/admin");
+  if (!user) redirect("/admin/accedi");
   if (!(await userIsAdmin(user.id))) notFound();
   return user;
 }

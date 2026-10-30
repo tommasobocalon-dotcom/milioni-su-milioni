@@ -12,6 +12,7 @@ import {
   ticketTag,
   type InboundEmail,
 } from "@/lib/domain/support";
+import { adminBaseUrl } from "@/lib/domain/admin-host";
 import { sendEmail } from "@/lib/notify";
 
 /**
@@ -73,7 +74,7 @@ async function alertTeam(number: number, title: string, from: string, body: stri
   const to = process.env.SUPPORT_ALERT_EMAIL?.trim();
   if (!to) return;
   await quietly("email di avviso al team", () =>
-    sendEmail(to, `${title} ${ticketTag(number)}`, `${from} ha scritto:\n\n${body.slice(0, 1500)}\n\nApri nel gestionale: ${appUrl()}/admin/assistenza/${number}`),
+    sendEmail(to, `${title} ${ticketTag(number)}`, `${from} ha scritto:\n\n${body.slice(0, 1500)}\n\nApri nel gestionale: ${adminBaseUrl(process.env.ADMIN_URL, appUrl())}/assistenza/${number}`),
   );
 }
 

@@ -96,6 +96,29 @@ Da qui in poi **ogni `git push` su `main` pubblica automaticamente** una nuova v
 
 La propagazione richiede da pochi minuti a qualche ora. Quando su Vercel i domini risultano **Valid Configuration**, il certificato HTTPS viene creato da solo e https://gecoitalia.it è attivo.
 
+## Passo 4b — Il gestionale su admin.gecoitalia.it (app separata)
+
+Finché questo passo non è fatto, il gestionale è su `gecoitalia.it/admin`. Dopo, vive solo su `admin.gecoitalia.it` e dal sito `/admin` sparisce (pagina 404). Stessi dati e stesso deploy: non c'è niente da sincronizzare.
+
+**Su Vercel**
+1. **Settings → Domains → Add** e scrivi `admin.gecoitalia.it`. Vercel mostra un record **CNAME** da creare (nome `admin`, valore che finisce in `vercel-dns.com` o simile).
+2. **Settings → Environment Variables**: aggiungi `ADMIN_URL` = `https://admin.gecoitalia.it` (e controlla che `APP_URL` sia `https://gecoitalia.it`).
+3. **Deployments → ⋯ → Redeploy** sull'ultimo deploy.
+
+**Su Aruba**
+1. Gestione DNS di `gecoitalia.it` → aggiungi un record **CNAME** con nome `admin` e **il valore indicato da Vercel**. Non toccare gli altri record.
+
+Quando su Vercel `admin.gecoitalia.it` risulta **Valid Configuration**, apri https://admin.gecoitalia.it: si apre la pagina di accesso del gestionale. Sul sito di prova il browser chiede prima nome e password del team (`SITE_ACCESS`), come sul sito.
+
+**Installarlo come app** (icona sul desktop o sul telefono, finestra propria senza barra degli indirizzi):
+- **Chrome o Edge sul computer:** apri admin.gecoitalia.it e premi l'icona **Installa** a destra nella barra degli indirizzi (oppure menu ⋮ → *Trasmetti, salva e condividi* → *Installa pagina come app*).
+- **Android (Chrome):** menu ⋮ → **Installa app** / **Aggiungi a schermata Home**.
+- **iPhone (Safari):** tasto **Condividi** → **Aggiungi alla schermata Home**.
+
+Note:
+- L'accesso al gestionale è separato da quello del sito: si entra con email e password dalla sua pagina (`/admin/accedi`). Google e Apple lì non ci sono: chi ha un account nato con Google si crea una password con *Password dimenticata?*.
+- Chi è amministratore e accede **sul sito** resta lì un utente normale: il gestionale si apre solo dal suo indirizzo.
+
 ## Passo 5 — Dare l'accesso al team
 
 Manda a ogni persona:

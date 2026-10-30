@@ -34,6 +34,9 @@ const securityHeaders = [
 const nextConfig: NextConfig = {
   // Cartella propria per il server dei test end-to-end, così gira accanto a `npm run dev` (playwright.config.ts).
   ...(process.env.NEXT_DIST_DIR ? { distDir: process.env.NEXT_DIST_DIR } : {}),
+  // Per provare in locale sito e gestionale su due indirizzi (src/proxy.ts) servono due nomi diversi da
+  // "localhost": APP_URL=http://sito.localhost:3000 e ADMIN_URL=http://admin.localhost:3000.
+  allowedDevOrigins: ["sito.localhost", "admin.localhost"],
   cacheComponents: true,
   partialPrefetching: true,
   // Foto profilo fino a 2 MB più il margine del multipart.

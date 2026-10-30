@@ -2,8 +2,10 @@
 
 import { and, eq, inArray, sql } from "drizzle-orm";
 import { revalidatePath, updateTag } from "next/cache";
+import { redirect } from "next/navigation";
 import { z } from "zod";
-import { requireAdmin } from "@/lib/auth/session";
+import { signIn } from "@/app/accedi/actions";
+import { destroySession, requireAdmin } from "@/lib/auth/session";
 import { db } from "@/lib/db/client";
 import { auditLogs, leadEvents, leads, partners, reviews, subscriptions, supportMessages, supportTickets, tokenLedger } from "@/lib/db/schema";
 import { manualCreditProblem } from "@/lib/domain/admin";
@@ -20,6 +22,24 @@ import type { FormState } from "@/components/ui/message-form";
  */
 
 const Id = z.uuid();
+
+export type AdminSignInState = { error: string; field?: "email" | "password"; email: string } | null;
+
+/**
+ * Accesso al gestionale come azione del modulo: funziona anche se si preme "Entra" prima che la pagina
+ * abbia caricato JavaScript, e la password viaggia sempre nel corpo della richiesta, mai nell'indirizzo.
+ */
+export async function adminSignIn(_prev: AdminSignInState, formData: FormData): Promise<AdminSignInState> {
+  const email = String(formData.get("email") ?? "");
+  const res = await signIn(email, String(formData.get("password") ?? ""), "/admin");
+  return { error: res.error, field: res.field === "name" ? undefined : res.field, email };
+}
+
+/** Esce e torna alla pagina di accesso del gestionale (non a quella del sito). */
+export async function logoutAdmin() {
+  await destroySession();
+  redirect("/admin/accedi");
+}
 const Body = z.string().trim().min(2, "Scrivi il messaggio").max(MESSAGE_MAX, "Messaggio troppo lungo");
 
 
