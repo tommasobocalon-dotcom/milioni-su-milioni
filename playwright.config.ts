@@ -3,6 +3,9 @@ import { defineConfig } from "@playwright/test";
 /** Segreto finto per firmare gli eventi Stripe nei test del webhook (e2e/stripe-webhook.spec.ts). */
 export const E2E_STRIPE_WEBHOOK_SECRET = "whsec_e2e_solo_test_locale";
 
+/** Token finto del webhook delle email di assistenza (e2e/admin.spec.ts). */
+export const E2E_INBOUND_EMAIL_TOKEN = "e2e-token-email-solo-test-locale";
+
 /**
  * I test girano su un server e un database tutti loro (porta 3100, database geco_e2e), accanto a
  * `npm run dev` sulla 3000: l'azzeramento dei dati prima di ogni giro non tocca mai quello che si prova a mano.
@@ -38,6 +41,7 @@ export default defineConfig({
       APP_URL: `http://localhost:${E2E_PORT}`,
       NEXT_DIST_DIR: ".next-e2e",
       STRIPE_WEBHOOK_SECRET: E2E_STRIPE_WEBHOOK_SECRET,
+      INBOUND_EMAIL_TOKEN: E2E_INBOUND_EMAIL_TOKEN,
     },
     timeout: 180_000,
   },

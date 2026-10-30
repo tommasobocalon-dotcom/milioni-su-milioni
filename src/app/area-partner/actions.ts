@@ -3,6 +3,7 @@
 import { and, eq, isNotNull, max } from "drizzle-orm";
 import { randomUUID } from "node:crypto";
 import { revalidatePath, updateTag } from "next/cache";
+import { redirect } from "next/navigation";
 import { z } from "zod";
 import { requirePartner } from "@/lib/auth/session";
 import { googlePlacesEnabled, searchGooglePlaces } from "@/lib/google/places";
@@ -20,6 +21,8 @@ import { TOKEN_PACKAGES } from "@/lib/domain/offers";
 import { tokenExpiryFrom } from "@/lib/domain/tokens";
 import { activateBoost, BoostNotActivatableError, LeadNotUnlockableError, unlockLead } from "@/lib/leads/service";
 import { LEAD_STATUSES, statusInfo } from "@/lib/leads/status";
+import { MESSAGE_MAX, TICKET_TOPICS } from "@/lib/domain/support";
+import { openTicket, replyFromPartner } from "@/lib/support/service";
 
 const Id = z.uuid();
 
@@ -481,4 +484,44 @@ export async function linkGooglePlace(placeId: string | null) {
   });
   updateTag(`partner:${partner.slug}`);
   revalidatePath("/area-partner/scheda");
+}
+
+// ---------------------------------------------------------------------------
+// Assistenza: richieste al team di geco dall'Area Partner (identità verificata dalla sessione)
+// ---------------------------------------------------------------------------
+
+const SupportMessage = z.string().trim().min(2, "Scrivi il messaggio").max(MESSAGE_MAX, "Messaggio troppo lungo");
+
+const SupportTicketSchema = z.object({
+  topic: z.enum(TICKET_TOPICS.map((t) => t.value), { error: "Scegli l'argomento" }),
+  subject: z.string().trim().min(3, "Scrivi l'oggetto in poche parole").max(150, "Oggetto troppo lungo"),
+  body: SupportMessage,
+});
+
+export async function openSupportTicket(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const { user } = await requirePartner();
+  const parsed = SupportTicketSchema.safeParse({ topic: formData.get("topic"), subject: formData.get("subject"), body: formData.get("body") });
+  if (!parsed.success) return { error: parsed.error.issues[0].message };
+  if (await ipRateLimited("support_partner", 20, 60)) return { error: "Hai aperto molte richieste nell'ultima ora. Riprova più tardi." };
+  const ticket = await openTicket({
+    channel: "partner_area",
+    topic: parsed.data.topic,
+    subject: parsed.data.subject,
+    body: parsed.data.body,
+    requesterName: user.name,
+    requesterEmail: user.email,
+    sessionUserId: user.id,
+  });
+  revalidatePath("/area-partner/assistenza");
+  redirect(`/area-partner/assistenza/${ticket.number}`);
+}
+
+export async function replySupportTicket(number: number, _prev: ActionState, formData: FormData): Promise<ActionState> {
+  const { user, partner } = await requirePartner();
+  const body = SupportMessage.safeParse(formData.get("body"));
+  if (!body.success) return { error: body.error.issues[0].message };
+  if (!(await replyFromPartner(partner.id, number, user, body.data))) return { error: "Richiesta non trovata" };
+  revalidatePath(`/area-partner/assistenza/${number}`);
+  revalidatePath("/area-partner/assistenza");
+  return { ok: "Messaggio inviato: ti rispondiamo qui e per email" };
 }

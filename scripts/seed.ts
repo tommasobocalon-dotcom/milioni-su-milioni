@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import * as s from "../src/lib/db/schema";
 import { slugify } from "../src/lib/domain/format";
-import { DEMO_ACCOUNT } from "../src/lib/auth/demo";
+import { ADMIN_DEMO_ACCOUNT, DEMO_ACCOUNT } from "../src/lib/auth/demo";
 import { hashPassword } from "../src/lib/domain/password";
 import { tokenExpiryFrom } from "../src/lib/domain/tokens";
 import {
@@ -365,4 +365,59 @@ export async function seed(db: Db) {
     }
   }
   await insertChunks(db, s.profileEvents, events, 500);
+
+  // Amministratore del gestionale (/admin) e richieste di assistenza di esempio
+  const [admin] = await db
+    .insert(s.users)
+    .values({ id: sid("user:admin"), email: ADMIN_DEMO_ACCOUNT.email, name: "Team geco", role: "admin", passwordHash: await hashPassword(ADMIN_DEMO_ACCOUNT.password), emailVerifiedAt: new Date() })
+    .returning({ id: s.users.id });
+  const tickets = [
+    {
+      subject: "Fattura di ottobre",
+      topic: "payments",
+      channel: "partner_area" as const,
+      status: "open" as const,
+      requesterName: "Mario Rossi",
+      requesterEmail: "mario@rossiimpianti.it",
+      userId: mario.id,
+      partnerId: rossiId,
+      messages: [{ kind: "inbound" as const, hoursAgo: 5, author: "Mario Rossi", authorUserId: mario.id, body: "Buongiorno, non trovo la fattura dell'abbonamento di ottobre. Dove posso scaricarla?" }],
+    },
+    {
+      subject: "Il professionista non mi ha richiamato",
+      topic: "leads",
+      channel: "web" as const,
+      status: "waiting" as const,
+      requesterName: "Giulia Verdi",
+      requesterEmail: "giulia.verdi@example.com",
+      userId: null,
+      partnerId: null,
+      messages: [
+        { kind: "inbound" as const, hoursAgo: 30, author: "Giulia Verdi", authorUserId: null, body: "Ho mandato una richiesta per un elettricista tre giorni fa ma nessuno mi ha chiamato." },
+        { kind: "note" as const, hoursAgo: 28, author: "Team geco", authorUserId: admin.id, body: "Sentito il partner: richiama domani mattina." },
+        { kind: "reply" as const, hoursAgo: 27, author: "Team geco", authorUserId: admin.id, body: "Ciao Giulia, abbiamo sentito il professionista: ti richiama domani in mattinata. Facci sapere se non succede." },
+      ],
+    },
+    {
+      subject: "Collaborazione per la pubblicità locale",
+      topic: "other",
+      channel: "email" as const,
+      status: "resolved" as const,
+      requesterName: "Ufficio marketing",
+      requesterEmail: "marketing@example.com",
+      userId: null,
+      partnerId: null,
+      messages: [{ kind: "inbound" as const, hoursAgo: 96, author: "Ufficio marketing", authorUserId: null, body: "Salve, vorremmo proporvi una collaborazione per la pubblicità sulle radio locali." }],
+    },
+  ];
+  for (const { messages, ...t } of tickets) {
+    const last = new Date(now.getTime() - messages[messages.length - 1].hoursAgo * HOUR);
+    const [ticket] = await db
+      .insert(s.supportTickets)
+      .values({ ...t, lastMessageAt: last, createdAt: new Date(now.getTime() - messages[0].hoursAgo * HOUR) })
+      .returning({ id: s.supportTickets.id });
+    await db.insert(s.supportMessages).values(
+      messages.map((m) => ({ ticketId: ticket.id, kind: m.kind, authorName: m.author, authorUserId: m.authorUserId, body: m.body, createdAt: new Date(now.getTime() - m.hoursAgo * HOUR) })),
+    );
+  }
 }

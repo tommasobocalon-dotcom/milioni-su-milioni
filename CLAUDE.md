@@ -48,7 +48,7 @@ Aggregatore web (Veneto → Triveneto → Nord Italia) che mette in contatto cli
 
 ## Stato dello sviluppo
 
-**Fatto e testato** (61 test unitari, 5 end-to-end, build di produzione ok):
+**Fatto e testato** (177 test unitari, 20 end-to-end, build di produzione ok):
 - Home, *Trova Casa*, *Trova Professionista* con filtri, ordinamento (punteggio PRD §7.5) e posti sponsorizzati etichettati; ricerca libera `/cerca` ("rifare il bagno a Mestre").
 - Profili pubblici agenzia e professionista con listino indicativo, portfolio, recensioni verificate, dati strutturati `LocalBusiness`/`AggregateRating`, URL del PRD §5.4.
 - Richiesta di contatto in 5 passi con domande dinamiche per categoria, verifica OTP via SMS, conteggio quota/token/duplicati/lead bloccato oltre quota (PRD §7.4), pagina di conferma con alternative.
@@ -56,8 +56,9 @@ Aggregatore web (Veneto → Triveneto → Nord Italia) che mette in contatto cli
 - Stripe (codice in `src/lib/billing/stripe.ts`, webhook `/api/stripe/webhook`): Checkout abbonamento mensile/annuale e pacchetti token (carta + SEPA, IVA 22%), Customer Portal, webhook firmato e idempotente (tabella `stripe_processed`), sospensione immediata al pagamento fallito e riattivazione automatica, azzeramento quota e token omaggio a ogni periodo pagato. Prezzi creati in Stripe da `npm run stripe:setup`. Configurazione in `DEPLOY.md`.
 - Registrazione partner self-service `/registrazione-partner` (PRD §6.1): account con ritorno automatico (`/accedi?next=`), dati azienda con controllo P.IVA, SDI o PEC, scheda creata "in attivazione" e nascosta finché il piano non è pagato; senza Stripe, in sviluppo e sul sito di prova, attivazione del piano senza pagamento.
 - Pagine *Come funziona* (ordinamento e recensioni spiegati), *Per i professionisti* (piani), privacy e termini in bozza, 404.
+- Gestionale `/admin` (PRD §10, prima parte): accesso con ruolo `admin` o email in `ADMIN_EMAILS` confermata (`requireAdmin()`, 404 per gli altri), panoramica (MRR, partner, lead, token, cose da fare), assistenza a ticket (modulo pubblico `/assistenza`, Area Partner → Assistenza, email in arrivo via webhook `/api/assistenza/email` con Resend firmato o token; risposte per email con `[geco #N]` nell'oggetto, note interne, stato, presa in carico), partner (ricerca, verifica/badge, sospensione e riattivazione, accredito token nel registro), segnalazioni lead (accolta = token rimborsati o quota liberata), moderazione recensioni, registro attività. Codice in `src/app/admin`, `src/lib/support`, `src/lib/data/admin.ts`.
 
-**Da fare** (prossimi passi suggeriti): fatturazione elettronica SdI collegata al webhook Stripe, Area Partner ridotta al solo pagamento quando l'account è sospeso, verifica partner (badge) dal Backoffice, invito dei commerciali con piano precompilato, editor della scheda/listino/portfolio con upload foto, chiave Google Places (recensioni Google gia pronte nel codice), mappa MapLibre, provider reali SMS/email, RLS, Area Commerciale, Backoffice Admin, assistente AI, deploy (Vercel + Supabase UE).
+**Da fare** (prossimi passi suggeriti): fatturazione elettronica SdI collegata al webhook Stripe, Area Partner ridotta al solo pagamento quando l'account è sospeso, resto del Backoffice (tassonomia, zone, piani e coupon, contenuti/FAQ, pesi del ranking, commerciali, impersonificazione in sola lettura), invito dei commerciali con piano precompilato, editor della scheda/listino/portfolio con upload foto, chiave Google Places (recensioni Google gia pronte nel codice), mappa MapLibre, provider reali SMS/email (e ricezione email dell'assistenza, ATTIVAZIONE-SERVIZI.md §4), RLS, Area Commerciale, assistente AI, deploy (Vercel + Supabase UE).
 
 **Valori provvisori presi dal Figma** (da confermare, PRD §20): nome "geco", prezzi piani (annuale = 10 mensilità), 8 token per lead oltre quota con sblocco entro 48 h, pacchetti token 50/120/300 a 49/99/219 €, tono "tu" anche verso i partner.
 

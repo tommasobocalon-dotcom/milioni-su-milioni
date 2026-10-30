@@ -1,12 +1,13 @@
-# Attivare i servizi esterni: recensioni Google, email, antispam
+# Attivare i servizi esterni: recensioni Google, email, antispam, assistenza
 
-Il codice di queste tre funzioni è già pronto e testato. Restano **spente** finché non si inseriscono le chiavi dei servizi esterni: senza chiavi il sito funziona lo stesso, solo senza quella funzione.
+Il codice di queste funzioni è già pronto e testato. Restano **spente** finché non si inseriscono le chiavi dei servizi esterni: senza chiavi il sito funziona lo stesso, solo senza quella funzione.
 
 | Funzione | Servizio | Cosa succede senza chiavi | Costo indicativo |
 |---|---|---|---|
 | Recensioni Google sulla scheda dei partner | Google Cloud, Places API (New) | Sezione nascosta; nell'Area Partner il collegamento è disattivato | Pay-as-you-go con quota gratuita mensile, carta obbligatoria |
 | Email (conferma account, recupero password) | Resend | Le email vengono stampate nel terminale; sul sito di prova il link si vede a schermo | Gratis fino a 3.000 email al mese |
 | Antispam su richiesta di contatto, registrazione e recupero password | Cloudflare Turnstile | Nessun controllo antispam (restano i limiti per IP) | Gratis |
+| Email di assistenza che entrano da sole nel gestionale | Resend Inbound (oppure Postmark) | Le richieste arrivano lo stesso dal modulo del sito e dall'Area Partner; quelle per email restano nella casella | Incluso nel piano Resend (verificare i limiti) |
 
 I prezzi cambiano: controllali sulle pagine ufficiali prima di attivare.
 
@@ -142,6 +143,63 @@ Ogni collegamento e scollegamento viene registrato (tabella `audit_logs`, azioni
 
 ---
 
+## 4. Gestionale e assistenza
+
+Il gestionale è su `/admin` (stesso sito, stesso database: non va collegato a niente). Le richieste di assistenza ci arrivano da tre strade:
+
+1. il modulo pubblico `/assistenza` (link "Assistenza" nel footer);
+2. l'Area Partner → **Assistenza** (il partner vede anche le risposte);
+3. le email scritte alla casella dell'assistenza, **solo dopo il Passo 4.3**.
+
+Ogni risposta data dal gestionale parte per email con `[geco #N]` nell'oggetto: quando il cliente risponde, il messaggio torna sullo stesso ticket.
+
+### Passo 4.1 — Chi entra nel gestionale
+Su Vercel aggiungi la tua email (più indirizzi separati da virgola):
+```
+ADMIN_EMAILS=tuaemail@esempio.it
+```
+Poi registrati su `/accedi` con quella email (o con Google) e **conferma l'email** dal link che ti arriva: senza conferma il gestionale resta chiuso, così nessuno può spacciarsi per te registrandosi con il tuo indirizzo. Dopo l'accesso finisci direttamente su `/admin`.
+
+In locale (dati di esempio) c'è già l'amministratore `admin@gecoitalia.it`, password `geco-demo-2026`.
+
+### Passo 4.2 — Indirizzo dell'assistenza e avvisi
+```
+SUPPORT_EMAIL=assistenza@gecoitalia.it
+SUPPORT_ALERT_EMAIL=tuaemail@esempio.it
+```
+- `SUPPORT_EMAIL` è l'indirizzo mostrato sul sito e il "rispondi a" di tutte le email dell'assistenza.
+- `SUPPORT_ALERT_EMAIL` (facoltativa) riceve un avviso con il link al ticket a ogni nuova richiesta o risposta di un cliente. Usa una casella diversa da `SUPPORT_EMAIL`.
+
+### Passo 4.3 — Far entrare le email nel gestionale
+La casella `SUPPORT_EMAIL` deve inoltrare ogni email al gestionale. Il modo più semplice, senza toccare la posta che già usi su Aruba:
+
+**Con Resend (consigliato, è già il servizio delle email in uscita)**
+1. Su Resend apri **Receiving** (ricezione) e segui le istruzioni per avere un indirizzo di ricezione: un sottodominio come `in.gecoitalia.it` con il record MX che Resend ti indica su Aruba, oppure l'indirizzo che Resend ti assegna.
+2. Su Resend apri **Webhooks → Add endpoint**: URL `https://gecoitalia.it/api/assistenza/email`, evento `email.received`. Copia il **Signing secret** (inizia con `whsec_`).
+3. Su Vercel:
+   ```
+   RESEND_INBOUND_SECRET=<whsec_...>
+   ```
+   Il testo delle email si legge con `RESEND_API_KEY`: se nei log di Vercel compare `[assistenza] email Resend non letta` con errore 401 o 403, la chiave ha solo "Sending access": creane una con accesso completo e sostituiscila.
+4. Su Aruba (webmail → Impostazioni → Inoltro) inoltra `assistenza@gecoitalia.it` all'indirizzo di ricezione del punto 1, lasciando una copia nella casella.
+
+**Con Postmark (alternativa)**
+1. Su Postmark crea un server e apri **Default Inbound Stream**: ti dà un indirizzo `…@inbound.postmarkapp.com`.
+2. Come *Webhook URL* metti `https://gecoitalia.it/api/assistenza/email?token=<una stringa casuale lunga>`.
+3. Su Vercel: `INBOUND_EMAIL_TOKEN=<la stessa stringa>`.
+4. Su Aruba inoltra `assistenza@gecoitalia.it` all'indirizzo di Postmark.
+
+Il percorso del webhook è escluso dalla password del sito di prova: è protetto dalla firma (Resend) o dal token (Postmark).
+
+### Passo 4.4 — Verificare
+1. Scrivi da una tua casella personale a `assistenza@gecoitalia.it`.
+2. In `/admin/assistenza` deve comparire una nuova richiesta "Email", e alla tua casella arriva la conferma con il numero `[geco #N]`.
+3. Rispondi dal gestionale: la risposta arriva per email. Rispondi a quella email: il messaggio si aggiunge allo stesso ticket, senza la parte citata.
+
+Le email da indirizzi automatici (noreply, rimbalzi) e dai nostri stessi indirizzi vengono ignorate, per non creare catene infinite di risposte automatiche. La stessa email consegnata due volte conta una volta sola.
+
+---
+
 ## Problemi frequenti
 
 | Sintomo | Causa probabile | Cosa fare |
@@ -154,6 +212,8 @@ Ogni collegamento e scollegamento viene registrato (tabella `audit_logs`, azioni
 | Nell'Area Partner: "Il collegamento con Google non è ancora attivo" | Manca `GOOGLE_PLACES_API_KEY` | Passo 3.6, poi Redeploy |
 | La ricerca Google non trova nulla o la sezione non compare | API sbagliata abilitata, restrizioni della chiave errate, fatturazione non attiva o quota finita | Nei log di Vercel cerca le righe `[google] Places API` con il codice di errore: 403 = chiave o API, 429 = quota |
 | Recensioni cambiate su Google ma non ancora sulla scheda | Cache del server di qualche ora | È normale: si aggiornano da sole |
+| `/admin` mostra "Questa pagina non c'è" | La tua email non è in `ADMIN_EMAILS` o non è ancora confermata | Passo 4.1, poi Redeploy |
+| Le email all'assistenza non compaiono nel gestionale | Inoltro non attivo, webhook sbagliato o segreto diverso | Su Resend/Postmark guarda i tentativi del webhook: 400 = firma, 401 = token, 503 = variabile mancante su Vercel |
 
 ---
 
@@ -172,6 +232,13 @@ APP_URL=https://gecoitalia.it
 
 # Recensioni Google
 GOOGLE_PLACES_API_KEY=
+
+# Gestionale e assistenza
+ADMIN_EMAILS=
+SUPPORT_EMAIL=assistenza@gecoitalia.it
+SUPPORT_ALERT_EMAIL=
+RESEND_INBOUND_SECRET=
+INBOUND_EMAIL_TOKEN=
 ```
 
 Le stesse variabili, con una riga di spiegazione, sono anche in [.env.example](.env.example). Per database, Vercel, dominio e Stripe vedi [DEPLOY.md](DEPLOY.md).

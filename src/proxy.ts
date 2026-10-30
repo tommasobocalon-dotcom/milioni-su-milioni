@@ -1,10 +1,12 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { hasSiteAccess, parseSiteAccess } from "@/lib/domain/site-access";
 
+const WEBHOOKS = new Set(["/api/stripe/webhook", "/api/assistenza/email"]);
+
 /** Sito di prova visibile solo al team: con SITE_ACCESS impostata ogni richiesta chiede nome e password. */
 export function proxy(request: NextRequest) {
-  // Stripe non conosce le credenziali del team: il webhook è protetto dalla firma (route.ts).
-  if (request.nextUrl.pathname === "/api/stripe/webhook") return NextResponse.next();
+  // Stripe e il provider email non conoscono le credenziali del team: i webhook hanno firma o token propri (route.ts).
+  if (WEBHOOKS.has(request.nextUrl.pathname)) return NextResponse.next();
   const logins = parseSiteAccess(process.env.SITE_ACCESS);
   if (!logins || hasSiteAccess(request.headers.get("authorization"), logins)) return NextResponse.next();
   return new NextResponse("Sito di prova riservato al team.", {
