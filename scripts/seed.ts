@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { eq } from "drizzle-orm";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import * as s from "../src/lib/db/schema";
 import { slugify } from "../src/lib/domain/format";
@@ -66,6 +67,19 @@ async function insertChunks<T extends Record<string, unknown>>(db: Db, table: Pa
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     await db.insert(table).values(rows.slice(i, i + size) as any);
   }
+}
+
+/**
+ * Amministratore di prova del gestionale (/admin). Se l'email esiste già non cambia nulla, così si può
+ * richiamare anche su un database già pieno (sito di prova, scripts/db-seed.ts).
+ */
+export async function ensureDemoAdmin(db: Db): Promise<{ id: string }> {
+  await db
+    .insert(s.users)
+    .values({ id: sid("user:admin"), email: ADMIN_DEMO_ACCOUNT.email, name: "Team geco", role: "admin", passwordHash: await hashPassword(ADMIN_DEMO_ACCOUNT.password), emailVerifiedAt: new Date() })
+    .onConflictDoNothing();
+  const [admin] = await db.select({ id: s.users.id }).from(s.users).where(eq(s.users.email, ADMIN_DEMO_ACCOUNT.email));
+  return admin;
 }
 
 export async function seed(db: Db) {
@@ -367,10 +381,7 @@ export async function seed(db: Db) {
   await insertChunks(db, s.profileEvents, events, 500);
 
   // Amministratore del gestionale (/admin) e richieste di assistenza di esempio
-  const [admin] = await db
-    .insert(s.users)
-    .values({ id: sid("user:admin"), email: ADMIN_DEMO_ACCOUNT.email, name: "Team geco", role: "admin", passwordHash: await hashPassword(ADMIN_DEMO_ACCOUNT.password), emailVerifiedAt: new Date() })
-    .returning({ id: s.users.id });
+  const admin = await ensureDemoAdmin(db);
   const tickets = [
     {
       subject: "Fattura di ottobre",

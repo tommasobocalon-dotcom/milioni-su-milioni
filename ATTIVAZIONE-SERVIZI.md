@@ -160,7 +160,7 @@ ADMIN_EMAILS=tuaemail@esempio.it
 ```
 Poi registrati su `/accedi` con quella email (o con Google) e **conferma l'email** dal link che ti arriva: senza conferma il gestionale resta chiuso, così nessuno può spacciarsi per te registrandosi con il tuo indirizzo. Dopo l'accesso finisci direttamente su `/admin`.
 
-In locale (dati di esempio) c'è già l'amministratore `admin@gecoitalia.it`, password `geco-demo-2026`.
+In locale e sul sito di prova (con `SITE_ACCESS` e `DEMO_MODE=1`) c'è già l'amministratore `admin@gecoitalia.it`, password `geco-demo-2026`: viene creato al deploy e sparisce dal processo quando, al lancio, si toglie `npm run db:seed` (DEPLOY.md). Prima del lancio cancellalo dal database.
 
 ### Passo 4.2 — Indirizzo dell'assistenza e avvisi
 ```
