@@ -1,11 +1,32 @@
 import "server-only";
 import { demoMode } from "@/lib/demo-mode";
+import { brevoEmailRequest, brevoSmsRequest } from "@/lib/domain/brevo";
 
 /**
- * Invio di SMS ed email. In sviluppo (provider "console") i messaggi vengono stampati nel
- * terminale. In produzione si collegheranno Twilio (SMS) e Resend o Postmark (email): il resto
- * dell'app usa solo queste due funzioni.
+ * Invio di SMS ed email: il resto dell'app usa solo queste due funzioni.
+ * Provider "console" (sviluppo): i messaggi vengono stampati nel terminale.
+ * Provider "brevo" (produzione): API di Brevo, chiave in BREVO_API_KEY (guida in DEPLOY.md).
  */
+
+/** L'invio non è riuscito (provider giù, credito SMS finito, configurazione sbagliata). */
+export class DeliveryError extends Error {}
+
+async function brevo(kind: string, request: { url: string; init: RequestInit }) {
+  let res: Response;
+  try {
+    res = await fetch(request.url, { ...request.init, signal: AbortSignal.timeout(10_000) });
+  } catch (e) {
+    throw new DeliveryError(`Brevo ${kind}: nessuna risposta (${e instanceof Error ? e.message : e})`);
+  }
+  // 402 = credito SMS esaurito: va ricaricato dal pannello Brevo.
+  if (!res.ok) throw new DeliveryError(`Brevo ${kind}: HTTP ${res.status} ${(await res.text()).slice(0, 300)}`);
+}
+
+function apiKey(): string {
+  const key = process.env.BREVO_API_KEY;
+  if (!key) throw new DeliveryError("BREVO_API_KEY non impostata");
+  return key;
+}
 
 export async function sendSms(to: string, text: string): Promise<void> {
   const provider = process.env.SMS_PROVIDER ?? "console";
@@ -13,7 +34,10 @@ export async function sendSms(to: string, text: string): Promise<void> {
     console.log(`\n[sms → ${to}] ${text}\n`);
     return;
   }
-  throw new Error(`Provider SMS "${provider}" non ancora configurato`);
+  if (provider === "brevo") {
+    return brevo("SMS", brevoSmsRequest({ apiKey: apiKey(), sender: process.env.SMS_SENDER || "geco", to, text }));
+  }
+  throw new DeliveryError(`Provider SMS "${provider}" sconosciuto`);
 }
 
 /** `replyTo`: dove arrivano le risposte (es. la casella dell'assistenza, che apre o aggiorna i ticket). */
@@ -25,7 +49,11 @@ export async function sendEmail(to: string, subject: string, text: string, optio
     return;
   }
   if (provider === "resend") return sendWithResend(to, subject, text, options.replyTo);
-  throw new Error(`Provider email "${provider}" non ancora configurato`);
+  if (provider === "brevo") {
+    const from = process.env.EMAIL_FROM || "info@gecoitalia.it";
+    return brevo("email", brevoEmailRequest({ apiKey: apiKey(), from, fromName: "geco", to, subject, text, replyTo: options.replyTo }));
+  }
+  throw new DeliveryError(`Provider email "${provider}" sconosciuto`);
 }
 
 /** Resend (server UE disponibili): una chiamata HTTP, senza librerie. */

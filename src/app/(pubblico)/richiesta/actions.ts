@@ -12,7 +12,7 @@ import { leads, partners } from "@/lib/db/schema";
 import { maskPhone, normalizeEmail, normalizeItalianPhone } from "@/lib/domain/otp";
 import { confirmLead, createPendingLead } from "@/lib/leads/service";
 import { AGENCY_REQUEST_TYPES, CALLBACK_SLOTS, OTHER_REQUEST, TIMINGS } from "@/lib/leads/options";
-import { sendEmail, sendSms, showDevCodes } from "@/lib/notify";
+import { DeliveryError, sendEmail, sendSms, showDevCodes } from "@/lib/notify";
 
 const RequestSchema = z.object({
   partnerSlug: z.string().min(1).max(120),
@@ -102,7 +102,24 @@ export async function submitLeadRequest(input: LeadRequestInput): Promise<Submit
     return { ok: true, leadId, maskedPhone: maskPhone(phone), devCode: showDevCodes() ? code : undefined };
   } catch (e) {
     if (e instanceof OtpRateLimitError) return { ok: false, error: e.message };
+    if (e instanceof DeliveryError) return smsFailed(e);
     throw e;
+  }
+}
+
+const SMS_FAILED = "Non riusciamo a inviare l'SMS in questo momento. Riprova tra qualche minuto.";
+
+function smsFailed(e: DeliveryError): { ok: false; error: string } {
+  console.error("[sms]", e.message);
+  return { ok: false, error: SMS_FAILED };
+}
+
+/** Le email dopo la conferma sono avvisi: se non partono la richiesta resta valida, si registra solo l'errore. */
+async function bestEffort(what: string, send: Promise<void>) {
+  try {
+    await send;
+  } catch (e) {
+    console.error(`[email] ${what} non inviata:`, e instanceof Error ? e.message : e);
   }
 }
 
@@ -130,11 +147,14 @@ export async function verifyLeadRequest(leadId: string, code: string): Promise<V
 
     const { outcome, partnerId } = await confirmLead(lead.id);
     if (outcome === "delivered" || outcome === "token" || outcome === "locked") {
-      await notifyPartner(partnerId, lead.id);
-      await sendEmail(
-        lead.email,
-        `Richiesta inviata a ${lead.partnerName}`,
-        `Abbiamo inviato la tua richiesta a ${lead.partnerName}, che ti ricontatterà nella fascia oraria che hai indicato. Tra qualche giorno ti chiederemo com'è andata.`,
+      await bestEffort("avviso al partner", notifyPartner(partnerId, lead.id));
+      await bestEffort(
+        "conferma al cliente",
+        sendEmail(
+          lead.email,
+          `Richiesta inviata a ${lead.partnerName}`,
+          `Abbiamo inviato la tua richiesta a ${lead.partnerName}, che ti ricontatterà nella fascia oraria che hai indicato. Tra qualche giorno ti chiederemo com'è andata.`,
+        ),
       );
     }
   }
@@ -150,6 +170,7 @@ export async function resendLeadCode(leadId: string): Promise<{ ok: boolean; err
     return { ok: true, devCode: showDevCodes() ? code : undefined };
   } catch (e) {
     if (e instanceof OtpRateLimitError) return { ok: false, error: e.message };
+    if (e instanceof DeliveryError) return smsFailed(e);
     throw e;
   }
 }

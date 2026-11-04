@@ -348,6 +348,7 @@ export const PARTNERS: PartnerSeed[] = [
       { title: "Caldaia a Mestre", municipality: 27042 },
     ],
     hours: H_ART,
+    boosted: true,
   },
   {
     slug: "studio-tecnico-bianchi",
@@ -392,6 +393,7 @@ export const PARTNERS: PartnerSeed[] = [
     ],
     portfolio: [],
     hours: H_STUDIO,
+    boosted: true,
   },
   {
     slug: "elettro-bortolin",
@@ -414,6 +416,7 @@ export const PARTNERS: PartnerSeed[] = [
     ],
     portfolio: [{ title: "Fotovoltaico con accumulo", municipality: 26043 }],
     hours: H_ART,
+    boosted: true,
   },
   {
     slug: "elettro-zanon",
@@ -480,6 +483,7 @@ export const PARTNERS: PartnerSeed[] = [
       { title: "Open space con cartongesso", municipality: 28060 },
     ],
     hours: H_ART,
+    boosted: true,
   },
   {
     slug: "arch-pavan",
@@ -501,6 +505,7 @@ export const PARTNERS: PartnerSeed[] = [
     ],
     portfolio: [{ title: "Casa sul Sile", municipality: 26086 }],
     hours: H_STUDIO,
+    boosted: true,
   },
   {
     slug: "immobiliare-prato-della-valle",
@@ -611,6 +616,7 @@ export const PARTNERS: PartnerSeed[] = [
     ],
     portfolio: [{ title: "Attico in centro storico", municipality: 26086, contract: "sale", priceCents: 46000000, sqm: 130, rooms: 4 }],
     hours: H_AG,
+    boosted: true,
   },
   {
     slug: "mutui-veneto",

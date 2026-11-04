@@ -1,5 +1,8 @@
 @import "tailwindcss";
 
+/* La ricerca della hero è uscita dallo schermo: la navbar mostra quella compatta (HeroSearchWatcher). */
+@custom-variant hero-search-hidden (:root[data-hero-search="hidden"] &);
+
 /*
  * Token del brand, dal file Figma "Piattaforma Casa & Professionisti — Bozza UI" (pagina Fondamenta)
  * e dal PRD §11.1. Usare i token semantici (page, surface, ink, primary…) nei componenti.
@@ -166,6 +169,79 @@
   25% { transform: translateY(-2%) rotate(-1.5deg); }
   50% { transform: translateY(-3%) rotate(0); }
   75% { transform: translateY(-2%) rotate(1.5deg); }
+}
+
+/*
+ * Home (novembre 2026, sul modello di Thumbtack): entrate allo scroll, hero e piccoli movimenti.
+ * Le entrate [data-reveal] sono animazioni legate allo scroll in solo CSS: nessuno script, nessun contenuto
+ * nascosto in attesa di JavaScript; i browser senza animation-timeline mostrano tutto fermo.
+ * Con "riduci movimento" non si muove niente.
+ */
+@media (prefers-reduced-motion: no-preference) {
+  @supports (animation-timeline: view()) {
+    [data-reveal] {
+      animation: reveal-up cubic-bezier(0.16, 1, 0.3, 1) both;
+      animation-timeline: view();
+      animation-range: entry calc(4% + var(--reveal-shift, 0%)) entry calc(70% + var(--reveal-shift, 0%));
+    }
+  }
+  .hero-rise {
+    animation: hero-rise 700ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+  .hero-drift {
+    animation: hero-drift 16s ease-in-out infinite alternate;
+  }
+  .hero-bob {
+    animation: hero-bob 2.4s ease-in-out infinite;
+  }
+  .phone-caret {
+    animation: phone-caret 1s steps(1) infinite;
+  }
+  .menu-in {
+    animation: menu-in 200ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .header-search-in {
+    animation: header-search-in 240ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+}
+
+@keyframes reveal-up {
+  from { opacity: 0; transform: translateY(32px); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes hero-rise {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes hero-drift {
+  from { transform: scale(1); }
+  to { transform: scale(1.08) translate(-1%, -1%); }
+}
+
+@keyframes hero-bob {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(6px); }
+}
+
+@keyframes phone-caret {
+  50% { opacity: 0; }
+}
+
+@keyframes step-progress {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
+}
+
+@keyframes menu-in {
+  from { opacity: 0; transform: translateY(-6px) scale(0.98); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes header-search-in {
+  from { opacity: 0; transform: translateY(-8px); }
+  to { opacity: 1; transform: none; }
 }
 
 @layer base {

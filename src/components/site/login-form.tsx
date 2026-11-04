@@ -17,11 +17,11 @@ export type { Audience };
 
 const noSubscribe = () => () => {};
 
-/** ?next= letto nel browser: la pagina resta statica e il modulo non viene rimontato. */
-function useNextParam() {
+/** Parametro dell'indirizzo letto nel browser: la pagina resta statica e il modulo non viene rimontato. */
+function useQueryParam(name: string) {
   return useSyncExternalStore(
     noSubscribe,
-    () => new URLSearchParams(window.location.search).get("next") ?? undefined,
+    () => new URLSearchParams(window.location.search).get(name) ?? undefined,
     () => undefined,
   );
 }
@@ -53,10 +53,11 @@ export function LoginForm({
   demo?: { email: string; password: string };
   notice?: React.ReactNode;
 }) {
-  const next = useNextParam();
+  const next = useQueryParam("next");
+  const signupFirst = useQueryParam("modo") === "registrati";
   const [chosen, setMode] = useState<Mode | null>(null);
-  // Chi arriva dalla registrazione partner di solito non ha ancora un account.
-  const mode = chosen ?? (next === "/registrazione-partner" ? "signup" : "login");
+  // Chi arriva dalla registrazione partner o da "Registrati" (?modo=registrati) di solito non ha ancora un account.
+  const mode = chosen ?? (signupFirst || next === "/registrazione-partner" ? "signup" : "login");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
