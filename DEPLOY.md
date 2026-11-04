@@ -179,7 +179,7 @@ Abbonamenti (mensile o annuale), pacchetti token e portale clienti passano da St
    Copia il *Signing secret* (`whsec_...`) in `STRIPE_WEBHOOK_SECRET`. Il webhook non chiede la password del sito di prova: è protetto dalla firma.
 5. **Portale clienti.** **Settings → Billing → Customer portal**: attiva aggiornamento del metodo di pagamento, storico fatture, disdetta *a fine periodo* e cambio piano tra i tre prodotti `Piano ...`.
 6. **Tentativi e sospensione.** **Settings → Billing → Subscriptions and emails**: lascia i tentativi automatici (Smart Retries) e le email di pagamento fallito. Dopo l'ultimo tentativo scegli *cancel the subscription*. Al primo pagamento fallito l'app sospende subito la scheda e la riattiva da sola quando un tentativo va a buon fine.
-7. Su Vercel aggiungi `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_TAX_RATE_ID` e `CRON_SECRET` (una stringa casuale lunga: serve al cron giornaliero che accredita i crediti mensili di chi paga l'annuale) e fai **Redeploy**.
+7. Su Vercel aggiungi `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_TAX_RATE_ID` e, se vuoi, `CRON_SECRET` (facoltativa: il cron giornaliero dei crediti mensili funziona anche senza, con la variabile risponde solo a Vercel) e fai **Redeploy**.
 8. I prezzi dei piani sono cambiati il 4/11/2026 (Base 15/9, Normal 49/39, Premium 120/99 € al mese): dopo il deploy rilancia `npm run stripe:setup` per creare i prezzi nuovi in Stripe. La prova gratuita di 7 giorni parte da sola al primo abbonamento.
 
 **In locale** il webhook si riceve con la [Stripe CLI](https://docs.stripe.com/stripe-cli):
