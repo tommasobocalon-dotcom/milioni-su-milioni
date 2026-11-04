@@ -67,14 +67,6 @@ export default function HowItWorksPage() {
         </p>
       </section>
 
-      <section className="flex flex-col gap-3">
-        <h2 className="font-display text-h2">L&apos;assistente geco</h2>
-        <p className="text-body">
-          Il geco è un assistente basato su intelligenza artificiale. Ti aiuta a orientarti e a compilare le richieste, ma non dà
-          pareri legali, fiscali o tecnici vincolanti e non promette prezzi.
-        </p>
-      </section>
-
       <ButtonLink href="/trova-professionista" className="self-start">
         Inizia a cercare
       </ButtonLink>

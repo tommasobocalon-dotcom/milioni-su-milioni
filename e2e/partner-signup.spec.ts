@@ -5,7 +5,7 @@ test("un'azienda si registra, la scheda resta nascosta fino all'attivazione del 
 
   // Dai piani pubblici alla registrazione, poi all'account con ritorno automatico.
   await page.goto("/per-i-professionisti#piani");
-  await page.getByRole("link", { name: "Attiva Media" }).click();
+  await page.getByRole("link", { name: "Scegli Media" }).click();
   await page.getByRole("link", { name: "Crea account o accedi" }).click();
   await expect(page).toHaveURL(/\/accedi\/azienda\?next=\/registrazione-partner$/);
   await expect(page.getByRole("heading", { level: 1, name: "Registra la tua attività" })).toBeVisible();

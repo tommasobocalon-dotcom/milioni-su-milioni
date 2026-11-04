@@ -3,36 +3,33 @@
 import { Suspense } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BarChart3, Bell, Building2, Coins, CreditCard, Inbox, Landmark, LayoutDashboard, LifeBuoy, LogOut, UserRound } from "lucide-react";
+import { Building2, Coins, House, Inbox, LifeBuoy, LogOut } from "lucide-react";
 import { logout } from "@/app/accedi/actions";
 import { Geco } from "@/components/site/geco";
 import { cn } from "@/lib/utils";
 
+/** Menu ridotto a 5 voci: le pagine collegate stanno sotto la stessa voce (schede in `PartnerTabs`). */
 const NAV = [
-  { href: "/area-partner", label: "Panoramica", icon: LayoutDashboard },
-  { href: "/area-partner/profilo", label: "Modifica account", icon: UserRound },
-  { href: "/area-partner/lead", label: "Lead", icon: Inbox },
-  { href: "/area-partner/scheda", label: "La mia scheda", icon: Building2 },
-  { href: "/area-partner/listino", label: "Listino prezzi", icon: Landmark },
-  { href: "/area-partner/statistiche", label: "Statistiche", icon: BarChart3 },
-  { href: "/area-partner/token", label: "Token e boost", icon: Coins },
-  { href: "/area-partner/abbonamento", label: "Abbonamento", icon: CreditCard },
-  { href: "/area-partner/notifiche", label: "Posta in arrivo", icon: Bell },
-  { href: "/area-partner/assistenza", label: "Assistenza", icon: LifeBuoy },
+  { href: "/area-partner", label: "Home", icon: House, also: ["/area-partner/statistiche", "/area-partner/notifiche"] },
+  { href: "/area-partner/lead", label: "Richieste clienti", icon: Inbox, also: [] },
+  { href: "/area-partner/scheda", label: "La mia attività", icon: Building2, also: ["/area-partner/listino", "/area-partner/profilo"] },
+  { href: "/area-partner/abbonamento", label: "Piano e crediti", icon: Coins, also: ["/area-partner/token"] },
+  { href: "/area-partner/assistenza", label: "Aiuto", icon: LifeBuoy, also: [] },
 ];
 
 function NavList({ pathname }: { pathname: string | null }) {
-  const active = (href: string) => !!pathname && (href === "/area-partner" ? pathname === href : pathname.startsWith(href));
+  const active = (href: string, also: string[]) =>
+    !!pathname && ((href === "/area-partner" ? pathname === href : pathname.startsWith(href)) || also.some((a) => pathname.startsWith(a)));
   return (
     <>
-      {NAV.map(({ href, label, icon: Icon }) => (
+      {NAV.map(({ href, label, icon: Icon, also }) => (
         <Link
           key={href}
           href={href}
-          aria-current={active(href) ? "page" : undefined}
+          aria-current={active(href, also) ? "page" : undefined}
           className={cn(
             "flex shrink-0 items-center gap-3 rounded-md px-3 py-2 text-body-s font-medium",
-            active(href) ? "bg-primary text-on-brand" : "text-on-brand-muted hover:bg-bosco-800 hover:text-on-brand",
+            active(href, also) ? "bg-primary text-on-brand" : "text-on-brand-muted hover:bg-bosco-800 hover:text-on-brand",
           )}
         >
           <Icon className="size-[18px]" aria-hidden />
@@ -73,16 +70,7 @@ export function PartnerSidebar({ bell }: { bell: React.ReactNode }) {
           <ActiveNavList />
         </Suspense>
       </nav>
-      <div className="hidden flex-col gap-3 p-4 lg:flex">
-        <div className="flex items-center gap-3 rounded-lg bg-bosco-800 p-3">
-          <Geco outfit="partner" size={44} />
-          <div className="text-body-s">
-            <p className="font-semibold">Serve aiuto?</p>
-            <Link href="/area-partner/assistenza" className="text-caption text-on-brand-muted underline hover:text-on-brand">
-              Contatta l&apos;assistenza
-            </Link>
-          </div>
-        </div>
+      <div className="hidden p-4 lg:block">
         <form action={logout}>
           <button className="inline-flex w-full items-center gap-2 rounded-md px-3 py-2 text-body-s text-on-brand-muted hover:bg-bosco-800 hover:text-on-brand">
             <LogOut className="size-4" aria-hidden /> Esci

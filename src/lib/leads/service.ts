@@ -97,18 +97,18 @@ export async function confirmLead(leadId: string, now = new Date()): Promise<{ o
       case "quota":
         await tx.update(subscriptions).set({ leadsUsed: (sub!.leadsUsed ?? 0) + 1 }).where(eq(subscriptions.id, sub!.id));
         await tx.update(leads).set({ verifiedAt: now, deliveredAt: now, charge: "quota" }).where(eq(leads.id, lead.id));
-        events.push({ type: "delivered", message: "Conteggiato nella quota del piano e consegnato al partner", actor: "Sistema" });
+        events.push({ type: "delivered", message: "Inclusa nel piano e consegnata", actor: "Sistema" });
         outcome = "delivered";
         break;
       case "token":
         await debitTokens(tx, lead.partnerId, decision.tokens, `Lead oltre quota ${lead.id.slice(0, 8)}`, now);
         await tx.update(leads).set({ verifiedAt: now, deliveredAt: now, charge: "token", tokensCharged: decision.tokens }).where(eq(leads.id, lead.id));
-        events.push({ type: "delivered", message: `Oltre quota: ${decision.tokens} token usati in automatico`, actor: "Sistema" });
+        events.push({ type: "delivered", message: `Richiesta extra: ${decision.tokens} crediti usati in automatico`, actor: "Sistema" });
         outcome = "token";
         break;
       case "locked":
         await tx.update(leads).set({ verifiedAt: now, deliveredAt: now, charge: "locked", unlockExpiresAt: decision.unlockExpiresAt }).where(eq(leads.id, lead.id));
-        events.push({ type: "locked", message: "Oltre la quota del piano: contatti nascosti per 48 ore, sbloccabili con i token", actor: "Sistema" });
+        events.push({ type: "locked", message: "Richiesta extra: contatti nascosti per 48 ore, si sbloccano con i crediti", actor: "Sistema" });
         outcome = "locked";
         break;
       case "duplicate":
@@ -134,9 +134,9 @@ export class LeadNotUnlockableError extends Error {}
 export async function unlockLead(partnerId: string, leadId: string, actor: string, now = new Date()) {
   return db.transaction(async (tx) => {
     const [lead] = await tx.select().from(leads).where(and(eq(leads.id, leadId), eq(leads.partnerId, partnerId))).for("update");
-    if (!lead || lead.charge !== "locked") throw new LeadNotUnlockableError("Questo lead non è da sbloccare");
+    if (!lead || lead.charge !== "locked") throw new LeadNotUnlockableError("Questa richiesta non è da sbloccare");
     if (!lead.unlockExpiresAt || lead.unlockExpiresAt.getTime() <= now.getTime()) {
-      throw new LeadNotUnlockableError("Il tempo per sbloccare questo lead è scaduto");
+      throw new LeadNotUnlockableError("Il tempo per sbloccare questa richiesta è scaduto");
     }
     try {
       await debitTokens(tx, partnerId, TOKEN_COST_PER_LEAD, `Sblocco lead ${lead.id.slice(0, 8)}`, now);
@@ -145,7 +145,7 @@ export async function unlockLead(partnerId: string, leadId: string, actor: strin
       throw e;
     }
     await tx.update(leads).set({ charge: "token", tokensCharged: TOKEN_COST_PER_LEAD, unlockExpiresAt: null }).where(eq(leads.id, lead.id));
-    await tx.insert(leadEvents).values({ leadId: lead.id, type: "unlocked", message: `Sbloccato con ${TOKEN_COST_PER_LEAD} token`, actor, createdAt: now });
+    await tx.insert(leadEvents).values({ leadId: lead.id, type: "unlocked", message: `Sbloccata con ${TOKEN_COST_PER_LEAD} crediti`, actor, createdAt: now });
   });
 }
 
@@ -157,7 +157,7 @@ export class BoostNotActivatableError extends Error {}
  */
 export async function activateBoost(partnerId: string, days: number, now = new Date()) {
   const option = BOOST_OPTIONS.find((o) => o.days === days);
-  if (!option) throw new BoostNotActivatableError("Durata del boost non valida");
+  if (!option) throw new BoostNotActivatableError("Durata non valida");
   return db.transaction(async (tx) => {
     // Il lock sul partner serializza attivazioni concorrenti dello stesso partner.
     const [p] = await tx

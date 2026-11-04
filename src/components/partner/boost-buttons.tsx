@@ -17,11 +17,11 @@ export function BoostButtons({ options, balance }: { options: readonly { days: n
               variant="secondary"
               disabled={pending || balance < b.tokens}
               onClick={() => {
-                if (!confirm(`Attivare il boost di ${b.days} giorni per ${b.tokens} token?`)) return;
+                if (!confirm(`Mettere in evidenza la scheda per ${b.days} giorni con ${b.tokens} crediti?`)) return;
                 start(async () => setState(await activateBoostAction(b.days)));
               }}
             >
-              <Rocket aria-hidden /> {b.days} giorni · {b.tokens} token
+              <Rocket aria-hidden /> {b.days} giorni · {b.tokens} crediti
             </Button>
           </li>
         ))}

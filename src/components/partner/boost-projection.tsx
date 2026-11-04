@@ -81,11 +81,11 @@ export function BoostProjection({
       <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
         <div className="flex flex-col gap-1">
           <h2 id="boost-projection-title" className="inline-flex items-center gap-2 text-h3 font-semibold">
-            <TrendingUp className="size-5" aria-hidden /> Quanto puoi crescere con un boost
+            <TrendingUp className="size-5" aria-hidden /> Quanto puoi crescere in evidenza
           </h2>
-          <p className="text-body-s text-ink-2">Visite alla scheda stimate nei prossimi {HORIZON} giorni, con e senza boost.</p>
+          <p className="text-body-s text-ink-2">Visite alla scheda stimate nei prossimi {HORIZON} giorni, in evidenza e senza.</p>
         </div>
-        <div role="radiogroup" aria-label="Durata del boost" className="inline-flex self-start rounded-md border border-line bg-page p-1">
+        <div role="radiogroup" aria-label="Durata" className="inline-flex self-start rounded-md border border-line bg-page p-1">
           {BOOST_OPTIONS.map((o) => (
             <button
               key={o.days}
@@ -98,7 +98,7 @@ export function BoostProjection({
                 o.days === days ? "bg-primary text-on-brand" : "text-ink-2 hover:bg-subtle hover:text-ink",
               )}
             >
-              {o.days} giorni · {o.tokens} token
+              {o.days} giorni · {o.tokens} crediti
             </button>
           ))}
         </div>
@@ -113,13 +113,13 @@ export function BoostProjection({
           <div className="flex min-w-0 flex-col gap-3">
             <ul className="flex flex-wrap gap-x-5 gap-y-1 text-caption text-ink-2" aria-label="Legenda">
               <li className="inline-flex items-center gap-2">
-                <span className="h-0.5 w-5 rounded-full bg-primary" aria-hidden /> Con boost di {option.days} giorni
+                <span className="h-0.5 w-5 rounded-full bg-primary" aria-hidden /> In evidenza per {option.days} giorni
               </li>
               <li className="inline-flex items-center gap-2">
-                <span className="h-0.5 w-5 rounded-full bg-neutro-400" aria-hidden /> Senza boost
+                <span className="h-0.5 w-5 rounded-full bg-neutro-400" aria-hidden /> Senza evidenza
               </li>
               <li className="inline-flex items-center gap-2">
-                <span className="size-3 rounded-sm bg-sponsor" aria-hidden /> Giorni di boost
+                <span className="size-3 rounded-sm bg-sponsor" aria-hidden /> Giorni in evidenza
               </li>
             </ul>
             <div ref={ref} className="relative w-full min-w-0 overflow-hidden" onMouseLeave={() => setHover(null)}>
@@ -127,7 +127,7 @@ export function BoostProjection({
                 width={width}
                 height={H}
                 role="img"
-                aria-label={`Con un boost di ${option.days} giorni: circa ${nf.format(p.with.at(-1)!)} visite in ${HORIZON} giorni invece di ${nf.format(p.without.at(-1)!)}.`}
+                aria-label={`In evidenza per ${option.days} giorni: circa ${nf.format(p.with.at(-1)!)} visite in ${HORIZON} giorni invece di ${nf.format(p.without.at(-1)!)}.`}
                 className="block"
                 onMouseMove={(e) => {
                   const r = e.currentTarget.getBoundingClientRect();
@@ -169,7 +169,7 @@ export function BoostProjection({
                   <p className="mb-1.5 font-semibold text-ink">{hover === 0 ? "Oggi" : `Fra ${hover} ${hover === 1 ? "giorno" : "giorni"}`}</p>
                   <p className="flex justify-between gap-3 text-ink-2">
                     <span className="inline-flex items-center gap-1.5">
-                      <span className="size-2 rounded-full bg-primary" aria-hidden /> Con boost
+                      <span className="size-2 rounded-full bg-primary" aria-hidden /> In evidenza
                     </span>
                     <span className="font-semibold text-ink tabular-nums">{nf.format(p.with[hover])}</span>
                   </p>
@@ -202,19 +202,19 @@ export function BoostProjection({
               </div>
               <div className="col-span-2 rounded-md border border-line p-4 xl:col-span-1">
                 <dt className="inline-flex items-center gap-1.5 text-caption text-ink-2">
-                  <Coins className="size-3.5" aria-hidden /> Costo del boost
+                  <Coins className="size-3.5" aria-hidden /> Costo
                 </dt>
                 <dd className="flex items-baseline justify-between gap-2">
-                  <span className="font-display text-h3 tabular-nums">{option.tokens} token</span>
+                  <span className="font-display text-h3 tabular-nums">{option.tokens} crediti</span>
                   <span className="text-caption text-ink-2">≈ {formatEuro(tokenCents(option.tokens))} + IVA</span>
                 </dd>
                 <dd className={cn("mt-1 text-caption", enough ? "text-success" : "text-ink-2")}>
-                  {enough ? `Hai ${tokenBalance} token: ti bastano` : `Hai ${tokenBalance} token: te ne servono altri ${option.tokens - tokenBalance}`}
+                  {enough ? `Hai ${tokenBalance} crediti: ti bastano` : `Hai ${tokenBalance} crediti: te ne servono altri ${option.tokens - tokenBalance}`}
                 </dd>
               </div>
             </dl>
             <ButtonLink href="/area-partner/token" className="w-full">
-              <Rocket aria-hidden /> {enough ? "Attiva il boost" : "Acquista token"}
+              <Rocket aria-hidden /> {enough ? "Metti in evidenza" : "Compra crediti"}
             </ButtonLink>
           </div>
         </div>
@@ -222,11 +222,11 @@ export function BoostProjection({
 
       <p className="text-caption text-ink-2">
         {measuredUplift
-          ? `Stima basata sui tuoi boost precedenti: nei giorni di boost le visite sono state ${measuredUplift.toLocaleString("it-IT")} volte quelle normali.`
-          : `Stima indicativa: non hai ancora abbastanza giorni di boost per misurare l'effetto sui tuoi dati, quindi ipotizziamo visite ${DEFAULT_BOOST_UPLIFT.toLocaleString("it-IT")} volte quelle normali.`}{" "}
+          ? `Stima basata sui tuoi periodi in evidenza precedenti: in quei giorni le visite sono state ${measuredUplift.toLocaleString("it-IT")} volte quelle normali.`
+          : `Stima indicativa: non hai ancora abbastanza giorni in evidenza per misurare l'effetto sui tuoi dati, quindi ipotizziamo visite ${DEFAULT_BOOST_UPLIFT.toLocaleString("it-IT")} volte quelle normali.`}{" "}
         Partiamo dalla tua media attuale di {viewsPerDay.toLocaleString("it-IT", { maximumFractionDigits: 1 })} visite al giorno
         {leadsPerView > 0 && ` e da ${(leadsPerView * 100).toLocaleString("it-IT", { maximumFractionDigits: 1 })} richieste ogni 100 visite`}. Non è una garanzia di
-        risultato. Durante il boost la scheda è etichettata come “Sponsorizzato”.
+        risultato. Durante il periodo in evidenza la scheda è etichettata come “Sponsorizzato”.
       </p>
     </section>
   );

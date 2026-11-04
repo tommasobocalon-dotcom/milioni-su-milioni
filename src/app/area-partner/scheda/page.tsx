@@ -13,7 +13,7 @@ import { getPartnerProfile } from "@/lib/data/partners";
 import { formatRating } from "@/lib/domain/format";
 import { getGoogleReviews, googlePlacesEnabled } from "@/lib/google/places";
 
-export const metadata = { title: "La mia scheda" };
+export const metadata = { title: "Scheda pubblica" };
 
 export default function ProfileEditorPage() {
   return (
@@ -29,7 +29,7 @@ async function Profile() {
   if (!p) return null;
   return (
     <div className="flex flex-col gap-6">
-      <PartnerPageHeader title="La mia scheda" subtitle="Così ti vedono i clienti" partnerName={partner.displayName} logoUrl={partner.logoUrl} planCode={sub?.planCode} />
+      <PartnerPageHeader title="Scheda pubblica" subtitle="Così ti vedono i clienti" partnerName={partner.displayName} logoUrl={partner.logoUrl} planCode={sub?.planCode} />
       <section className="flex flex-col gap-4 rounded-lg border border-line bg-surface p-6">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h2 className="text-h3 font-semibold">{p.displayName}</h2>

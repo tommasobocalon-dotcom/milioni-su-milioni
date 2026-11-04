@@ -1,6 +1,6 @@
 /**
  * Interpreta la ricerca libera "cosa ti serve" e la porta alla sezione giusta.
- * Regole semplici e prevedibili; l'assistente AI (PRD §5.8) farà il resto più avanti.
+ * Regole semplici e prevedibili.
  * L'ordine conta: le regole più specifiche vengono prima.
  */
 

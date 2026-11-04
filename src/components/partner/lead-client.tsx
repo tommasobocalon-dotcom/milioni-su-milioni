@@ -41,7 +41,7 @@ export function ReportForm({ leadId }: { leadId: string }) {
         </p>
       )}
       <Button type="submit" variant="danger" size="s" disabled={pending}>
-        <Flag aria-hidden /> Segnala lead non valido
+        <Flag aria-hidden /> Segnala richiesta non valida
       </Button>
     </form>
   );

@@ -78,9 +78,9 @@ export async function reportLead(leadId: string, _prev: ReportState, formData: F
   const { user, partner } = await requirePartner();
   const reason = REPORT_REASONS.find((r) => r.value === formData.get("reason"));
   const lead = await ownLead(partner.id, leadId);
-  if (!lead) return { error: "Lead non trovato" };
+  if (!lead) return { error: "Richiesta non trovata" };
   if (!reason) return { error: "Scegli un motivo tra quelli previsti" };
-  if (lead.reportStatus) return { error: "Hai già segnalato questo lead" };
+  if (lead.reportStatus) return { error: "Hai già segnalato questa richiesta" };
   const now = new Date();
   if (!canReportLead(lead.deliveredAt, now)) return { error: "Sono passate più di 72 ore dalla consegna: non è più possibile segnalarlo" };
   await db.update(leads).set({ reportReason: reason.value, reportStatus: "open", reportedAt: now }).where(eq(leads.id, lead.id));
@@ -94,7 +94,7 @@ export type UnlockState = { error?: string };
 
 export async function unlockLeadAction(leadId: string): Promise<UnlockState> {
   const { user, partner } = await requirePartner();
-  if (!Id.safeParse(leadId).success) return { error: "Lead non valido" };
+  if (!Id.safeParse(leadId).success) return { error: "Richiesta non valida" };
   try {
     await unlockLead(partner.id, leadId, user.name);
   } catch (e) {
@@ -143,7 +143,7 @@ export async function activateBoostAction(days: number): Promise<ActionState> {
     const { endsAt } = await activateBoost(partner.id, days);
     await db.insert(auditLogs).values({ actor: user.email, action: "boost.activated", entity: "partner", entityId: partner.id, data: { days } });
     revalidatePath("/area-partner", "layout");
-    return { ok: `Boost attivo fino al ${endsAt.toLocaleDateString("it-IT")}` };
+    return { ok: `In evidenza fino al ${endsAt.toLocaleDateString("it-IT")}` };
   } catch (e) {
     if (e instanceof BoostNotActivatableError) return { error: e.message };
     throw e;

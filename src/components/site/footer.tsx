@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { HOME_PHOTOS } from "@/lib/data/home-content";
+import { CATEGORY_PHOTOS } from "@/lib/data/category-photos";
 import { Wordmark } from "./wordmark";
 
 const COLUMNS = [
@@ -44,7 +44,7 @@ const ISTAT_CREDIT = {
 
 /** Footer a colonne sul modello di Thumbtack, nei colori del brand, con i crediti di foto e mappa. */
 export function SiteFooter() {
-  const credits = [...new Map(HOME_PHOTOS.map((p) => [p.credit.page, p.credit])).values(), ISTAT_CREDIT];
+  const credits = [...new Map(Object.values(CATEGORY_PHOTOS).map((p) => [p.credit.page, p.credit])).values(), ISTAT_CREDIT];
   return (
     <footer className="mt-auto bg-brand text-salvia-200">
       <div className="container-page grid gap-12 pt-16 pb-12 md:grid-cols-2 md:pt-20 lg:grid-cols-[1.3fr_repeat(3,1fr)]">
@@ -66,9 +66,6 @@ export function SiteFooter() {
       <div className="bg-bosco-800">
         <div className="container-page flex flex-col gap-3 py-5 text-body-s md:flex-row md:items-start md:justify-between md:gap-8">
           <p>© 2026 geco (nome provvisorio) · Veneto, Italia</p>
-          <p className="md:text-right">
-            Quando usi l&apos;assistente geco stai parlando con un&apos;intelligenza artificiale.
-          </p>
         </div>
         <details className="container-page pb-5 text-body-s">
           <summary className="cursor-pointer self-start hover:text-on-brand">Crediti di foto e mappe</summary>

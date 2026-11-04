@@ -98,23 +98,23 @@ async function Stats({ days }: { days: StatsPeriod }) {
         <section className="flex flex-col gap-4 rounded-lg border border-line bg-surface p-6 lg:col-span-2" aria-labelledby="boost">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <h2 id="boost" className="inline-flex items-center gap-2 text-h3 font-semibold">
-              <Rocket className="size-5" aria-hidden /> Promozione con i token
+              <Rocket className="size-5" aria-hidden /> Scheda in evidenza
             </h2>
             <ButtonLink href="/area-partner/token" size="s">
-              {active ? "Allunga il boost" : "Attiva un boost"}
+              {active ? "Allunga il periodo" : "Metti in evidenza"}
             </ButtonLink>
           </div>
           <p className="text-body-s text-ink-2">
             {active
-              ? `Boost attivo fino al ${dateFmt.format(active.endsAt)}: compari tra i primi risultati, etichettato come "Sponsorizzato". Nel grafico i giorni con boost hanno lo sfondo ambra.`
-              : 'Con un boost compari tra i primi risultati della tua categoria nella tua provincia, sempre etichettato come "Sponsorizzato".'}
+              ? `In evidenza fino al ${dateFmt.format(active.endsAt)}: compari tra i primi risultati, etichettato come "Sponsorizzato". Nel grafico i giorni in evidenza hanno lo sfondo ambra.`
+              : 'In evidenza compari tra i primi risultati della tua categoria nella tua provincia, sempre etichettato come "Sponsorizzato".'}
           </p>
           {s.boosts.length > 0 && (
             <table className="w-full text-left text-body-s">
               <thead className="text-caption text-ink-2">
                 <tr>
                   <th className="py-2 font-medium">Periodo</th>
-                  <th className="py-2 text-right font-medium">Token spesi</th>
+                  <th className="py-2 text-right font-medium">Crediti usati</th>
                   <th className="py-2 text-right font-medium">Stato</th>
                 </tr>
               </thead>
@@ -341,15 +341,15 @@ function Reviews({ reviews, days }: { reviews: PartnerStats["reviews"]; days: nu
   );
 }
 
-/** Un consiglio alla volta, scelto dal punto più debole del percorso (regole fisse, non IA). */
+/** Un consiglio alla volta, scelto dal punto più debole del percorso (regole fisse). */
 function GecoTip({ s }: { s: PartnerStats }) {
   const t = s.totals;
   const unhandled = s.leadsByStatus.new ?? 0;
   const tip =
     unhandled > 0
-      ? { text: `Hai ${unhandled} ${unhandled === 1 ? "richiesta nuova" : "richieste nuove"} da gestire: chi risponde entro poche ore sale nei risultati.`, href: "/area-partner/lead?stato=new", cta: "Vai ai lead" }
+      ? { text: `Hai ${unhandled} ${unhandled === 1 ? "richiesta nuova" : "richieste nuove"} da gestire: chi risponde entro poche ore sale nei risultati.`, href: "/area-partner/lead?stato=new", cta: "Vedi le richieste" }
       : t.impressions < 20
-        ? { text: "Compari poco nelle ricerche: un boost ti porta tra i primi risultati della tua provincia.", href: "/area-partner/token", cta: "Attiva un boost" }
+        ? { text: "Compari poco nelle ricerche: metterti in evidenza ti porta tra i primi risultati della tua provincia.", href: "/area-partner/token", cta: "Metti in evidenza" }
         : (stepRate(t.views, t.impressions) ?? 100) < 15
           ? { text: "Molti ti vedono ma pochi aprono la scheda: una foto di copertina e una descrizione chiara aiutano.", href: "/area-partner/scheda", cta: "Migliora la scheda" }
           : { text: "Chi vede prezzi indicativi chiede più spesso un contatto: tieni aggiornato il listino.", href: "/area-partner/listino", cta: "Apri il listino" };

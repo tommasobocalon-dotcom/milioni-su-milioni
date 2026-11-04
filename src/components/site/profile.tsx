@@ -1,6 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
-import { BadgeCheck, CalendarDays, Clock, Home, Image as ImageIcon, MapPin, MessageCircle, ShieldCheck } from "lucide-react";
+import { BadgeCheck, CalendarDays, Clock, Home, Image as ImageIcon, MapPin, ShieldCheck } from "lucide-react";
 import { Suspense } from "react";
 import { Geco } from "@/components/site/geco";
 import { GoogleReviewsSection } from "@/components/site/google-reviews";
@@ -289,9 +289,6 @@ export function ProfileView({ p }: { p: PartnerProfile }) {
                 <li>✓ I tuoi dati vanno solo a questo partner</li>
               </ul>
               <ButtonLink href={`/richiesta/${p.slug}`}>Richiedi contatto</ButtonLink>
-              <p className="inline-flex items-center gap-1.5 text-caption text-ink-2">
-                <MessageCircle className="size-3.5" aria-hidden /> Hai una domanda? Il geco (un assistente IA) arriva presto.
-              </p>
             </section>
 
             <section id="zone" className="flex flex-col gap-3 rounded-lg border border-line bg-surface p-6">

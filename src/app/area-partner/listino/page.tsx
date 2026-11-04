@@ -9,7 +9,7 @@ import { getListableServices, getPriceList, getSubscription } from "@/lib/data/p
 import { getPartnerProfile } from "@/lib/data/partners";
 import { formatPriceRange, type PriceUnit } from "@/lib/domain/format";
 
-export const metadata = { title: "Listino prezzi" };
+export const metadata = { title: "Prezzi" };
 
 export default function PriceListPage() {
   return (
@@ -35,7 +35,7 @@ async function PriceList() {
   return (
     <div className="flex flex-col gap-6">
       <PartnerPageHeader
-        title="Listino prezzi"
+        title="Prezzi"
         subtitle="Prezzi indicativi mostrati sul profilo e nei risultati di ricerca"
         partnerName={partner.displayName}
         logoUrl={partner.logoUrl}

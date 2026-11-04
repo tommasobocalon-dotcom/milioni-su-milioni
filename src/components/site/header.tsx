@@ -10,7 +10,7 @@ const SECTIONS = [
   { href: "/come-funziona", label: "Come funziona", note: "Ordinamento, recensioni e contenuti sponsorizzati" },
 ];
 
-/** Navbar sul modello di Thumbtack: marchio a sinistra, Esplora, Sei un professionista?, Accedi e Registrati a destra. */
+/** Navbar sul modello di Thumbtack: marchio a sinistra, Esplora, Area clienti e Area aziende a destra. */
 export async function SiteHeader() {
   const categories = (await getCategories())
     .filter((c) => c.partnerType !== "agency")
@@ -24,30 +24,18 @@ export async function SiteHeader() {
         <nav aria-label="Principale" className="ml-auto hidden items-center md:flex">
           <div className="flex items-center lg:hero-search-hidden:max-xl:hidden">
             <ExploreMenu sections={SECTIONS} categories={categories} />
-            <Link
-              href="/per-i-professionisti"
-              className="inline-flex h-11 items-center rounded-full px-4 text-body text-ink-2 transition-colors hover:text-ink"
-            >
-              Sei un professionista?
-            </Link>
           </div>
           <Link
             href="/accedi"
             className="inline-flex h-11 items-center rounded-full px-4 text-body font-semibold text-primary transition-colors hover:bg-subtle"
           >
-            Accedi
+            Area clienti
           </Link>
           <Link
             href="/accedi/azienda"
-            className="inline-flex h-11 items-center rounded-full px-4 text-body text-ink-2 transition-colors hover:text-ink"
+            className="ml-1 inline-flex h-11 items-center rounded-full bg-subtle px-5 text-body font-semibold text-primary transition-[background-color,transform] duration-150 hover:bg-brand-soft active:scale-[0.97]"
           >
             Area aziende
-          </Link>
-          <Link
-            href="/accedi?modo=registrati"
-            className="ml-1 inline-flex h-11 items-center rounded-full bg-subtle px-5 text-body-s font-bold text-primary transition-[background-color,transform] duration-150 hover:bg-brand-soft active:scale-[0.97]"
-          >
-            Registrati
           </Link>
         </nav>
 
@@ -63,21 +51,15 @@ export async function SiteHeader() {
                 {s.label}
               </Link>
             ))}
-            <Link href="/accedi/azienda" className="rounded-md px-3 py-2.5 text-body text-ink-2 hover:bg-subtle">
-              Area aziende
-            </Link>
-            <Link href="/per-i-professionisti" className="rounded-md px-3 py-2.5 text-body text-ink-2 hover:bg-subtle">
-              Sei un professionista?
-            </Link>
             <div className="mt-1 grid grid-cols-2 gap-2">
               <Link href="/accedi" className="inline-flex h-11 items-center justify-center rounded-full text-body font-semibold text-primary hover:bg-subtle">
-                Accedi
+                Area clienti
               </Link>
               <Link
-                href="/accedi?modo=registrati"
-                className="inline-flex h-11 items-center justify-center rounded-full bg-subtle text-body-s font-bold text-primary hover:bg-brand-soft"
+                href="/accedi/azienda"
+                className="inline-flex h-11 items-center justify-center rounded-full bg-subtle text-body font-semibold text-primary hover:bg-brand-soft"
               >
-                Registrati
+                Area aziende
               </Link>
             </div>
           </div>

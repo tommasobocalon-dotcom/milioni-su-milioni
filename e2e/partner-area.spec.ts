@@ -41,25 +41,25 @@ test("il partner entra, gestisce un lead e sblocca quello oltre quota", async ({
   await login(page);
   await expect(page.getByRole("heading", { level: 1, name: /, Mario$/ })).toBeVisible();
   // 18 lead nei dati di esempio, più quelli eventualmente inviati dagli altri test
-  await expect(page.getByText(/^\d+ \/ 25$/).first()).toBeVisible();
+  await expect(page.getByText(/^\d+ di 25$/).first()).toBeVisible();
   await expect(page.getByText("140").first()).toBeVisible();
 
   // Inbox e dettaglio di un lead
-  await page.getByRole("navigation", { name: "Area Partner" }).getByRole("link", { name: "Lead" }).click();
-  await expect(page.getByRole("heading", { level: 1, name: "Lead" })).toBeVisible();
+  await page.getByRole("navigation", { name: "Area Partner" }).getByRole("link", { name: "Richieste clienti" }).click();
+  await expect(page.getByRole("heading", { level: 1, name: "Richieste clienti" })).toBeVisible();
   await page.getByRole("link", { name: /Marco B\./ }).click();
   await expect(page.getByRole("heading", { level: 1, name: /Marco B\. · Rifacimento bagno completo/ })).toBeVisible();
   await expect(page.getByText("+39 347 555 1218")).toBeVisible();
 
   await page.getByLabel("Stato").selectOption("contacted");
   await page.getByRole("button", { name: "Aggiorna stato" }).click();
-  await expect(page.getByText('Stato cambiato in "Contattato"')).toBeVisible();
+  await expect(page.getByText('Stato cambiato in "Chiamata"')).toBeVisible();
 
   // Lead oltre quota: contatti nascosti finché non si usano i token
   await page.goto("/area-partner/lead");
   await page.getByRole("link", { name: /Chiara/ }).click();
   await expect(page.getByText("Telefono ed email nascosti")).toBeVisible();
-  await page.getByRole("button", { name: "Sblocca con 8 token" }).click();
+  await page.getByRole("button", { name: "Sblocca con 8 crediti" }).click();
   await expect(page.getByText("+39 340 555 6677")).toBeVisible();
 
   await page.goto("/area-partner/token");
@@ -94,9 +94,10 @@ test("campanella, profilo, boost, statistiche, assistenza e lavori svolti", asyn
   const after = before - 1;
   await expect(page.getByRole("link", { name: after ? `Posta in arrivo, ${after} da leggere` : "Posta in arrivo" }).first()).toBeVisible();
 
-  // Modifica account: un file che non è un'immagine viene rifiutato, logo, foto, dati aziendali e sede vengono salvati.
-  await page.getByRole("link", { name: "Modifica account" }).first().click();
-  await expect(page.getByRole("heading", { level: 1, name: "Modifica account" })).toBeVisible();
+  // Dati account: un file che non è un'immagine viene rifiutato, logo, foto, dati aziendali e sede vengono salvati.
+  await page.getByRole("link", { name: "La mia attività" }).first().click();
+  await page.getByRole("link", { name: "Dati account" }).click();
+  await expect(page.getByRole("heading", { level: 1, name: "Dati account" })).toBeVisible();
   const photo = page.getByLabel(/foto profilo/);
   await photo.setInputFiles({ name: "finto.png", mimeType: "image/png", buffer: Buffer.from("<html>no</html>") });
   await page.getByRole("button", { name: "Salva" }).click();
@@ -122,16 +123,16 @@ test("campanella, profilo, boost, statistiche, assistenza e lavori svolti", asyn
   // Boost a token, poi visibile nelle statistiche.
   await page.goto("/area-partner/token");
   page.on("dialog", (d) => d.accept());
-  await page.getByRole("button", { name: /3 giorni · 30 token/ }).click();
-  await expect(page.getByText(/Boost attivo fino al/)).toBeVisible();
+  await page.getByRole("button", { name: /3 giorni · 30 crediti/ }).click();
+  await expect(page.getByText(/In evidenza fino al/)).toBeVisible();
   await page.goto("/area-partner/statistiche");
   // L'etichetta c'è anche nel percorso "Dalla ricerca alla richiesta": si controlla il riquadro degli indicatori.
   await expect(page.getByRole("region", { name: "Indicatori" }).getByText("Comparse nei risultati")).toBeVisible();
   await expect(page.getByRole("cell", { name: "Attivo" })).toBeVisible();
 
   // Assistenza.
-  await page.getByRole("link", { name: "Assistenza" }).first().click();
-  await expect(page.getByRole("heading", { level: 1, name: "Assistenza" })).toBeVisible();
+  await page.getByRole("link", { name: "Aiuto" }).first().click();
+  await expect(page.getByRole("heading", { level: 1, name: "Aiuto" })).toBeVisible();
   await expect(page.getByRole("region", { name: "Contatti" }).getByRole("link")).toHaveCount(3);
 
   // Lavori svolti (nella scheda): aggiungo un lavoro con foto, lo vedo nel profilo pubblico con i dati aziendali, lo elimino.

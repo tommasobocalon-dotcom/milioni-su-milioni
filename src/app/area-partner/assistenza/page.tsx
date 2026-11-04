@@ -9,7 +9,7 @@ import { requirePartner } from "@/lib/auth/session";
 import { listPartnerTickets } from "@/lib/data/support";
 import { supportEmail } from "@/lib/support/service";
 
-export const metadata = { title: "Assistenza" };
+export const metadata = { title: "Aiuto" };
 
 // Telefono e WhatsApp PROVVISORI: sostituire con quelli reali prima del lancio.
 const SUPPORT = {
@@ -42,7 +42,7 @@ async function Support() {
 
   return (
     <div className="flex flex-col gap-6">
-      <PartnerPageHeader title="Assistenza" subtitle="Siamo qui per aiutarti" partnerName={partner.displayName} logoUrl={partner.logoUrl} />
+      <PartnerPageHeader title="Aiuto" subtitle="Siamo qui per aiutarti" partnerName={partner.displayName} logoUrl={partner.logoUrl} />
 
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_340px]">
         <div className="flex min-w-0 flex-col gap-6">
@@ -104,16 +104,16 @@ async function Support() {
             <h2 className="text-h4 font-semibold">Domande frequenti</h2>
             <ul className="flex list-disc flex-col gap-2 pl-5 text-body-s">
               <li>
-                Un lead non è valido? Segnalalo entro 72 ore dalla pagina del{" "}
+                Una richiesta non è valida? Segnalala entro 72 ore dalla pagina della{" "}
                 <Link href="/area-partner/lead" className="font-semibold text-primary underline">
-                  lead
+                  richiesta
                 </Link>
                 .
               </li>
               <li>
-                Token, boost e lead oltre quota: trovi tutto in{" "}
+                Crediti, scheda in evidenza e richieste extra: trovi tutto in{" "}
                 <Link href="/area-partner/token" className="font-semibold text-primary underline">
-                  Token e boost
+                  Crediti
                 </Link>
                 .
               </li>

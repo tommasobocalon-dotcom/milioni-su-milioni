@@ -20,7 +20,7 @@ export function UnlockButton({ leadId, tokens }: { leadId: string; tokens: numbe
           })
         }
       >
-        <Coins aria-hidden /> {pending ? "Sblocco…" : `Sblocca con ${tokens} token`}
+        <Coins aria-hidden /> {pending ? "Sblocco…" : `Sblocca con ${tokens} crediti`}
       </Button>
       {error && (
         <p role="alert" className="text-caption text-error">

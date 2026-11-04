@@ -18,7 +18,7 @@ import { canReportLead, REPORT_REASONS, TOKEN_COST_PER_LEAD } from "@/lib/domain
 import { LEAD_STATUSES } from "@/lib/leads/status";
 import { whenLabel } from "@/components/partner/lead-row";
 
-export const metadata = { title: "Dettaglio lead" };
+export const metadata = { title: "Richiesta" };
 
 const fullFmt = new Intl.DateTimeFormat("it-IT", { day: "numeric", month: "long", hour: "2-digit", minute: "2-digit", timeZone: "Europe/Rome" });
 const shortFmt = new Intl.DateTimeFormat("it-IT", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", timeZone: "Europe/Rome" });
@@ -45,11 +45,11 @@ async function Lead({ id }: { id: string }) {
   const reportDeadline = lead.deliveredAt ? new Date(lead.deliveredAt.getTime() + 72 * 3600_000) : null;
   const whatsapp = lead.clientPhone ? `https://wa.me/${lead.clientPhone.replace("+", "")}` : null;
   const chargeText = {
-    quota: sub ? `Conteggiato nella quota del piano (${sub.leadsUsed} di ${sub.leadsIncluded} nel periodo).` : "Conteggiato nella quota del piano.",
-    token: `Oltre quota: ${lead.tokensCharged} token usati.`,
-    locked: `Arrivato oltre la quota del piano: i contatti si sbloccano con ${TOKEN_COST_PER_LEAD} token.`,
-    expired: "Il tempo per sbloccare questo lead è scaduto: il cliente ha ricevuto proposte alternative.",
-    refunded: "Segnalazione accolta: il lead ti è stato restituito.",
+    quota: sub ? `Inclusa nel piano (${sub.leadsUsed} di ${sub.leadsIncluded} usate in questo periodo).` : "Inclusa nel piano.",
+    token: `Richiesta extra: ${lead.tokensCharged} crediti usati.`,
+    locked: `Richiesta extra: hai già usato quelle incluse nel piano. Il numero si vede usando ${TOKEN_COST_PER_LEAD} crediti.`,
+    expired: "Il tempo per sbloccare questa richiesta è scaduto: il cliente ha ricevuto altre proposte.",
+    refunded: "Segnalazione accolta: questa richiesta non ti è stata conteggiata.",
     pending: "",
     duplicate: "",
   }[lead.charge];
@@ -58,14 +58,14 @@ async function Lead({ id }: { id: string }) {
     <div className="flex flex-col gap-6">
       <MarkSeen leadId={lead.id} isNew={lead.status === "new"} />
       <Link href="/area-partner/lead" className="inline-flex items-center gap-1 self-start text-body-s font-semibold text-primary hover:underline">
-        <ArrowLeft className="size-4" aria-hidden /> Tutti i lead
+        <ArrowLeft className="size-4" aria-hidden /> Tutte le richieste
       </Link>
       <header className="flex flex-col gap-1">
         <h1 className="font-display text-h1">
           {lead.clientName} · {lead.requestType}
         </h1>
         <p className="text-body-s text-ink-2">
-          Ricevuto {whenLabel(lead.createdAt, now)} · {lead.municipality} · numero verificato con SMS
+          Ricevuta {whenLabel(lead.createdAt, now)} · {lead.municipality} · numero verificato con SMS
         </p>
       </header>
 
@@ -168,14 +168,14 @@ async function Lead({ id }: { id: string }) {
 
           {chargeText && (
             <section className="flex flex-col gap-1 rounded-lg bg-brand-soft p-5">
-              <p className="caps-label text-primary">Conteggio</p>
+              <p className="caps-label text-primary">Quanto ti costa</p>
               <p className="text-body-s">{chargeText}</p>
-              <p className="text-caption text-neutro-700">Conta solo perché è verificato con SMS e consegnato. I duplicati entro 30 giorni si annullano da soli.</p>
+              <p className="text-caption text-neutro-700">Conta solo perché il numero del cliente è verificato con SMS. Se lo stesso cliente ti scrive di nuovo entro 30 giorni non la paghi due volte.</p>
             </section>
           )}
 
           <section className="flex flex-col gap-3 rounded-lg border border-line bg-surface p-6">
-            <h2 className="text-h4 font-semibold">Problema con questo lead?</h2>
+            <h2 className="text-h4 font-semibold">Problema con questa richiesta?</h2>
             {lead.reportStatus ? (
               <p className="text-body-s">
                 Segnalato ({REPORT_REASONS.find((r) => r.value === lead.reportReason)?.label ?? lead.reportReason}):{" "}
@@ -184,8 +184,8 @@ async function Lead({ id }: { id: string }) {
             ) : reportable ? (
               <>
                 <p className="text-body-s text-ink-2">
-                  Puoi segnalarlo fino al {reportDeadline && fullFmt.format(reportDeadline)}, solo per motivi oggettivi. Se accolta, ti
-                  restituiamo il lead.
+                  Puoi segnalarlo fino al {reportDeadline && fullFmt.format(reportDeadline)}, solo per motivi oggettivi. Se accolta, non ti
+                  viene conteggiata.
                 </p>
                 <ReportForm leadId={lead.id} />
               </>

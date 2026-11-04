@@ -18,7 +18,7 @@ import { TOKEN_COST_PER_LEAD } from "@/lib/domain/lead-rules";
 import { BOOST_OPTIONS, packageSaving, TOKEN_PACKAGES } from "@/lib/domain/offers";
 import { cn } from "@/lib/utils";
 
-export const metadata = { title: "Token e boost" };
+export const metadata = { title: "Crediti" };
 
 const dateFmt = new Intl.DateTimeFormat("it-IT", { day: "numeric", month: "short", year: "numeric", timeZone: "Europe/Rome" });
 const KIND: Record<string, string> = { purchase: "Acquisto", credit: "Accredito", consume: "Consumo", expire: "Scadenza", refund: "Rimborso" };
@@ -44,13 +44,13 @@ async function Tokens({ paid }: { paid: boolean }) {
   return (
     <div className="flex flex-col gap-6">
       <PartnerPageHeader
-        title="Token e boost"
-        subtitle="Crediti prepagati per lead oltre quota, boost e vetrina. Validi 12 mesi."
+        title="Crediti"
+        subtitle="Servono per le richieste extra (oltre quelle del piano) e per mettere la scheda in evidenza. Valgono 12 mesi."
         partnerName={partner.displayName} logoUrl={partner.logoUrl}
         planCode={sub?.planCode}
       />
 
-      {paid && <PaymentNotice>I token compaiono nel saldo appena Stripe conferma il pagamento: con la carta in pochi secondi, con l&apos;addebito SEPA in qualche giorno lavorativo.</PaymentNotice>}
+      {paid && <PaymentNotice>I crediti compaiono nel saldo appena Stripe conferma il pagamento: con la carta in pochi secondi, con l&apos;addebito SEPA in qualche giorno lavorativo.</PaymentNotice>}
 
       <div className="grid gap-6 xl:grid-cols-[340px_1fr]">
         <section className="flex flex-col gap-4 rounded-lg bg-brand p-6 text-on-brand">
@@ -58,7 +58,7 @@ async function Tokens({ paid }: { paid: boolean }) {
             <div>
               <p className="caps-label text-on-brand-muted">Saldo disponibile</p>
               <p className="font-display text-display-xl">{balance}</p>
-              <p className="text-body-s text-on-brand-muted">≈ {Math.floor(balance / TOKEN_COST_PER_LEAD)} lead oltre quota</p>
+              <p className="text-body-s text-on-brand-muted">≈ {Math.floor(balance / TOKEN_COST_PER_LEAD)} richieste extra</p>
             </div>
             <Geco outfit="token" size={96} />
           </div>
@@ -71,17 +71,17 @@ async function Tokens({ paid }: { paid: boolean }) {
                 disabled={memberRole !== "owner"}
                 className="mt-0.5 size-5 accent-salvia-300"
               />
-              <span>Usa automaticamente i token per i lead oltre quota ({TOKEN_COST_PER_LEAD} token ciascuno)</span>
+              <span>Usa i crediti in automatico per le richieste extra ({TOKEN_COST_PER_LEAD} crediti ciascuna)</span>
             </label>
             <Button type="submit" variant="light" size="s" disabled={memberRole !== "owner"}>
               Salva preferenza
             </Button>
-            <p className="text-caption text-on-brand-muted">Se disattivato, i lead oltre quota restano nascosti per 48 ore e puoi sbloccarli tu.</p>
+            <p className="text-caption text-on-brand-muted">Se lo togli, le richieste extra restano nascoste per 48 ore e decidi tu se sbloccarle.</p>
           </form>
         </section>
 
         <section className="flex flex-col gap-4">
-          <h2 className="text-h3 font-semibold">Acquista un pacchetto</h2>
+          <h2 className="text-h3 font-semibold">Compra crediti</h2>
           <ul className="grid gap-4 md:grid-cols-3">
             {TOKEN_PACKAGES.map((p) => {
               const saving = packageSaving(p.tokens, p.priceCents);
@@ -98,7 +98,7 @@ async function Tokens({ paid }: { paid: boolean }) {
                     {saving > 0 && <span className="rounded-full bg-ambra-100 px-2 py-0.5 text-caption font-semibold">−{saving}%</span>}
                   </div>
                   <p className="font-display text-h1">
-                    {p.tokens} <span className="text-body text-ink-2">token</span>
+                    {p.tokens} <span className="text-body text-ink-2">crediti</span>
                   </p>
                   <p className="text-body-s">{formatEuro(p.priceCents)} + IVA</p>
                   {stripeOn ? (
@@ -128,7 +128,7 @@ async function Tokens({ paid }: { paid: boolean }) {
           </ul>
           <p className="text-caption text-ink-2">
             {!stripeOn && dev
-              ? "Ambiente di prova: l'acquisto accredita i token senza pagamento. Con Stripe configurato il pagamento passa dal Checkout di Stripe, con ricevuta via email."
+              ? "Ambiente di prova: l'acquisto accredita i crediti senza pagamento. Con Stripe configurato il pagamento passa dal Checkout di Stripe, con ricevuta via email."
               : "Pagamento anticipato con Stripe (carta o addebito SEPA), con ricevuta via email."}
           </p>
         </section>
@@ -136,7 +136,7 @@ async function Tokens({ paid }: { paid: boolean }) {
 
       <section className="flex flex-col gap-4 rounded-lg border border-line bg-surface p-6">
         <h2 className="inline-flex items-center gap-2 text-h3 font-semibold">
-          <Rocket className="size-5" aria-hidden /> Boost della scheda
+          <Rocket className="size-5" aria-hidden /> Metti in evidenza la scheda
         </h2>
         <p className="text-body-s text-ink-2">
           Posizione sponsorizzata in cima ai risultati per la tua categoria e provincia, sempre etichettata come
@@ -144,7 +144,7 @@ async function Tokens({ paid }: { paid: boolean }) {
         </p>
         <BoostButtons options={BOOST_OPTIONS} balance={balance} />
         <p className="text-caption text-ink-2">
-          Vale per la tua categoria nella tua provincia. Se hai già un boost attivo, il nuovo parte alla sua scadenza. I risultati li trovi in{" "}
+          Vale per la tua categoria nella tua provincia. Se sei già in evidenza, il nuovo periodo parte quando finisce quello attuale. I risultati li trovi in{" "}
           <Link href="/area-partner/statistiche" className="font-semibold text-primary underline">
             Statistiche
           </Link>
@@ -161,7 +161,7 @@ async function Tokens({ paid }: { paid: boolean }) {
                 <th className="px-5 py-2 font-semibold">Data</th>
                 <th className="px-5 py-2 font-semibold">Descrizione</th>
                 <th className="px-5 py-2 font-semibold">Tipo</th>
-                <th className="px-5 py-2 text-right font-semibold">Token</th>
+                <th className="px-5 py-2 text-right font-semibold">Crediti</th>
                 <th className="px-5 py-2 font-semibold">Scadenza</th>
               </tr>
             </thead>
@@ -181,8 +181,7 @@ async function Tokens({ paid }: { paid: boolean }) {
           </table>
         </div>
         <p className="border-t border-line px-5 py-4 text-caption text-ink-2">
-          Registro immutabile: il saldo è sempre ricostruibile. I token non sono convertibili in denaro; si consumano prima quelli che
-          scadono prima.
+          I crediti non si convertono in denaro. Si usano prima quelli che scadono prima.
         </p>
       </section>
     </div>

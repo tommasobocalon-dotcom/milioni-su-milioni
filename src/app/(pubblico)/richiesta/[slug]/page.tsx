@@ -68,9 +68,6 @@ async function Request({ slug, service }: { slug: string; service?: string }) {
               primo contatto sarà più utile e il preventivo più preciso.
             </p>
           </div>
-          <p className="text-caption text-ink-2">
-            Il geco è un assistente basato su intelligenza artificiale: i suoi consigli non sono pareri tecnici vincolanti.
-          </p>
         </aside>
       </div>
     </div>

@@ -46,7 +46,7 @@ async function PlanChooser({ owner, demo }: { owner: boolean; demo: boolean }) {
         {plans.map((p) => (
           <li key={p.code} className="flex flex-col gap-3 rounded-lg border border-line bg-surface p-5">
             <p className="font-display text-h2">{p.name}</p>
-            <p className="text-body-s text-ink-2">{p.leadsIncluded} lead inclusi ogni periodo</p>
+            <p className="text-body-s text-ink-2">{p.leadsIncluded} richieste incluse ogni periodo</p>
             {demo ? (
               <>
                 <form action={simulateSubscription.bind(null, p.code, "monthly")}>
@@ -155,23 +155,23 @@ async function Subscription({ paid, welcome }: { paid: boolean; welcome: boolean
           </div>
           <div className="flex flex-col gap-2">
             <p className="flex justify-between text-body-s">
-              <span>Lead del periodo</span>
+              <span>Richieste usate in questo periodo</span>
               <span className="font-semibold">
                 {sub.leadsUsed} di {sub.leadsIncluded}
               </span>
             </p>
-            <div className="h-2 overflow-hidden rounded-full bg-muted" role="progressbar" aria-valuenow={used} aria-valuemin={0} aria-valuemax={100} aria-label="Lead usati nel periodo">
+            <div className="h-2 overflow-hidden rounded-full bg-muted" role="progressbar" aria-valuenow={used} aria-valuemin={0} aria-valuemax={100} aria-label="Richieste usate in questo periodo">
               <div className="h-full rounded-full bg-primary" style={{ width: `${used}%` }} />
             </div>
           </div>
           <ul className="grid gap-2 text-body-s sm:grid-cols-2">
             {[
-              `${sub.leadsIncluded} lead inclusi ogni periodo`,
+              `${sub.leadsIncluded} richieste incluse ogni periodo`,
               `Fino a ${sub.maxProvinces} ${sub.maxProvinces === 1 ? "provincia" : "province"}`,
               sub.maxServices ? `Fino a ${sub.maxServices} servizi nel listino` : "Servizi nel listino illimitati",
               sub.maxPortfolioItems ? `${sub.maxPortfolioItems} elementi di portfolio` : "Portfolio illimitato",
               `${sub.maxUsers} ${sub.maxUsers === 1 ? "utente" : "utenti"} per l'azienda`,
-              sub.renewalTokens ? `${sub.renewalTokens} token omaggio a ogni rinnovo` : "Nessun token omaggio",
+              sub.renewalTokens ? `${sub.renewalTokens} crediti in omaggio a ogni rinnovo` : "Nessun credito in omaggio",
             ].map((t) => (
               <li key={t} className="flex items-center gap-2">
                 <Check className="size-4 text-success" aria-hidden /> {t}

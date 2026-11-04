@@ -7,7 +7,7 @@ import { requirePartner } from "@/lib/auth/session";
 import { db } from "@/lib/db/client";
 import { partners, users } from "@/lib/db/schema";
 
-export const metadata = { title: "Modifica account" };
+export const metadata = { title: "Dati account" };
 
 export default function ProfilePage() {
   return (
@@ -38,7 +38,7 @@ async function Profile() {
 
   return (
     <div className="flex flex-col gap-6">
-      <PartnerPageHeader title="Modifica account" subtitle="I tuoi dati e quelli della tua azienda" partnerName={partner.displayName} logoUrl={partner.logoUrl} />
+      <PartnerPageHeader title="Dati account" subtitle="I tuoi dati e quelli della tua azienda" partnerName={partner.displayName} logoUrl={partner.logoUrl} />
       <ProfileForm
         canEditFiscal={memberRole === "owner"}
         values={{

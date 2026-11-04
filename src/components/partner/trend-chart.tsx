@@ -62,7 +62,7 @@ export function TrendChart({ days, metrics, boostDays }: { days: string[]; metri
         {shown != null ? (
           <>
             <span className="font-semibold text-ink">{metric.values[shown]}</span> {metric.label.toLowerCase()} · {fmtDay(days[shown], true)}
-            {boostDays[shown] && " · boost attivo"}
+            {boostDays[shown] && " · in evidenza"}
           </>
         ) : (
           <>
@@ -156,7 +156,7 @@ export function TrendChart({ days, metrics, boostDays }: { days: string[]; metri
                   <tr key={d}>
                     <th scope="row" className="px-3 py-1.5 font-normal">
                       {fmtDay(d, true)}
-                      {boostDays[i] && <span className="ml-1 text-caption text-ink-2">(boost)</span>}
+                      {boostDays[i] && <span className="ml-1 text-caption text-ink-2">(in evidenza)</span>}
                     </th>
                     {metrics.map((m) => (
                       <td key={m.key} className="px-3 py-1.5 text-right">

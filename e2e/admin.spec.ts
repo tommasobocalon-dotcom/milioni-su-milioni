@@ -148,7 +148,7 @@ test("lead segnalato: il partner segnala, l'amministratore accoglie e il lead vi
   await partner.goto("/area-partner/lead");
   await partner.getByRole("link", { name: /Paola R\./ }).click();
   await partner.getByLabel("Motivo").selectOption("unreachable");
-  await partner.getByRole("button", { name: "Segnala lead non valido" }).click();
+  await partner.getByRole("button", { name: "Segnala richiesta non valida" }).click();
   await expect(partner.getByText("Segnalato (Numero inesistente o irraggiungibile): in verifica")).toBeVisible();
 
   const admin = await browser.newPage();
@@ -160,7 +160,7 @@ test("lead segnalato: il partner segnala, l'amministratore accoglie e il lead vi
   await expect(row.getByText("Accolta")).toBeVisible();
 
   await partner.reload();
-  await expect(partner.getByText("Segnalazione accolta: il lead ti è stato restituito.")).toBeVisible();
+  await expect(partner.getByText("Segnalazione accolta: questa richiesta non ti è stata conteggiata.")).toBeVisible();
 });
 
 test("l'amministratore accredita token e sospende e riattiva un partner", async ({ page }) => {

@@ -24,7 +24,7 @@ export function LeadRow({ lead, now }: { lead: LeadListItem; now: Date }) {
     <li>
       <Link href={`/area-partner/lead/${lead.id}`} className="flex items-center gap-4 px-5 py-3.5 hover:bg-subtle">
         <span className={cn("hidden w-32 shrink-0 rounded-full px-2.5 py-1 text-center text-caption font-semibold sm:inline-block", s.tone)}>
-          {locked ? "Oltre quota" : s.label}
+          {locked ? "Extra" : s.label}
         </span>
         <span className="flex min-w-0 flex-1 flex-col">
           <span className="inline-flex items-center gap-1.5 font-semibold">

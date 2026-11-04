@@ -19,11 +19,11 @@ export function LockedLeadsBanner({
             <Coins className="size-5 shrink-0" aria-hidden />
             <div className="flex-1">
               <p className="font-semibold">
-                Lead oltre quota · {l.requestType} · {l.municipality}
+                Richiesta extra · {l.requestType} · {l.municipality}
               </p>
               <p className="text-body-s text-neutro-700">
-                Contatti nascosti: puoi sbloccarlo con {TOKEN_COST_PER_LEAD} token entro {hours} ore, poi il cliente riceverà
-                proposte alternative.
+                Hai già usato le richieste incluse nel piano. Per vedere il numero del cliente usa {TOKEN_COST_PER_LEAD} crediti
+                {hours < 1 ? "entro un'ora" : `entro ${hours} ore`}, altrimenti il cliente riceverà altre proposte.
               </p>
             </div>
             <UnlockButton leadId={l.id} tokens={TOKEN_COST_PER_LEAD} />
