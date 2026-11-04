@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { accountStatusFrom, grantsRenewalTokens, periodFromItems, subscriptionStatusFromStripe, tokenPurchaseFromCheckout } from "./billing";
+import { accountStatusFrom, grantsRenewalTokens, periodFromItems, subscriptionStatusFromStripe, tokenMonthsDue, tokenPurchaseFromCheckout } from "./billing";
 
 describe("subscriptionStatusFromStripe", () => {
   it("attivo solo con pagamento in regola", () => {
@@ -59,10 +59,10 @@ describe("periodFromItems", () => {
 });
 
 describe("tokenPurchaseFromCheckout", () => {
-  const paid = { mode: "payment", payment_status: "paid", metadata: { kind: "tokens", partnerId: "p1", packageCode: "medio" } };
+  const paid = { mode: "payment", payment_status: "paid", metadata: { kind: "tokens", partnerId: "p1", packageCode: "pro" } };
 
   it("pacchetto pagato: partner e token da accreditare", () => {
-    expect(tokenPurchaseFromCheckout(paid)).toEqual({ partnerId: "p1", tokens: 120, name: "Medio" });
+    expect(tokenPurchaseFromCheckout(paid)).toEqual({ partnerId: "p1", tokens: 300, name: "Pro" });
   });
 
   it("SEPA ancora in elaborazione: niente accredito", () => {
@@ -87,5 +87,23 @@ describe("grantsRenewalTokens", () => {
     expect(grantsRenewalTokens("subscription_update")).toBe(false);
     expect(grantsRenewalTokens("manual")).toBe(false);
     expect(grantsRenewalTokens(null)).toBe(false);
+  });
+});
+
+describe("tokenMonthsDue", () => {
+  const start = new Date("2026-01-31T10:00:00Z");
+
+  it("una quota di token appena inizia il periodo", () => {
+    expect(tokenMonthsDue(start, start)).toBe(1);
+  });
+
+  it("una in più a ogni mese compiuto, anche nei mesi corti", () => {
+    expect(tokenMonthsDue(start, new Date("2026-02-27T10:00:00Z"))).toBe(1);
+    expect(tokenMonthsDue(start, new Date("2026-02-28T10:00:00Z"))).toBe(2);
+    expect(tokenMonthsDue(start, new Date("2026-03-31T10:00:00Z"))).toBe(3);
+  });
+
+  it("mai più di 12 in un anno", () => {
+    expect(tokenMonthsDue(start, new Date("2027-06-01T10:00:00Z"))).toBe(12);
   });
 });

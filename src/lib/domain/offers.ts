@@ -1,19 +1,32 @@
-/** Pacchetti token e durate dei boost, come nel prototipo Figma (prezzi da confermare: PRD §20). */
+/** Pacchetti token e boost (documento "Costo e funzioni definitive", 4/11/2026). Prezzi IVA esclusa. */
 
 export const TOKEN_PACKAGES = [
-  { code: "piccolo", name: "Piccolo", tokens: 50, priceCents: 4900 },
-  { code: "medio", name: "Medio", tokens: 120, priceCents: 9900, highlight: true },
-  { code: "grande", name: "Grande", tokens: 300, priceCents: 21900 },
+  { code: "starter", name: "Starter", tokens: 100, priceCents: 1900 },
+  { code: "pro", name: "Pro", tokens: 300, priceCents: 4900, highlight: true },
+  { code: "business", name: "Business", tokens: 750, priceCents: 9900 },
 ] as const;
 
+/** Boost temporaneo ("Flash Sponsor"), solo per i piani Normal e Premium (ranking.ts, canBoost). */
 export const BOOST_OPTIONS = [
-  { days: 3, tokens: 30 },
-  { days: 7, tokens: 60 },
-  { days: 14, tokens: 100 },
+  { hours: 24, tokens: 50 },
+  { hours: 48, tokens: 90 },
+  { hours: 72, tokens: 140 },
 ] as const;
 
-/** Sconto rispetto al pacchetto piccolo, per mostrare il risparmio. */
+/** "24 ore", "48 ore"… */
+export const boostLabel = (hours: number) => `${hours} ore`;
+
+/** Sconto rispetto al pacchetto più piccolo, per mostrare il risparmio. */
 export function packageSaving(tokens: number, priceCents: number): number {
   const base = TOKEN_PACKAGES[0].priceCents / TOKEN_PACKAGES[0].tokens;
   return Math.round((1 - priceCents / tokens / base) * 100);
 }
+
+/** Espansione "spot" a una provincia vicina (solo Normal e Premium). */
+export const AREA_EXTENSION = { days: 30, tokens: 180 } as const;
+
+/** Lavoro in evidenza nella pagina "Ispirazione / Case study" (solo Normal e Premium). */
+export const SHOWCASE_OPTIONS = [
+  { days: 7, tokens: 80 },
+  { days: 30, tokens: 250 },
+] as const;

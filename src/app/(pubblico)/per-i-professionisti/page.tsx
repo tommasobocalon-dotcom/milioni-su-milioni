@@ -7,13 +7,14 @@ import { ButtonLink } from "@/components/ui/button";
 import { CATEGORY_PHOTOS } from "@/lib/data/category-photos";
 import { getPlans } from "@/lib/data/plans";
 import { formatEuro } from "@/lib/domain/format";
-import { REPORT_WINDOW_HOURS, TOKEN_COST_PER_LEAD, UNLOCK_WINDOW_HOURS } from "@/lib/domain/lead-rules";
-import { BOOST_OPTIONS, TOKEN_PACKAGES } from "@/lib/domain/offers";
+import { REPORT_WINDOW_HOURS } from "@/lib/domain/lead-rules";
+import { AREA_EXTENSION, BOOST_OPTIONS, boostLabel, SHOWCASE_OPTIONS, TOKEN_PACKAGES } from "@/lib/domain/offers";
+import { planFeatures } from "@/lib/domain/plan-features";
 
 export const metadata: Metadata = {
   title: "Per artigiani, tecnici e agenzie",
   description:
-    "Ricevi richieste di clienti della tua zona, con il numero verificato da un SMS. Abbonamento fisso mensile o annuale, crediti solo se servono.",
+    "Richieste di clienti della tua zona gratis e illimitate, con il numero verificato da un SMS. Tre piani, 7 giorni di prova gratis.",
 };
 
 const STEPS = [
@@ -25,24 +26,20 @@ const STEPS = [
 
 const FAQ = [
   {
-    q: "Cosa succede quando finisco le richieste del piano?",
-    a: `Le richieste in più sono "extra": vedi il lavoro e il comune, ma il numero resta nascosto per ${UNLOCK_WINDOW_HOURS} ore. Se ti interessa la sblocchi con ${TOKEN_COST_PER_LEAD} crediti. Se non la sblocchi non paghi niente.`,
+    q: "Quanto pago per ogni richiesta?",
+    a: "Niente. Le richieste dei clienti sono gratis e illimitate con tutti i piani: paghi solo l'abbonamento.",
   },
   {
     q: "E se una richiesta non è valida?",
-    a: `La segnali entro ${REPORT_WINDOW_HOURS} ore (numero inesistente, fuori zona, lavoro che non fai, spam). Se la segnalazione è accolta non ti viene conteggiata.`,
-  },
-  {
-    q: "Lo stesso cliente mi scrive due volte: pago due volte?",
-    a: "No. Se lo stesso cliente ti rimanda la stessa richiesta entro 30 giorni, conta una volta sola.",
+    a: `La segnali entro ${REPORT_WINDOW_HOURS} ore (numero inesistente, fuori zona, lavoro che non fai, spam). Ci aiuta a tenere fuori numeri falsi e spam.`,
   },
   {
     q: "Chi paga di più compare più in alto?",
-    a: 'No. L\'ordine dipende da distanza, completezza della scheda, recensioni e velocità di risposta. Chi si mette in evidenza compare in cima, ma sempre con la scritta "Sponsorizzato".',
+    a: 'Sì, ed è dichiarato. Nella tua zona compaiono prima i Premium, poi i Normal, poi i Base; con un boost sali in cima al tuo gruppo per 24, 48 o 72 ore. Tra pari grado l\'ordine ruota. I posti a pagamento hanno sempre la scritta "Sponsorizzato".',
   },
   {
     q: "Come pago? Posso disdire?",
-    a: "Paghi in anticipo online, con carta o addebito SEPA. Disdici quando vuoi dall'Area aziende: il piano resta attivo fino alla fine del periodo pagato.",
+    a: "I primi 7 giorni sono gratis: inserisci la carta e se disdici prima non paghi nulla. Poi paghi in anticipo, con carta o addebito SEPA. Disdici quando vuoi dall'Area aziende: il piano resta attivo fino alla fine del periodo pagato.",
   },
   {
     q: "Quanto ci metto a partire?",
@@ -50,25 +47,13 @@ const FAQ = [
   },
 ];
 
-function planLines(p: Awaited<ReturnType<typeof getPlans>>[number]): string[] {
-  return [
-    `${p.leadsIncluded} richieste di clienti al mese`,
-    `Fino a ${p.maxProvinces} ${p.maxProvinces === 1 ? "provincia" : "province"}`,
-    p.maxServices ? `${p.maxServices} prezzi nel listino` : "Listino senza limiti",
-    p.maxPortfolioItems ? `${p.maxPortfolioItems} foto di lavori` : "Foto di lavori senza limiti",
-    `${p.maxUsers} ${p.maxUsers === 1 ? "utente" : "utenti"}`,
-    p.renewalTokens ? `${p.renewalTokens} crediti in omaggio a ogni rinnovo` : null,
-    p.featuredSlots ? "Posti in evidenza nella tua zona" : null,
-  ].filter((l): l is string => !!l);
-}
-
 export default async function ForProfessionalsPage() {
   const plans: PlanCard[] = (await getPlans()).map((p) => ({
     code: p.code,
     name: p.name,
     monthlyPriceCents: p.monthlyPriceCents,
     yearlyPriceCents: p.yearlyPriceCents,
-    lines: planLines(p),
+    lines: planFeatures(p.code),
   }));
   const photo = CATEGORY_PHOTOS.ristrutturazioni;
 
@@ -84,7 +69,7 @@ export default async function ForProfessionalsPage() {
               numero già verificato.
             </p>
             <ul className="flex flex-col gap-2 text-body">
-              {["Clienti verificati con un SMS", "Abbonamento fisso, sai sempre quanto spendi", "Nessun vincolo: disdici quando vuoi"].map((t) => (
+              {["Richieste dei clienti gratis e illimitate", "Clienti verificati con un SMS", "7 giorni di prova gratis, poi disdici quando vuoi"].map((t) => (
                 <li key={t} className="flex items-center gap-2">
                   <Check className="size-5 shrink-0 text-salvia-300" aria-hidden /> {t}
                 </li>
@@ -128,16 +113,18 @@ export default async function ForProfessionalsPage() {
             <h2 id="piani-titolo" className="font-display text-h2 md:text-h1">
               Scegli il tuo piano
             </h2>
-            <p className="text-body text-ink-2">Ogni piano include un numero di richieste al mese. Con l&apos;annuale paghi 10 mesi invece di 12.</p>
+            <p className="text-body text-ink-2">Con tutti i piani le richieste dei clienti sono gratis e illimitate. I primi 7 giorni non paghi nulla.</p>
           </div>
           <PlanPicker plans={plans} />
 
           <div className="grid gap-6 rounded-lg border border-line bg-surface p-6 md:grid-cols-[1fr_1.2fr] md:p-8">
             <div className="flex flex-col gap-2">
-              <h3 className="text-h3 font-semibold">Ti servono più richieste? Usa i crediti</h3>
+              <h3 className="text-h3 font-semibold">Vuoi più visibilità? Usa i crediti</h3>
               <p className="text-body-s text-ink-2">
-                Li compri solo se servono e valgono 12 mesi. Una richiesta extra costa {TOKEN_COST_PER_LEAD} crediti; con{" "}
-                {BOOST_OPTIONS[0].tokens} crediti metti la scheda in evidenza per {BOOST_OPTIONS[0].days} giorni.
+                Con i piani Normal e Premium: boost in cima ai risultati per {BOOST_OPTIONS.map((o) => `${boostLabel(o.hours)} (${o.tokens} crediti)`).join(", ")};
+                una provincia vicina per {AREA_EXTENSION.days} giorni ({AREA_EXTENSION.tokens} crediti); un tuo lavoro in evidenza nella pagina
+                Ispirazione per {SHOWCASE_OPTIONS.map((o) => `${o.days} giorni (${o.tokens} crediti)`).join(" o ")}. Normal include 80 crediti al mese,
+                Premium 200. Se ne servono altri:
               </p>
             </div>
             <ul className="grid grid-cols-3 gap-3">

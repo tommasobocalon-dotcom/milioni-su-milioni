@@ -4,7 +4,7 @@ import { and, eq, inArray, isNotNull, isNull, or } from "drizzle-orm";
 import Stripe from "stripe";
 import { db } from "@/lib/db/client";
 import { partners, plans, stripeProcessed, subscriptions, tokenLedger } from "@/lib/db/schema";
-import { accountStatusFrom, grantsRenewalTokens, periodFromItems, subscriptionStatusFromStripe, tokenPurchaseFromCheckout } from "@/lib/domain/billing";
+import { accountStatusFrom, grantsRenewalTokens, periodFromItems, subscriptionStatusFromStripe, tokenMonthsDue, tokenPurchaseFromCheckout, TRIAL_DAYS } from "@/lib/domain/billing";
 import { TOKEN_PACKAGES } from "@/lib/domain/offers";
 import { tokenExpiryFrom } from "@/lib/domain/tokens";
 
@@ -91,6 +91,12 @@ export async function createSubscriptionCheckout(payer: Payer, planCode: string,
       ),
     );
   if (open) throw new BillingError("Hai già un abbonamento: cambia piano o metodo di pagamento dal portale");
+  // Prova gratuita una sola volta per azienda: chi ha già avuto un abbonamento Stripe paga da subito.
+  const [past] = await db
+    .select({ id: subscriptions.id })
+    .from(subscriptions)
+    .where(and(eq(subscriptions.partnerId, payer.partnerId), isNotNull(subscriptions.stripeSubscriptionId)))
+    .limit(1);
   const metadata = { kind: "subscription", partnerId: payer.partnerId };
   const session = await stripe().checkout.sessions.create({
     mode: "subscription",
@@ -98,7 +104,8 @@ export async function createSubscriptionCheckout(payer: Payer, planCode: string,
     locale: "it",
     line_items: [{ price, quantity: 1 }],
     metadata,
-    subscription_data: { metadata, default_tax_rates: taxRates() },
+    // Carta chiesta subito (impostazione predefinita di Checkout): alla fine della prova l'addebito parte da solo.
+    subscription_data: { metadata, default_tax_rates: taxRates(), ...(past ? {} : { trial_period_days: TRIAL_DAYS }) },
     success_url: `${appUrl()}/area-partner/abbonamento?pagamento=ok`,
     cancel_url: `${appUrl()}/area-partner/abbonamento`,
   });
@@ -217,16 +224,16 @@ export async function handleStripeEvent(event: Stripe.Event): Promise<void> {
       return;
 
     case "invoice.paid": {
-      // Periodo pagato: la quota lead si azzera e arrivano i token omaggio del piano (PRD §7.1, §7.2).
+      // Periodo pagato: arrivano i token del piano (la prima quota mensile; le altre dell'annuale dal cron mensile).
       const invoice = event.data.object;
       const subscriptionId = idOf(invoice.parent?.subscription_details?.subscription);
-      if (!subscriptionId || !grantsRenewalTokens(invoice.billing_reason)) return;
+      // La fattura a 0 € della prova gratuita non porta token: arrivano col primo pagamento vero.
+      if (!subscriptionId || !grantsRenewalTokens(invoice.billing_reason) || invoice.amount_paid <= 0) return;
       const synced = await syncSubscription(subscriptionId);
       if (!synced) return;
       const now = new Date();
       await db.transaction(async (tx) => {
         if (!(await firstTime(tx, `invoice:${invoice.id}`))) return;
-        await tx.update(subscriptions).set({ leadsUsed: 0 }).where(eq(subscriptions.id, synced.id));
         const [plan] = await tx
           .select({ name: plans.name, tokens: plans.renewalTokens })
           .from(subscriptions)
@@ -238,7 +245,7 @@ export async function handleStripeEvent(event: Stripe.Event): Promise<void> {
           kind: "credit",
           amount: plan.tokens,
           expiresAt: tokenExpiryFrom(now),
-          reference: `Token omaggio del piano ${plan.name}`,
+          reference: `Crediti del piano ${plan.name}`,
           createdAt: now,
         });
       });
@@ -248,4 +255,36 @@ export async function handleStripeEvent(event: Stripe.Event): Promise<void> {
     default:
       return;
   }
+}
+
+/**
+ * Crediti del piano "ogni mese" per chi paga l'annuale: la prima quota arriva col pagamento (invoice.paid),
+ * le altre una per ogni mese compiuto. Gira ogni giorno dal cron di Vercel; la chiave in stripe_processed
+ * evita doppi accrediti anche se il job viene ripetuto.
+ */
+export async function grantMonthlyTokens(now = new Date()): Promise<number> {
+  const rows = await db
+    .select({ id: subscriptions.id, partnerId: subscriptions.partnerId, start: subscriptions.currentPeriodStart, name: plans.name, tokens: plans.renewalTokens })
+    .from(subscriptions)
+    .innerJoin(plans, eq(plans.id, subscriptions.planId))
+    .where(and(eq(subscriptions.status, "active"), eq(subscriptions.period, "yearly"), isNotNull(subscriptions.stripeSubscriptionId)));
+  let granted = 0;
+  for (const sub of rows) {
+    if (sub.tokens <= 0) continue;
+    for (let month = 2; month <= tokenMonthsDue(sub.start, now); month++) {
+      await db.transaction(async (tx) => {
+        if (!(await firstTime(tx, `monthly-tokens:${sub.id}:${sub.start.toISOString()}:${month}`))) return;
+        await tx.insert(tokenLedger).values({
+          partnerId: sub.partnerId,
+          kind: "credit",
+          amount: sub.tokens,
+          expiresAt: tokenExpiryFrom(now),
+          reference: `Crediti del piano ${sub.name} (mese ${month})`,
+          createdAt: now,
+        });
+        granted++;
+      });
+    }
+  }
+  return granted;
 }

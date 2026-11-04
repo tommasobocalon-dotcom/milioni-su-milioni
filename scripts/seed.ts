@@ -235,8 +235,6 @@ export async function seed(db: Db) {
       status: "active",
       currentPeriodStart: periodStart,
       currentPeriodEnd: new Date(periodStart.getTime() + 30 * DAY),
-      leadsUsed: p.slug === "rossi-impianti" ? 18 : Math.floor(rand() * plan.leadsIncluded * 0.8),
-      autoUseTokens: false,
     });
 
     // Token: un pacchetto acquistato e, dove previsto, i token omaggio del rinnovo
@@ -244,7 +242,7 @@ export async function seed(db: Db) {
     await db.insert(s.tokenLedger).values({
       partnerId: row.id,
       kind: "purchase",
-      amount: p.slug === "rossi-impianti" ? 120 : 50 + Math.floor(rand() * 4) * 25,
+      amount: p.slug === "rossi-impianti" ? 300 : 50 + Math.floor(rand() * 4) * 25,
       expiresAt: tokenExpiryFrom(purchaseAt),
       reference: "Pacchetto token (esempio)",
       createdAt: purchaseAt,
@@ -255,7 +253,7 @@ export async function seed(db: Db) {
         kind: "credit",
         amount: plan.renewalTokens,
         expiresAt: tokenExpiryFrom(periodStart),
-        reference: `Token omaggio rinnovo piano ${plan.name}`,
+        reference: `Crediti del piano ${plan.name}`,
         createdAt: periodStart,
       });
     }
@@ -316,9 +314,9 @@ export async function seed(db: Db) {
     ]);
   }
 
-  // Un lead oltre quota con i contatti nascosti, da sbloccare con i token
-  const lockedAt = new Date(now.getTime() - 7 * HOUR);
-  const [locked] = await db
+  // Una richiesta arrivata qualche ora fa, ancora da gestire
+  const chiaraAt = new Date(now.getTime() - 7 * HOUR);
+  const [chiara] = await db
     .insert(s.leads)
     .values({
       partnerId: rossiId,
@@ -338,19 +336,18 @@ export async function seed(db: Db) {
       clientPhone: "+393405556677",
       privacyConsent: true,
       status: "new",
-      charge: "locked",
-      unlockExpiresAt: new Date(lockedAt.getTime() + 48 * HOUR),
-      verifiedAt: lockedAt,
-      deliveredAt: lockedAt,
-      createdAt: lockedAt,
+      charge: "quota",
+      verifiedAt: chiaraAt,
+      deliveredAt: chiaraAt,
+      createdAt: chiaraAt,
     })
     .returning({ id: s.leads.id });
   await db.insert(s.leadEvents).values({
-    leadId: locked.id,
-    type: "locked",
-    message: "Lead oltre la quota del piano: contatti nascosti per 48 ore, sbloccabili con i token",
+    leadId: chiara.id,
+    type: "delivered",
+    message: "Richiesta consegnata",
     actor: "Sistema",
-    createdAt: lockedAt,
+    createdAt: chiaraAt,
   });
 
   // Statistiche di esempio per Rossi Impianti: 90 giorni di comparse, visite e clic, con un boost passato

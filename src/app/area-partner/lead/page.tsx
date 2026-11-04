@@ -1,7 +1,6 @@
 import { Suspense } from "react";
 import { connection } from "next/server";
 import { LeadRow } from "@/components/partner/lead-row";
-import { LockedLeadsBanner } from "@/components/partner/locked-banner";
 import { PartnerPageHeader } from "@/components/partner/page-header";
 import { PartnerSkeleton } from "@/components/partner/skeleton";
 import { ChipLink } from "@/components/ui/chip";
@@ -35,8 +34,6 @@ async function Leads({ status }: { status?: string }) {
         partnerName={partner.displayName} logoUrl={partner.logoUrl}
         planCode={o.sub?.planCode}
       />
-
-      <LockedLeadsBanner leads={o.locked} now={now} />
 
       <section aria-label="Elenco richieste" className="rounded-lg border border-line bg-surface">
         <div className="flex flex-wrap items-center gap-2 p-5">

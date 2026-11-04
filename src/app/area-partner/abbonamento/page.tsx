@@ -10,6 +10,7 @@ import { stripeConfigured } from "@/lib/billing/stripe";
 import { getSubscription } from "@/lib/data/partner-area";
 import { getPlans } from "@/lib/data/plans";
 import { demoMode } from "@/lib/demo-mode";
+import { planFeatures } from "@/lib/domain/plan-features";
 import { formatEuro } from "@/lib/domain/format";
 
 export const metadata = { title: "Abbonamento" };
@@ -46,7 +47,11 @@ async function PlanChooser({ owner, demo }: { owner: boolean; demo: boolean }) {
         {plans.map((p) => (
           <li key={p.code} className="flex flex-col gap-3 rounded-lg border border-line bg-surface p-5">
             <p className="font-display text-h2">{p.name}</p>
-            <p className="text-body-s text-ink-2">{p.leadsIncluded} richieste incluse ogni periodo</p>
+            <ul className="flex flex-col gap-1 text-body-s text-ink-2">
+              {planFeatures(p.code).map((t) => (
+                <li key={t}>{t}</li>
+              ))}
+            </ul>
             {demo ? (
               <>
                 <form action={simulateSubscription.bind(null, p.code, "monthly")}>
@@ -119,7 +124,6 @@ async function Subscription({ paid, welcome }: { paid: boolean; welcome: boolean
     );
   }
   const yearly = sub.period === "yearly";
-  const used = Math.min(100, Math.round((sub.leadsUsed / Math.max(1, sub.leadsIncluded)) * 100));
   const portal = stripeOn && sub.stripeSubscriptionId && (
     <CheckoutButton action={openBillingPortal} size="s" variant="secondary" className="self-start" disabled={!owner}>
       Gestisci pagamento e fatture
@@ -153,26 +157,8 @@ async function Subscription({ paid, welcome }: { paid: boolean; welcome: boolean
               Prossimo rinnovo: <strong>{dateFmt.format(sub.currentPeriodEnd)}</strong>
             </p>
           </div>
-          <div className="flex flex-col gap-2">
-            <p className="flex justify-between text-body-s">
-              <span>Richieste usate in questo periodo</span>
-              <span className="font-semibold">
-                {sub.leadsUsed} di {sub.leadsIncluded}
-              </span>
-            </p>
-            <div className="h-2 overflow-hidden rounded-full bg-muted" role="progressbar" aria-valuenow={used} aria-valuemin={0} aria-valuemax={100} aria-label="Richieste usate in questo periodo">
-              <div className="h-full rounded-full bg-primary" style={{ width: `${used}%` }} />
-            </div>
-          </div>
           <ul className="grid gap-2 text-body-s sm:grid-cols-2">
-            {[
-              `${sub.leadsIncluded} richieste incluse ogni periodo`,
-              `Fino a ${sub.maxProvinces} ${sub.maxProvinces === 1 ? "provincia" : "province"}`,
-              sub.maxServices ? `Fino a ${sub.maxServices} servizi nel listino` : "Servizi nel listino illimitati",
-              sub.maxPortfolioItems ? `${sub.maxPortfolioItems} elementi di portfolio` : "Portfolio illimitato",
-              `${sub.maxUsers} ${sub.maxUsers === 1 ? "utente" : "utenti"} per l'azienda`,
-              sub.renewalTokens ? `${sub.renewalTokens} crediti in omaggio a ogni rinnovo` : "Nessun credito in omaggio",
-            ].map((t) => (
+            {planFeatures(sub.planCode).map((t) => (
               <li key={t} className="flex items-center gap-2">
                 <Check className="size-4 text-success" aria-hidden /> {t}
               </li>

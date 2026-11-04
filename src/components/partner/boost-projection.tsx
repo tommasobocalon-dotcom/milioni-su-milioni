@@ -4,7 +4,10 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Coins, Eye, Inbox, Rocket, TrendingUp } from "lucide-react";
 import { ButtonLink } from "@/components/ui/button";
 import { formatEuro } from "@/lib/domain/format";
-import { BOOST_OPTIONS, TOKEN_PACKAGES } from "@/lib/domain/offers";
+import { BOOST_OPTIONS as BOOSTS, boostLabel, TOKEN_PACKAGES } from "@/lib/domain/offers";
+
+/** Il grafico ragiona a giorni: un boost di 24 ore = 1 giorno. */
+const BOOST_OPTIONS = BOOSTS.map((o) => ({ ...o, days: o.hours / 24 }));
 import { DEFAULT_BOOST_UPLIFT, projectBoost } from "@/lib/domain/stats";
 import { cn } from "@/lib/utils";
 
@@ -98,7 +101,7 @@ export function BoostProjection({
                 o.days === days ? "bg-primary text-on-brand" : "text-ink-2 hover:bg-subtle hover:text-ink",
               )}
             >
-              {o.days} giorni · {o.tokens} crediti
+              {boostLabel(o.hours)} · {o.tokens} crediti
             </button>
           ))}
         </div>
@@ -113,7 +116,7 @@ export function BoostProjection({
           <div className="flex min-w-0 flex-col gap-3">
             <ul className="flex flex-wrap gap-x-5 gap-y-1 text-caption text-ink-2" aria-label="Legenda">
               <li className="inline-flex items-center gap-2">
-                <span className="h-0.5 w-5 rounded-full bg-primary" aria-hidden /> In evidenza per {option.days} giorni
+                <span className="h-0.5 w-5 rounded-full bg-primary" aria-hidden /> Boost di {boostLabel(option.hours)}
               </li>
               <li className="inline-flex items-center gap-2">
                 <span className="h-0.5 w-5 rounded-full bg-neutro-400" aria-hidden /> Senza evidenza
@@ -127,7 +130,7 @@ export function BoostProjection({
                 width={width}
                 height={H}
                 role="img"
-                aria-label={`In evidenza per ${option.days} giorni: circa ${nf.format(p.with.at(-1)!)} visite in ${HORIZON} giorni invece di ${nf.format(p.without.at(-1)!)}.`}
+                aria-label={`Con un boost di ${boostLabel(option.hours)}: circa ${nf.format(p.with.at(-1)!)} visite in ${HORIZON} giorni invece di ${nf.format(p.without.at(-1)!)}.`}
                 className="block"
                 onMouseMove={(e) => {
                   const r = e.currentTarget.getBoundingClientRect();

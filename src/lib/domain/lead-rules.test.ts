@@ -1,21 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { canReportLead, decideLeadCharge, isDuplicateLead, REPORT_WINDOW_HOURS, UNLOCK_WINDOW_HOURS } from "./lead-rules";
+import { canReportLead, decideLeadCharge, isDuplicateLead, REPORT_WINDOW_HOURS } from "./lead-rules";
 
 const now = new Date("2026-10-23T10:00:00Z");
 
 describe("decideLeadCharge", () => {
-  const base = {
-    accountActive: true,
-    isDuplicate: false,
-    quotaUsed: 10,
-    quotaIncluded: 25,
-    tokenBalance: 0,
-    autoUseTokens: false,
-    tokenCostPerLead: 8,
-    now,
-  };
+  const base = { accountActive: true, isDuplicate: false };
 
-  it("counts the lead against the plan quota while there is room", () => {
+  it("delivers every lead for free, with no quota (decisione del 4/11/2026)", () => {
     expect(decideLeadCharge(base)).toEqual({ kind: "quota" });
   });
 
@@ -25,27 +16,6 @@ describe("decideLeadCharge", () => {
 
   it("sends the client to alternatives when the account is not active", () => {
     expect(decideLeadCharge({ ...base, accountActive: false })).toEqual({ kind: "redirect" });
-  });
-
-  it("uses tokens automatically over quota when the partner opted in and has enough", () => {
-    expect(decideLeadCharge({ ...base, quotaUsed: 25, tokenBalance: 20, autoUseTokens: true })).toEqual({
-      kind: "token",
-      tokens: 8,
-    });
-  });
-
-  it("locks the lead for 48 hours over quota without automatic tokens", () => {
-    const decision = decideLeadCharge({ ...base, quotaUsed: 25, tokenBalance: 20 });
-    expect(decision).toEqual({
-      kind: "locked",
-      tokens: 8,
-      unlockExpiresAt: new Date(now.getTime() + UNLOCK_WINDOW_HOURS * 3600_000),
-    });
-  });
-
-  it("locks the lead when automatic tokens are on but the balance is too low", () => {
-    const decision = decideLeadCharge({ ...base, quotaUsed: 25, tokenBalance: 5, autoUseTokens: true });
-    expect(decision.kind).toBe("locked");
   });
 });
 

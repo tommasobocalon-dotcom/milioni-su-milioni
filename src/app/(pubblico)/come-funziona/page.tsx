@@ -1,14 +1,12 @@
 import type { Metadata } from "next";
 import { Geco } from "@/components/site/geco";
 import { ButtonLink } from "@/components/ui/button";
-import { RANKING_WEIGHTS } from "@/lib/domain/ranking";
 
 export const metadata: Metadata = {
   title: "Come funziona",
-  description: "Come cerchiamo, ordiniamo e verifichiamo: recensioni solo da richieste verificate, contenuti sponsorizzati sempre etichettati.",
+  description: "Come ordiniamo i risultati (piano di abbonamento e boost) e come verifichiamo le recensioni. Contenuti sponsorizzati sempre etichettati.",
 };
 
-const pct = (v: number) => `${Math.round(v * 100)}%`;
 
 export default function HowItWorksPage() {
   return (
@@ -45,25 +43,31 @@ export default function HowItWorksPage() {
 
       <section id="ordinamento" className="flex flex-col gap-3 scroll-mt-24">
         <h2 className="font-display text-h2">Come ordiniamo i risultati</h2>
-        <p className="text-body">I risultati organici sono ordinati con un punteggio che combina:</p>
-        <ul className="flex flex-col gap-1.5 text-body">
-          <li>valutazione media ponderata, che premia molte recensioni solide più di pochi voti alti ({pct(RANKING_WEIGHTS.rating)});</li>
-          <li>vicinanza al comune cercato ({pct(RANKING_WEIGHTS.proximity)});</li>
-          <li>completezza della scheda ({pct(RANKING_WEIGHTS.completeness)});</li>
-          <li>tempo di risposta ({pct(RANKING_WEIGHTS.response)});</li>
-          <li>piano di abbonamento ({pct(RANKING_WEIGHTS.plan)}).</li>
-        </ul>
         <p className="text-body">
-          Vediamo solo i partner che servono la zona cercata. Puoi sempre ordinare per valutazione, numero di recensioni, distanza o
-          prezzo indicativo.
+          Mostriamo solo le aziende che lavorano nella categoria e nella zona che cerchi. Poi l&apos;ordine dipende dal piano di
+          abbonamento che l&apos;azienda paga e dal boost a pagamento:
+        </p>
+        <ol className="flex list-decimal flex-col gap-1.5 pl-6 text-body">
+          <li>piano Premium con boost attivo;</li>
+          <li>piano Premium;</li>
+          <li>piano Normal con boost attivo;</li>
+          <li>piano Normal;</li>
+          <li>piano Base.</li>
+        </ol>
+        <p className="text-body">
+          Tra aziende dello stesso gruppo l&apos;ordine cambia da un visitatore all&apos;altro, così nessuna resta sempre prima. Il
+          riquadro grande in cima va a un&apos;azienda Premium, a rotazione. Recensioni e prezzi non cambiano l&apos;ordine
+          consigliato, ma puoi ordinare tu per valutazione, numero di recensioni, distanza o prezzo indicativo.
         </p>
       </section>
 
       <section id="sponsorizzati" className="flex flex-col gap-3 scroll-mt-24">
         <h2 className="font-display text-h2">Contenuti sponsorizzati</h2>
         <p className="text-body">
-          I partner possono acquistare posizioni in evidenza per la loro categoria e provincia. Questi posti sono separati dai
-          risultati organici, al massimo due per pagina, e sono sempre etichettati come &quot;Sponsorizzato&quot;.
+          Il riquadro grande in cima e le aziende con un boost attivo sono posti a pagamento: li riconosci dalla scritta
+          &quot;Sponsorizzato&quot;. Il boost vale per la categoria e la provincia dell&apos;azienda e dura da 24 a 72 ore. Un&apos;azienda
+          può anche pagare per comparire per 30 giorni in una provincia vicina alla sua, e per mettere un lavoro in evidenza nella
+          pagina Ispirazione, anche lì con la scritta &quot;Sponsorizzato&quot;.
         </p>
       </section>
 

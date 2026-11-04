@@ -37,12 +37,12 @@ test("Google dall'accesso aziende riporta alla pagina aziende", async ({ page })
   await expect(page.getByText("L'accesso con Google non è ancora attivo. Usa email e password.")).toBeVisible();
 });
 
-test("il partner entra, gestisce un lead e sblocca quello oltre quota", async ({ page }) => {
+test("il partner entra e gestisce le richieste", async ({ page }) => {
   await login(page);
   await expect(page.getByRole("heading", { level: 1, name: /, Mario$/ })).toBeVisible();
   // 18 lead nei dati di esempio, più quelli eventualmente inviati dagli altri test
-  await expect(page.getByText(/^\d+ di 25$/).first()).toBeVisible();
-  await expect(page.getByText("140").first()).toBeVisible();
+  await expect(page.getByRole("region", { name: "Il tuo piano" }).getByText("Normal", { exact: true })).toBeVisible();
+  await expect(page.getByRole("region", { name: "Il tuo piano" }).getByText("Crediti")).toBeVisible();
 
   // Inbox e dettaglio di un lead
   await page.getByRole("navigation", { name: "Area Partner" }).getByRole("link", { name: "Richieste clienti" }).click();
@@ -55,16 +55,10 @@ test("il partner entra, gestisce un lead e sblocca quello oltre quota", async ({
   await page.getByRole("button", { name: "Aggiorna stato" }).click();
   await expect(page.getByText('Stato cambiato in "Chiamata"')).toBeVisible();
 
-  // Lead oltre quota: contatti nascosti finché non si usano i token
+  // Le richieste sono gratis e illimitate: i contatti si vedono subito, senza sblocchi.
   await page.goto("/area-partner/lead");
   await page.getByRole("link", { name: /Chiara/ }).click();
-  await expect(page.getByText("Telefono ed email nascosti")).toBeVisible();
-  await page.getByRole("button", { name: "Sblocca con 8 crediti" }).click();
   await expect(page.getByText("+39 340 555 6677")).toBeVisible();
-
-  await page.goto("/area-partner/token");
-  await expect(page.getByText("132").first()).toBeVisible();
-  await expect(page.getByRole("cell", { name: /Sblocco lead/ })).toBeVisible();
 });
 
 test("chi crea un account senza azienda entra come cliente nell'Area cliente", async ({ page }) => {
@@ -123,7 +117,7 @@ test("campanella, profilo, boost, statistiche, assistenza e lavori svolti", asyn
   // Boost a token, poi visibile nelle statistiche.
   await page.goto("/area-partner/token");
   page.on("dialog", (d) => d.accept());
-  await page.getByRole("button", { name: /3 giorni · 30 crediti/ }).click();
+  await page.getByRole("button", { name: /24 ore · 50 crediti/ }).click();
   await expect(page.getByText(/In evidenza fino al/)).toBeVisible();
   await page.goto("/area-partner/statistiche");
   // L'etichetta c'è anche nel percorso "Dalla ricerca alla richiesta": si controlla il riquadro degli indicatori.
@@ -152,4 +146,38 @@ test("campanella, profilo, boost, statistiche, assistenza e lavori svolti", asyn
   await page.goto("/area-partner/scheda");
   await page.getByRole("button", { name: "Elimina Bagno rifatto a Mestre" }).click();
   await expect(portfolio.getByText("Bagno rifatto a Mestre")).toHaveCount(0);
+});
+
+test("extra a crediti: provincia vicina nelle ricerche e lavoro in Ispirazione", async ({ page }) => {
+  await login(page);
+
+  // Rossi Impianti è a Padova: in provincia di Verona compare solo dopo aver comprato la provincia vicina.
+  const verona = "/trova-professionista?categoria=idraulico&dove=Verona";
+  await page.goto(verona);
+  await expect(page.getByRole("link", { name: "Rossi Impianti" })).toHaveCount(0);
+  await page.goto("/area-partner/token");
+  page.on("dialog", (d) => d.accept());
+  await page.getByRole("button", { name: "Verona" }).click();
+  await expect(page.getByText(/Compari anche in provincia di Verona fino al/)).toBeVisible();
+  await page.goto(verona);
+  await expect(page.getByRole("link", { name: "Rossi Impianti" }).first()).toBeVisible();
+
+  // Un lavoro con foto in evidenza nella pagina Ispirazione, con la scritta "Sponsorizzato".
+  const png = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==", "base64");
+  await page.goto("/area-partner/scheda");
+  await page.getByLabel(/^Titolo/).fill("Caldaia nuova a Vigonza");
+  await page.getByLabel("Foto", { exact: true }).setInputFiles({ name: "caldaia.png", mimeType: "image/png", buffer: png });
+  await page.getByRole("button", { name: "Aggiungi" }).click();
+  await expect(page.getByText("Aggiunto al portfolio")).toBeVisible();
+  await page.goto("/area-partner/token");
+  await page.getByLabel("Lavoro da mettere in evidenza").selectOption({ label: "Caldaia nuova a Vigonza" });
+  await page.getByRole("button", { name: /7 giorni · 80 crediti/ }).click();
+  await expect(page.getByText(/In evidenza in Ispirazione fino al/)).toBeVisible();
+  await page.goto("/ispirazione");
+  const featured = page.getByRole("region", { name: "In evidenza" });
+  await expect(featured.getByText("Caldaia nuova a Vigonza")).toBeVisible();
+  await expect(featured.getByText("Sponsorizzato")).toBeVisible();
+
+  await page.goto("/area-partner/scheda");
+  await page.getByRole("button", { name: "Elimina Caldaia nuova a Vigonza" }).click();
 });

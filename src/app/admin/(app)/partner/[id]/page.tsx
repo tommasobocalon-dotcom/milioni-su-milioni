@@ -64,7 +64,7 @@ async function PartnerDetail({ id }: { id: string }) {
       <section aria-label="Indicatori" className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {[
           { label: "Piano", value: p.sub ? p.sub.planName : "Nessuno", note: p.sub ? `${PERIOD_LABEL[p.sub.period]}, ${SUB_LABEL[p.sub.status]}` : "Non ha ancora pagato" },
-          { label: "Quota lead", value: p.sub ? `${p.sub.leadsUsed} / ${p.sub.leadsIncluded}` : "—", note: p.sub ? `Rinnovo il ${dateOnly.format(p.sub.currentPeriodEnd)}` : "" },
+          { label: "Piano", value: p.sub?.planName ?? "—", note: p.sub ? `Rinnovo il ${dateOnly.format(p.sub.currentPeriodEnd)}` : "" },
           { label: "Saldo token", value: String(p.balance), note: "Dal registro immutabile" },
           { label: "Lead ricevuti", value: String(p.leads.total), note: `${p.leads.last30} negli ultimi 30 giorni · ${p.leads.reported} segnalati` },
         ].map((k) => (

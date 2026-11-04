@@ -1,6 +1,6 @@
 "use server";
 
-import { and, eq, inArray, sql } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import { revalidatePath, updateTag } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
@@ -206,18 +206,13 @@ export async function resolveLeadReportAction(leadId: string, formData: FormData
           reference: `Rimborso lead segnalato ${lead.id.slice(0, 8)}`,
           createdAt: now,
         });
-      } else if (lead.charge === "quota") {
-        await tx
-          .update(subscriptions)
-          .set({ leadsUsed: sql`greatest(${subscriptions.leadsUsed} - 1, 0)` })
-          .where(and(eq(subscriptions.partnerId, lead.partnerId), eq(subscriptions.status, "active")));
       }
       const refunded = lead.charge === "token" || lead.charge === "quota";
       await tx.update(leads).set({ reportStatus: "accepted", charge: refunded ? "refunded" : lead.charge }).where(eq(leads.id, lead.id));
       await tx.insert(leadEvents).values({
         leadId: lead.id,
         type: "report_accepted",
-        message: lead.charge === "token" ? `Segnalazione accolta: ${lead.tokensCharged} token restituiti` : "Segnalazione accolta: il lead non conta nella quota",
+        message: lead.charge === "token" ? `Segnalazione accolta: ${lead.tokensCharged} token restituiti` : "Segnalazione accolta",
         actor: "Assistenza geco",
         createdAt: now,
       });

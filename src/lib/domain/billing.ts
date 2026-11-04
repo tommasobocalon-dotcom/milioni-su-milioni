@@ -4,6 +4,9 @@
  */
 import { TOKEN_PACKAGES } from "./offers";
 
+/** Giorni di prova gratuita al primo abbonamento (documento del 4/11/2026). */
+export const TRIAL_DAYS = 7;
+
 export type SubscriptionStatus = "activating" | "active" | "suspended" | "cancelled";
 
 /** Sospensione immediata al pagamento fallito: nessun periodo di tolleranza (decisione del 26/10/2026). */
@@ -49,7 +52,28 @@ export function tokenPurchaseFromCheckout(session: CheckoutLike): { partnerId: s
   return pkg ? { partnerId: m.partnerId, tokens: pkg.tokens, name: pkg.name } : null;
 }
 
-/** Token omaggio del piano: a ogni periodo pagato (primo compreso), non sui conguagli. */
+/** Token del piano: a ogni periodo pagato (primo compreso), non sui conguagli. */
 export function grantsRenewalTokens(billingReason: string | null): boolean {
   return billingReason === "subscription_create" || billingReason === "subscription_cycle";
+}
+
+/**
+ * Token del piano "ogni mese" (documento del 4/11/2026): quante quote mensili spettano dall'inizio del
+ * periodo pagato fino a `now`, prima compresa. Con il mensile è sempre 1; con l'annuale ne arriva una a ogni
+ * mese compiuto, al massimo 12. Il 31 gennaio + 1 mese = 28 febbraio (fine mese).
+ */
+export function tokenMonthsDue(periodStart: Date, now: Date): number {
+  let months = 0;
+  while (months < 12 && addMonths(periodStart, months).getTime() <= now.getTime()) months++;
+  return Math.max(months, 1);
+}
+
+function addMonths(date: Date, months: number): Date {
+  const d = new Date(date);
+  const day = d.getUTCDate();
+  d.setUTCDate(1);
+  d.setUTCMonth(d.getUTCMonth() + months);
+  const last = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 0)).getUTCDate();
+  d.setUTCDate(Math.min(day, last));
+  return d;
 }

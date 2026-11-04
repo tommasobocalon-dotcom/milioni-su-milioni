@@ -4,7 +4,8 @@ import { deletePortfolioItem, setPortfolioStatus } from "@/app/area-partner/acti
 import { PortfolioForm } from "@/components/partner/portfolio-form";
 import { Button } from "@/components/ui/button";
 import { getMunicipalities } from "@/lib/data/catalog";
-import { getPortfolio } from "@/lib/data/partner-area";
+import { getPortfolio, getSubscription } from "@/lib/data/partner-area";
+import { PREMIUM_WEIGHT } from "@/lib/domain/ranking";
 import { formatEuro } from "@/lib/domain/format";
 
 const STATUS = [
@@ -15,10 +16,20 @@ const STATUS = [
 
 /** Lavori svolti (o immobili per le agenzie) mostrati nella scheda pubblica. */
 export async function PortfolioManager({ partnerId, isAgency }: { partnerId: string; isAgency: boolean }) {
-  const [items, places] = await Promise.all([getPortfolio(partnerId), getMunicipalities()]);
+  const [items, places, sub] = await Promise.all([getPortfolio(partnerId), getMunicipalities(), getSubscription(partnerId)]);
+  const limitNote = sub
+    ? sub.maxPortfolioItems === null
+      ? `Progetti senza limiti con il piano ${sub.planName}`
+      : `${items.length} di ${sub.maxPortfolioItems} progetti del piano ${sub.planName}`
+    : null;
   return (
     <>
-      <PortfolioForm isAgency={isAgency} places={places.map((p) => ({ id: p.id, label: `${p.name} (${p.provinceCode})` }))} />
+      <PortfolioForm
+        isAgency={isAgency}
+        places={places.map((p) => ({ id: p.id, label: `${p.name} (${p.provinceCode})` }))}
+        canVideo={!!sub && sub.planWeight >= PREMIUM_WEIGHT}
+        limitNote={limitNote}
+      />
 
       <h2 className="text-h3 font-semibold">{isAgency ? "Immobili" : "Lavori svolti"}</h2>
       <section aria-label="Elementi del portfolio" className="rounded-lg border border-line bg-surface p-6">

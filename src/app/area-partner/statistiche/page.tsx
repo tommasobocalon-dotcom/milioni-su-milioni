@@ -10,7 +10,8 @@ import { Geco } from "@/components/site/geco";
 import { ButtonLink } from "@/components/ui/button";
 import { ChipLink } from "@/components/ui/chip";
 import { requirePartner } from "@/lib/auth/session";
-import { getTokenBalance } from "@/lib/data/partner-area";
+import { getSubscription, getTokenBalance } from "@/lib/data/partner-area";
+import { canBoost } from "@/lib/domain/ranking";
 import { getPartnerStats, type PartnerStats } from "@/lib/data/stats";
 import { boostedDays, boostUplift, change, parsePeriod, STATS_PERIODS, stepRate, type StatsPeriod } from "@/lib/domain/stats";
 import { LEAD_STATUSES } from "@/lib/leads/status";
@@ -35,6 +36,23 @@ async function Stats({ days }: { days: StatsPeriod }) {
   const { partner } = await requirePartner();
   await connection();
   const now = new Date();
+  // Le statistiche sono incluse nei piani Normal e Premium, non nel Base (documento del 4/11/2026).
+  const sub = await getSubscription(partner.id);
+  if (!sub || !canBoost(sub.planWeight)) {
+    return (
+      <div className="flex flex-col gap-6">
+        <PartnerPageHeader title="Statistiche" partnerName={partner.displayName} logoUrl={partner.logoUrl} planCode={sub?.planCode} />
+        <section className="flex flex-col items-start gap-4 rounded-lg bg-brand-soft p-6 sm:flex-row sm:items-center">
+          <Geco outfit="partner" size={80} />
+          <div className="flex flex-1 flex-col gap-1">
+            <h2 className="text-h3 font-semibold">Le statistiche sono incluse nei piani Normal e Premium</h2>
+            <p className="text-body text-neutro-700">Visite alla scheda, richieste ricevute, da dove arrivano i clienti e quanto rende un boost.</p>
+          </div>
+          <ButtonLink href="/area-partner/abbonamento">Cambia piano</ButtonLink>
+        </section>
+      </div>
+    );
+  }
   const [s, tokenBalance] = await Promise.all([getPartnerStats(partner.id, now, days), getTokenBalance(partner.id, now)]);
   const t = s.totals;
   const prev = s.previousTotals;

@@ -11,6 +11,7 @@ import { LogoPartner } from "@/components/ui/logo-partner";
 import { Rating, Stars } from "@/components/ui/stars";
 import type { PartnerProfile } from "@/lib/data/partners";
 import { formatEuro, formatPriceRange, formatRating, formatResponseTime, PRICE_UNIT_LABEL, type PriceUnit } from "@/lib/domain/format";
+import { videoEmbedUrl } from "@/lib/domain/extras";
 
 const dateFmt = new Intl.DateTimeFormat("it-IT", { month: "long", year: "numeric" });
 
@@ -151,7 +152,16 @@ export function ProfileView({ p }: { p: PartnerProfile }) {
                   {p.portfolio.map((item) => (
                     <li key={item.id} className="flex flex-col gap-2">
                       <div className="relative flex aspect-[4/3] items-center justify-center overflow-hidden rounded-md bg-muted text-ink-2">
-                        {item.imageUrl ? (
+                        {item.videoUrl && videoEmbedUrl(item.videoUrl) ? (
+                          <iframe
+                            src={videoEmbedUrl(item.videoUrl)!}
+                            title={`Video: ${item.title}`}
+                            loading="lazy"
+                            allow="encrypted-media; picture-in-picture; fullscreen"
+                            referrerPolicy="strict-origin-when-cross-origin"
+                            className="absolute inset-0 size-full"
+                          />
+                        ) : item.imageUrl ? (
                           <Image src={item.imageUrl} alt={item.title} fill sizes="(min-width: 1280px) 30vw, (min-width: 640px) 45vw, 100vw" className="object-cover" />
                         ) : item.kind === "property" ? (
                           <Home className="size-8" aria-hidden />

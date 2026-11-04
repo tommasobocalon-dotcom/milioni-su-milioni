@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { ChipLink } from "@/components/ui/chip";
 import { Input, Select } from "@/components/ui/field";
 import { findPlace, getCategories, getCategoryBySlug, getMunicipalities, getServicesForCategory } from "@/lib/data/catalog";
+import { FeaturedPartner } from "@/components/site/featured-partner";
 import { searchPartners, type SortKey } from "@/lib/data/search";
 
 export type ResultsParams = {
@@ -17,7 +18,7 @@ export type ResultsParams = {
 };
 
 const SORTS: { value: SortKey; label: string }[] = [
-  { value: "rilevanza", label: "Rilevanza" },
+  { value: "rilevanza", label: "Consigliati" },
   { value: "valutazione", label: "Valutazione" },
   { value: "recensioni", label: "Numero di recensioni" },
   { value: "distanza", label: "Distanza" },
@@ -47,7 +48,7 @@ export async function Results({ mode, params }: { mode: "agency" | "pro"; params
   const minRating = params.voto ? Number(params.voto.replace(",", ".")) : undefined;
   const sort = (SORTS.find((s) => s.value === params.ordina)?.value ?? "rilevanza") as SortKey;
 
-  const { sponsored, results } = await searchPartners({
+  const { featured, results } = await searchPartners({
     partnerType: mode,
     categoryId: category?.id,
     serviceId: service?.id,
@@ -67,7 +68,7 @@ export async function Results({ mode, params }: { mode: "agency" | "pro"; params
 
   const what = mode === "agency" ? "Agenzie immobiliari" : category?.pluralName ?? "Professionisti e artigiani";
   const where = place ? `a ${place.name}` : "in Veneto";
-  const total = sponsored.length + results.length;
+  const total = (featured ? 1 : 0) + results.length;
   const proCategories = allCategories.filter((c) => c.partnerType !== "agency");
 
   return (
@@ -194,8 +195,9 @@ export async function Results({ mode, params }: { mode: "agency" | "pro"; params
           <p id="ordinamento" className="flex gap-2 rounded-md bg-subtle p-3 text-caption text-ink-2">
             <Info className="size-4 shrink-0" aria-hidden />
             <span>
-              Come ordiniamo: pertinenza di zona, valutazione ponderata, completezza della scheda, tempo di risposta e piano.
-              I posti sponsorizzati sono separati ed etichettati.{" "}
+              Come ordiniamo: mostriamo solo chi lavora nella zona cercata, poi prima i piani più alti (Premium, Normal, Base)
+              e chi ha un boost attivo, etichettato &quot;Sponsorizzato&quot;. Tra aziende dello stesso piano l&apos;ordine cambia a
+              ogni visita.{" "}
               <Link href="/come-funziona#ordinamento" className="font-semibold text-primary underline">
                 Dettagli
               </Link>
@@ -210,17 +212,7 @@ export async function Results({ mode, params }: { mode: "agency" | "pro"; params
           >
             <SlidersHorizontal className="size-4" aria-hidden /> Filtri e ordinamento
           </a>
-          {sponsored.length > 0 && (
-            <>
-              <h2 className="caps-label text-ink-2">Sponsorizzato</h2>
-              {sponsored.map((p) => (
-                <PartnerCard key={p.id} p={p} />
-              ))}
-              <h2 className="caps-label mt-2 text-ink-2">
-                {results.length} {results.length === 1 ? "risultato" : "risultati"}
-              </h2>
-            </>
-          )}
+          {featured && <FeaturedPartner p={featured} />}
           {results.map((p) => (
             <PartnerCard key={p.id} p={p} />
           ))}

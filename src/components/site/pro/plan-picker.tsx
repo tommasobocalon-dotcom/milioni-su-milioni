@@ -14,7 +14,7 @@ export type PlanCard = {
   lines: string[];
 };
 
-/** I tre piani affiancati, con la scelta mensile/annuale. Il piano Media è quello consigliato. */
+/** I tre piani affiancati, con la scelta mensile/annuale. Il piano Normal è quello consigliato. */
 export function PlanPicker({ plans }: { plans: PlanCard[] }) {
   const [yearly, setYearly] = useState(false);
 
@@ -23,7 +23,7 @@ export function PlanPicker({ plans }: { plans: PlanCard[] }) {
       <div role="radiogroup" aria-label="Come paghi" className="inline-flex rounded-full bg-surface p-1 ring-1 ring-line">
         {[
           { value: false, label: "Mensile" },
-          { value: true, label: "Annuale · 2 mesi gratis" },
+          { value: true, label: "Annuale · costa meno" },
         ].map((o) => (
           <button
             key={o.label}
@@ -43,7 +43,7 @@ export function PlanPicker({ plans }: { plans: PlanCard[] }) {
 
       <ul className="grid w-full gap-6 md:grid-cols-3">
         {plans.map((p) => {
-          const featured = p.code === "media";
+          const featured = p.code === "normal";
           return (
             <li
               key={p.code}
@@ -61,12 +61,12 @@ export function PlanPicker({ plans }: { plans: PlanCard[] }) {
               <div>
                 <p>
                   <span className="font-display text-display-l tabular-nums">
-                    {formatEuro(yearly ? p.yearlyPriceCents : p.monthlyPriceCents)}
+                    {formatEuro(yearly ? Math.round(p.yearlyPriceCents / 12) : p.monthlyPriceCents)}
                   </span>
-                  <span className="text-body text-ink-2">{yearly ? " /anno" : " /mese"}</span>
+                  <span className="text-body text-ink-2"> /mese</span>
                 </p>
                 <p className="text-body-s text-ink-2">
-                  {yearly ? `invece di ${formatEuro(p.monthlyPriceCents * 12)}` : `oppure ${formatEuro(p.yearlyPriceCents)} all'anno`} · IVA esclusa
+                  {yearly ? `${formatEuro(p.yearlyPriceCents)} pagati una volta all'anno` : `${formatEuro(Math.round(p.yearlyPriceCents / 12))} al mese con l'annuale`} · IVA esclusa
                 </p>
               </div>
               <ul className="flex flex-col gap-2.5 text-body-s">

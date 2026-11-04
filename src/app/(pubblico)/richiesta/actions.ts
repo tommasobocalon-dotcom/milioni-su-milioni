@@ -146,7 +146,7 @@ export async function verifyLeadRequest(leadId: string, code: string): Promise<V
     if (check === "locked") return { ok: false, error: "Troppi tentativi: chiedi un nuovo codice." };
 
     const { outcome, partnerId } = await confirmLead(lead.id);
-    if (outcome === "delivered" || outcome === "token" || outcome === "locked") {
+    if (outcome === "delivered") {
       await bestEffort("avviso al partner", notifyPartner(partnerId, lead.id));
       await bestEffort(
         "conferma al cliente",

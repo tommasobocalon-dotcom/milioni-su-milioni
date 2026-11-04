@@ -15,7 +15,7 @@ const csp = [
   "style-src 'self' 'unsafe-inline'",
   // Cloudflare Turnstile (antispam): script e iframe del widget, verifica dal browser.
   `script-src 'self' 'unsafe-inline' https://challenges.cloudflare.com${isDev ? " 'unsafe-eval'" : ""}`,
-  "frame-src https://challenges.cloudflare.com",
+  "frame-src https://challenges.cloudflare.com https://www.youtube-nocookie.com https://player.vimeo.com",
   `connect-src 'self' https://challenges.cloudflare.com${isDev ? " ws:" : ""}`,
   ...(isDev ? [] : ["upgrade-insecure-requests"]),
 ].join("; ");

@@ -181,10 +181,8 @@ export async function getPartnerAdmin(id: string, now: Date) {
         status: subscriptions.status,
         period: subscriptions.period,
         currentPeriodEnd: subscriptions.currentPeriodEnd,
-        leadsUsed: subscriptions.leadsUsed,
         stripeSubscriptionId: subscriptions.stripeSubscriptionId,
         planName: plans.name,
-        leadsIncluded: plans.leadsIncluded,
       })
       .from(subscriptions)
       .innerJoin(plans, eq(plans.id, subscriptions.planId))

@@ -7,7 +7,19 @@ import { Button } from "@/components/ui/button";
 import { Field, Input, Select, Textarea } from "@/components/ui/field";
 
 /** Nuovo elemento del portfolio: immobile per le agenzie, lavoro svolto per gli altri. */
-export function PortfolioForm({ isAgency, places }: { isAgency: boolean; places: { id: number; label: string }[] }) {
+export function PortfolioForm({
+  isAgency,
+  places,
+  canVideo,
+  limitNote,
+}: {
+  isAgency: boolean;
+  places: { id: number; label: string }[];
+  /** Video YouTube o Vimeo: solo piano Premium. */
+  canVideo: boolean;
+  /** Es. "3 di 5 progetti del piano Base". */
+  limitNote: string | null;
+}) {
   const [state, action, pending] = useActionState<ActionState, FormData>(addPortfolioItem, {});
   const form = useRef<HTMLFormElement>(null);
   useEffect(() => {
@@ -21,7 +33,10 @@ export function PortfolioForm({ isAgency, places }: { isAgency: boolean; places:
         const data = new FormData(e.currentTarget);
         startTransition(() => action(data));
       }} className="flex flex-col gap-4 rounded-lg border border-line bg-surface p-6">
-      <h2 className="text-h3 font-semibold">{isAgency ? "Aggiungi un immobile" : "Aggiungi un lavoro"}</h2>
+      <div className="flex flex-wrap items-baseline justify-between gap-2">
+        <h2 className="text-h3 font-semibold">{isAgency ? "Aggiungi un immobile" : "Aggiungi un lavoro"}</h2>
+        {limitNote && <p className="text-body-s text-ink-2">{limitNote}</p>}
+      </div>
       <Field label="Titolo" htmlFor="pf-title" required>
         <Input id="pf-title" name="title" required maxLength={120} placeholder={isAgency ? "Trilocale con terrazzo" : "Rifacimento bagno completo"} />
       </Field>
@@ -62,6 +77,11 @@ export function PortfolioForm({ isAgency, places }: { isAgency: boolean; places:
         <label className="inline-flex items-center gap-2 text-body-s">
           <input type="checkbox" name="hasBeforeAfter" className="size-4" /> Ho le foto prima e dopo
         </label>
+      )}
+      {canVideo && (
+        <Field label="Video" htmlFor="pf-video" help="Link di YouTube o Vimeo (incluso nel piano Premium)">
+          <Input id="pf-video" name="videoUrl" type="url" inputMode="url" placeholder="https://www.youtube.com/watch?v=…" />
+        </Field>
       )}
       <Field label="Descrizione" htmlFor="pf-description">
         <Textarea id="pf-description" name="description" maxLength={1000} />

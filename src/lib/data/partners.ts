@@ -101,6 +101,7 @@ export async function getPartnerProfile(slug: string) {
         description: portfolioItems.description,
         status: portfolioItems.status,
         imageUrl: portfolioItems.imageUrl,
+        videoUrl: portfolioItems.videoUrl,
       })
       .from(portfolioItems)
       .leftJoin(municipalities, eq(municipalities.id, portfolioItems.municipalityId))

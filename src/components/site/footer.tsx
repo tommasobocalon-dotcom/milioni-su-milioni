@@ -8,6 +8,7 @@ const COLUMNS = [
     links: [
       { href: "/trova-professionista", label: "Trova un professionista" },
       { href: "/trova-casa", label: "Trova un'agenzia" },
+      { href: "/ispirazione", label: "Ispirazione" },
       { href: "/come-funziona", label: "Come funziona" },
       { href: "/come-funziona#recensioni", label: "Recensioni verificate" },
       { href: "/assistenza", label: "Assistenza" },

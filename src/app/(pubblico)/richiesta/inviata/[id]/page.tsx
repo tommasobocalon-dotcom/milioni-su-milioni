@@ -64,8 +64,8 @@ async function Sent({ id }: { id: string }) {
   }
 
   const place = await findPlace(lead.municipality);
-  const { sponsored, results } = await searchPartners({ categoryId: lead.categoryId, place });
-  const alternatives = [...sponsored, ...results].filter((p) => p.id !== lead.partnerId).slice(0, 2);
+  const { featured, results } = await searchPartners({ categoryId: lead.categoryId, place });
+  const alternatives = [...(featured ? [featured] : []), ...results].filter((p) => p.id !== lead.partnerId).slice(0, 2);
   const duplicate = lead.charge === "duplicate";
   const unavailable = lead.charge === "pending";
 

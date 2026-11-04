@@ -1,20 +1,19 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
-import { ArrowLeft, Clock, Lock, Mail, MessageCircle, Phone } from "lucide-react";
+import { ArrowLeft, Clock, Mail, MessageCircle, Phone } from "lucide-react";
 import { connection } from "next/server";
 import { z } from "zod";
 import { saveLeadNotes, updateLeadStatus } from "@/app/area-partner/actions";
 import { MarkSeen, ReportForm } from "@/components/partner/lead-client";
 import { PartnerSkeleton } from "@/components/partner/skeleton";
-import { UnlockButton } from "@/components/partner/unlock-button";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Select, Textarea } from "@/components/ui/field";
 import { requirePartner } from "@/lib/auth/session";
-import { getLeadDetail, getSubscription } from "@/lib/data/partner-area";
+import { getLeadDetail } from "@/lib/data/partner-area";
 import { formatPhone } from "@/lib/domain/format";
-import { canReportLead, REPORT_REASONS, TOKEN_COST_PER_LEAD } from "@/lib/domain/lead-rules";
+import { canReportLead, REPORT_REASONS } from "@/lib/domain/lead-rules";
 import { LEAD_STATUSES } from "@/lib/leads/status";
 import { whenLabel } from "@/components/partner/lead-row";
 
@@ -38,21 +37,12 @@ async function Lead({ id }: { id: string }) {
   const { partner } = await requirePartner();
   await connection();
   const now = new Date();
-  const [lead, sub] = await Promise.all([getLeadDetail(partner.id, id), getSubscription(partner.id)]);
+  const lead = await getLeadDetail(partner.id, id);
   if (!lead) notFound();
 
   const reportable = !lead.reportStatus && canReportLead(lead.deliveredAt, now);
   const reportDeadline = lead.deliveredAt ? new Date(lead.deliveredAt.getTime() + 72 * 3600_000) : null;
   const whatsapp = lead.clientPhone ? `https://wa.me/${lead.clientPhone.replace("+", "")}` : null;
-  const chargeText = {
-    quota: sub ? `Inclusa nel piano (${sub.leadsUsed} di ${sub.leadsIncluded} usate in questo periodo).` : "Inclusa nel piano.",
-    token: `Richiesta extra: ${lead.tokensCharged} crediti usati.`,
-    locked: `Richiesta extra: hai già usato quelle incluse nel piano. Il numero si vede usando ${TOKEN_COST_PER_LEAD} crediti.`,
-    expired: "Il tempo per sbloccare questa richiesta è scaduto: il cliente ha ricevuto altre proposte.",
-    refunded: "Segnalazione accolta: questa richiesta non ti è stata conteggiata.",
-    pending: "",
-    duplicate: "",
-  }[lead.charge];
 
   return (
     <div className="flex flex-col gap-6">
@@ -73,14 +63,14 @@ async function Lead({ id }: { id: string }) {
         <label htmlFor="status" className="text-body-s font-semibold">
           Stato
         </label>
-        <Select id="status" name="status" defaultValue={lead.status} disabled={lead.locked} className="w-56">
+        <Select id="status" name="status" defaultValue={lead.status} className="w-56">
           {LEAD_STATUSES.map((s) => (
             <option key={s.value} value={s.value}>
               {s.label}
             </option>
           ))}
         </Select>
-        <Button type="submit" variant="secondary" size="s" disabled={lead.locked}>
+        <Button type="submit" variant="secondary" size="s">
           Aggiorna stato
         </Button>
       </form>
@@ -131,17 +121,10 @@ async function Lead({ id }: { id: string }) {
         <aside className="flex flex-col gap-6">
           <section className="flex flex-col gap-3 rounded-lg border border-line bg-surface p-6">
             <h2 className="text-h4 font-semibold">Contatti del cliente</h2>
-            {lead.locked ? (
-              <>
-                <p className="inline-flex items-center gap-2 text-body-s text-ink-2">
-                  <Lock className="size-4" aria-hidden /> Telefono ed email nascosti
-                </p>
-                {lead.charge === "locked" && <UnlockButton leadId={lead.id} tokens={TOKEN_COST_PER_LEAD} />}
-              </>
-            ) : (
+            {(
               <>
                 <p className="inline-flex items-center gap-2 text-body">
-                  <Phone className="size-4" aria-hidden /> {formatPhone(lead.clientPhone!)}
+                  <Phone className="size-4" aria-hidden /> {formatPhone(lead.clientPhone)}
                 </p>
                 <p className="inline-flex items-center gap-2 text-body break-all">
                   <Mail className="size-4" aria-hidden /> {lead.clientEmail}
@@ -166,14 +149,6 @@ async function Lead({ id }: { id: string }) {
             )}
           </section>
 
-          {chargeText && (
-            <section className="flex flex-col gap-1 rounded-lg bg-brand-soft p-5">
-              <p className="caps-label text-primary">Quanto ti costa</p>
-              <p className="text-body-s">{chargeText}</p>
-              <p className="text-caption text-neutro-700">Conta solo perché il numero del cliente è verificato con SMS. Se lo stesso cliente ti scrive di nuovo entro 30 giorni non la paghi due volte.</p>
-            </section>
-          )}
-
           <section className="flex flex-col gap-3 rounded-lg border border-line bg-surface p-6">
             <h2 className="text-h4 font-semibold">Problema con questa richiesta?</h2>
             {lead.reportStatus ? (
@@ -184,8 +159,7 @@ async function Lead({ id }: { id: string }) {
             ) : reportable ? (
               <>
                 <p className="text-body-s text-ink-2">
-                  Puoi segnalarlo fino al {reportDeadline && fullFmt.format(reportDeadline)}, solo per motivi oggettivi. Se accolta, non ti
-                  viene conteggiata.
+                  Puoi segnalarlo fino al {reportDeadline && fullFmt.format(reportDeadline)}, solo per motivi oggettivi: ci aiuta a tenere fuori numeri falsi e spam.
                 </p>
                 <ReportForm leadId={lead.id} />
               </>

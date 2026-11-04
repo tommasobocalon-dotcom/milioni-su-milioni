@@ -1,7 +1,8 @@
 import "server-only";
-import { and, asc, avg, count, desc, eq, isNotNull, ne, sql } from "drizzle-orm";
+import { and, asc, avg, count, desc, eq, gt, isNotNull, ne, sql } from "drizzle-orm";
 import { db } from "@/lib/db/client";
 import {
+  areaExtensions,
   leadEvents,
   leads,
   municipalities,
@@ -9,11 +10,14 @@ import {
   partnerServices,
   plans,
   portfolioItems,
+  provinces,
   reviews,
   services,
+  showcaseFeatures,
   subscriptions,
   tokenLedger,
 } from "@/lib/db/schema";
+import { neighbourProvinces } from "@/lib/domain/extras";
 import { tokenBalance } from "@/lib/domain/tokens";
 
 /**
@@ -30,7 +34,7 @@ export async function getSubscription(partnerId: string) {
     .select({
       planCode: plans.code,
       planName: plans.name,
-      leadsIncluded: plans.leadsIncluded,
+      planWeight: plans.visibilityWeight,
       monthlyPriceCents: plans.monthlyPriceCents,
       yearlyPriceCents: plans.yearlyPriceCents,
       maxProvinces: plans.maxProvinces,
@@ -40,8 +44,6 @@ export async function getSubscription(partnerId: string) {
       renewalTokens: plans.renewalTokens,
       status: subscriptions.status,
       period: subscriptions.period,
-      leadsUsed: subscriptions.leadsUsed,
-      autoUseTokens: subscriptions.autoUseTokens,
       currentPeriodStart: subscriptions.currentPeriodStart,
       currentPeriodEnd: subscriptions.currentPeriodEnd,
       stripeSubscriptionId: subscriptions.stripeSubscriptionId,
@@ -124,7 +126,6 @@ export async function getLeadDetail(partnerId: string, leadId: string) {
       status: leads.status,
       charge: leads.charge,
       tokensCharged: leads.tokensCharged,
-      unlockExpiresAt: leads.unlockExpiresAt,
       deliveredAt: leads.deliveredAt,
       reportReason: leads.reportReason,
       reportStatus: leads.reportStatus,
@@ -138,16 +139,7 @@ export async function getLeadDetail(partnerId: string, leadId: string) {
   if (!lead) return null;
   const events = await db.select().from(leadEvents).where(eq(leadEvents.leadId, lead.id)).orderBy(asc(leadEvents.createdAt));
 
-  // Lead oltre quota non sbloccato: i contatti restano nascosti finché non si usano i token.
-  const locked = lead.charge === "locked" || lead.charge === "expired";
-  return {
-    ...lead,
-    locked,
-    clientEmail: locked ? null : lead.clientEmail,
-    clientPhone: locked ? null : lead.clientPhone,
-    clientName: locked ? lead.clientName.split(" ")[0] : lead.clientName,
-    events,
-  };
+  return { ...lead, events };
 }
 
 export async function getOverview(partnerId: string, now: Date) {
@@ -172,11 +164,6 @@ export async function getOverview(partnerId: string, now: Date) {
       .where(eq(partners.id, partnerId)),
     db.select({ n: count() }).from(partnerServices).where(eq(partnerServices.partnerId, partnerId)),
   ]);
-  const locked = await db
-    .select({ id: leads.id, requestType: leads.requestType, municipality: municipalities.name, unlockExpiresAt: leads.unlockExpiresAt })
-    .from(leads)
-    .innerJoin(municipalities, eq(municipalities.id, leads.municipalityId))
-    .where(and(visible(partnerId), eq(leads.charge, "locked")));
 
   return {
     sub,
@@ -188,7 +175,6 @@ export async function getOverview(partnerId: string, now: Date) {
     completeness: partner[0]?.completeness ?? 0,
     responseMinutes: partner[0]?.responseMinutes ?? null,
     priceCount: priceCount[0]?.n ?? 0,
-    locked,
   };
 }
 
@@ -240,4 +226,41 @@ export async function getPortfolio(partnerId: string) {
     .leftJoin(municipalities, eq(municipalities.id, portfolioItems.municipalityId))
     .where(eq(portfolioItems.partnerId, partnerId))
     .orderBy(asc(portfolioItems.sortOrder));
+}
+
+/** Per la pagina Crediti: province confinanti acquistabili e lavori con foto da mettere in Ispirazione, con le scadenze attive. */
+export async function getExtras(partnerId: string, now: Date) {
+  const [home] = await db
+    .select({ code: provinces.code })
+    .from(partners)
+    .innerJoin(municipalities, eq(municipalities.id, partners.municipalityId))
+    .innerJoin(provinces, eq(provinces.id, municipalities.provinceId))
+    .where(eq(partners.id, partnerId));
+  const codes = home ? neighbourProvinces(home.code) : [];
+  const [allProvinces, extensions, items, showcases] = await Promise.all([
+    db.select({ id: provinces.id, code: provinces.code, name: provinces.name }).from(provinces),
+    db
+      .select({ provinceId: areaExtensions.provinceId, endsAt: sql<Date>`max(${areaExtensions.endsAt})`.mapWith((v) => new Date(v)) })
+      .from(areaExtensions)
+      .where(and(eq(areaExtensions.partnerId, partnerId), gt(areaExtensions.endsAt, now)))
+      .groupBy(areaExtensions.provinceId),
+    db
+      .select({ id: portfolioItems.id, title: portfolioItems.title })
+      .from(portfolioItems)
+      .where(and(eq(portfolioItems.partnerId, partnerId), isNotNull(portfolioItems.imageUrl)))
+      .orderBy(asc(portfolioItems.sortOrder)),
+    db
+      .select({ itemId: showcaseFeatures.portfolioItemId, endsAt: sql<Date>`max(${showcaseFeatures.endsAt})`.mapWith((v) => new Date(v)) })
+      .from(showcaseFeatures)
+      .where(and(eq(showcaseFeatures.partnerId, partnerId), gt(showcaseFeatures.endsAt, now)))
+      .groupBy(showcaseFeatures.portfolioItemId),
+  ]);
+  const extensionEnd = new Map(extensions.map((e) => [e.provinceId, e.endsAt]));
+  const showcaseEnd = new Map(showcases.map((x) => [x.itemId, x.endsAt]));
+  return {
+    neighbours: allProvinces
+      .filter((p) => codes.includes(p.code))
+      .map((p) => ({ id: p.id, name: p.name, activeUntil: extensionEnd.get(p.id) ?? null })),
+    items: items.map((i) => ({ ...i, activeUntil: showcaseEnd.get(i.id) ?? null })),
+  };
 }

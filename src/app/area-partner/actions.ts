@@ -1,6 +1,8 @@
 "use server";
 
-import { and, eq, isNotNull, max } from "drizzle-orm";
+import { and, count, eq, isNotNull, max } from "drizzle-orm";
+import { videoEmbedUrl } from "@/lib/domain/extras";
+import { PREMIUM_WEIGHT } from "@/lib/domain/ranking";
 import { randomUUID } from "node:crypto";
 import { revalidatePath, updateTag } from "next/cache";
 import { redirect } from "next/navigation";
@@ -19,7 +21,7 @@ import { parseAmount } from "@/lib/domain/format";
 import { canReportLead, REPORT_REASONS } from "@/lib/domain/lead-rules";
 import { TOKEN_PACKAGES } from "@/lib/domain/offers";
 import { tokenExpiryFrom } from "@/lib/domain/tokens";
-import { activateBoost, BoostNotActivatableError, LeadNotUnlockableError, unlockLead } from "@/lib/leads/service";
+import { activateAreaExtension, activateBoost, activateShowcase, ExtraNotActivatableError } from "@/lib/leads/service";
 import { LEAD_STATUSES, statusInfo } from "@/lib/leads/status";
 import { MESSAGE_MAX, TICKET_TOPICS } from "@/lib/domain/support";
 import { openTicket, replyFromPartner } from "@/lib/support/service";
@@ -51,7 +53,7 @@ export async function updateLeadStatus(leadId: string, formData: FormData) {
   const { user, partner } = await requirePartner();
   const status = StatusSchema.safeParse(formData.get("status"));
   const lead = await ownLead(partner.id, leadId);
-  if (!lead || !status.success || lead.charge === "locked") return;
+  if (!lead || !status.success) return;
   if (lead.status === status.data) return;
   await db.update(leads).set({ status: status.data as (typeof LEAD_STATUSES)[number]["value"] }).where(eq(leads.id, lead.id));
   await db.insert(leadEvents).values({
@@ -90,21 +92,6 @@ export async function reportLead(leadId: string, _prev: ReportState, formData: F
   return { ok: true };
 }
 
-export type UnlockState = { error?: string };
-
-export async function unlockLeadAction(leadId: string): Promise<UnlockState> {
-  const { user, partner } = await requirePartner();
-  if (!Id.safeParse(leadId).success) return { error: "Richiesta non valida" };
-  try {
-    await unlockLead(partner.id, leadId, user.name);
-  } catch (e) {
-    if (e instanceof LeadNotUnlockableError) return { error: e.message };
-    throw e;
-  }
-  revalidatePath("/area-partner", "layout");
-  return {};
-}
-
 /**
  * Solo in sviluppo e sul sito di prova: accredita un pacchetto senza pagamento, per provare il flusso
  * dei token. In produzione l'accredito arriva dal webhook Stripe checkout.session.completed.
@@ -127,25 +114,49 @@ export async function simulateTokenPurchase(code: string) {
   revalidatePath("/area-partner", "layout");
 }
 
-export async function setAutoUseTokens(formData: FormData) {
-  const { partner, memberRole } = await requirePartner();
-  if (memberRole !== "owner") return;
-  const on = formData.get("auto") === "on";
-  await db.update(subscriptions).set({ autoUseTokens: on }).where(eq(subscriptions.partnerId, partner.id));
-  revalidatePath("/area-partner", "layout");
-}
-
 export type ActionState = { error?: string; ok?: string };
 
-export async function activateBoostAction(days: number): Promise<ActionState> {
+export async function activateBoostAction(hours: number): Promise<ActionState> {
   const { user, partner } = await requirePartner();
   try {
-    const { endsAt } = await activateBoost(partner.id, days);
-    await db.insert(auditLogs).values({ actor: user.email, action: "boost.activated", entity: "partner", entityId: partner.id, data: { days } });
+    const { endsAt } = await activateBoost(partner.id, hours);
+    await db.insert(auditLogs).values({ actor: user.email, action: "boost.activated", entity: "partner", entityId: partner.id, data: { hours } });
     revalidatePath("/area-partner", "layout");
-    return { ok: `In evidenza fino al ${endsAt.toLocaleDateString("it-IT")}` };
+    return { ok: `In evidenza fino al ${endsAt.toLocaleString("it-IT", { day: "numeric", month: "long", hour: "2-digit", minute: "2-digit", timeZone: "Europe/Rome" })}` };
   } catch (e) {
-    if (e instanceof BoostNotActivatableError) return { error: e.message };
+    if (e instanceof ExtraNotActivatableError) return { error: e.message };
+    throw e;
+  }
+}
+
+const dayFmt = (d: Date) => d.toLocaleDateString("it-IT", { day: "numeric", month: "long", timeZone: "Europe/Rome" });
+
+export async function activateAreaExtensionAction(provinceId: number): Promise<ActionState> {
+  const { user, partner } = await requirePartner();
+  if (!Number.isInteger(provinceId)) return { error: "Provincia non valida" };
+  try {
+    const { endsAt, provinceName } = await activateAreaExtension(partner.id, provinceId);
+    await db.insert(auditLogs).values({ actor: user.email, action: "area_extension.activated", entity: "partner", entityId: partner.id, data: { provinceId } });
+    updateTag("catalog");
+    revalidatePath("/area-partner", "layout");
+    return { ok: `Compari anche in provincia di ${provinceName} fino al ${dayFmt(endsAt)}` };
+  } catch (e) {
+    if (e instanceof ExtraNotActivatableError) return { error: e.message };
+    throw e;
+  }
+}
+
+export async function activateShowcaseAction(portfolioItemId: string, days: number): Promise<ActionState> {
+  const { user, partner } = await requirePartner();
+  if (!Id.safeParse(portfolioItemId).success) return { error: "Lavoro non valido" };
+  try {
+    const { endsAt } = await activateShowcase(partner.id, portfolioItemId, days);
+    await db.insert(auditLogs).values({ actor: user.email, action: "showcase.activated", entity: "partner", entityId: partner.id, data: { portfolioItemId, days } });
+    revalidatePath("/ispirazione");
+    revalidatePath("/area-partner", "layout");
+    return { ok: `In evidenza in Ispirazione fino al ${dayFmt(endsAt)}` };
+  } catch (e) {
+    if (e instanceof ExtraNotActivatableError) return { error: e.message };
     throw e;
   }
 }
@@ -250,6 +261,11 @@ const PortfolioSchema = z.object({
   sqm: optionalInt(100_000),
   rooms: optionalInt(100),
   hasBeforeAfter: z.literal("on").optional(),
+  videoUrl: z
+    .string()
+    .trim()
+    .optional()
+    .refine((v) => !v || videoEmbedUrl(v) !== null, "Il video deve essere un link di YouTube o Vimeo"),
 });
 
 /** Agenzie: immobili. Tutti gli altri: lavori svolti. Il tipo arriva dal partner, non dal form. */
@@ -260,6 +276,18 @@ export async function addPortfolioItem(_prev: ActionState, formData: FormData): 
   const d = parsed.data;
   const isProperty = partner.type === "agency";
   if (isProperty && !d.contract) return { error: "Scegli vendita o affitto" };
+
+  // Limiti del piano (documento del 4/11/2026): progetti in bacheca e video solo per Premium.
+  const [plan] = await db
+    .select({ name: plans.name, maxItems: plans.maxPortfolioItems, weight: plans.visibilityWeight })
+    .from(subscriptions)
+    .innerJoin(plans, eq(plans.id, subscriptions.planId))
+    .where(and(eq(subscriptions.partnerId, partner.id), eq(subscriptions.status, "active")));
+  const [{ n }] = await db.select({ n: count() }).from(portfolioItems).where(eq(portfolioItems.partnerId, partner.id));
+  if (plan?.maxItems != null && n >= plan.maxItems) {
+    return { error: `Il piano ${plan.name} include fino a ${plan.maxItems} progetti: elimina un progetto o cambia piano` };
+  }
+  if (d.videoUrl && (!plan || plan.weight < PREMIUM_WEIGHT)) return { error: "I video sono inclusi nel piano Premium" };
 
   const image = await saveImage("portfolio", partner.id, formData.get("image"));
   if (image && "error" in image) return image;
@@ -278,6 +306,7 @@ export async function addPortfolioItem(_prev: ActionState, formData: FormData): 
     status: isProperty ? "available" : null,
     hasBeforeAfter: !isProperty && d.hasBeforeAfter === "on",
     imageUrl: image?.url ?? null,
+    videoUrl: d.videoUrl || null,
     sortOrder: (last ?? -1) + 1,
   });
   updateTag(`partner:${partner.slug}`);
@@ -446,7 +475,7 @@ export async function simulateSubscription(planCode: string, period: "monthly" |
         kind: "credit",
         amount: plan.renewalTokens,
         expiresAt: tokenExpiryFrom(start),
-        reference: `Token omaggio del piano ${plan.name} (attivazione di prova)`,
+        reference: `Crediti del piano ${plan.name} (attivazione di prova)`,
         createdAt: start,
       });
     }

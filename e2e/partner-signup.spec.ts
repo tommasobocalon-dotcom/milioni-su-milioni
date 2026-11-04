@@ -5,7 +5,7 @@ test("un'azienda si registra, la scheda resta nascosta fino all'attivazione del 
 
   // Dai piani pubblici alla registrazione, poi all'account con ritorno automatico.
   await page.goto("/per-i-professionisti#piani");
-  await page.getByRole("link", { name: "Scegli Media" }).click();
+  await page.getByRole("link", { name: "Scegli Normal" }).click();
   await page.getByRole("link", { name: "Crea account o accedi" }).click();
   await expect(page).toHaveURL(/\/accedi\/azienda\?next=\/registrazione-partner$/);
   await expect(page.getByRole("heading", { level: 1, name: "Registra la tua attività" })).toBeVisible();
@@ -40,12 +40,12 @@ test("un'azienda si registra, la scheda resta nascosta fino all'attivazione del 
   const profile = "/professionisti/treviso/idraulico/idraulica-verdi-treviso";
   expect(await (await request.get(profile)).text()).not.toContain("Idraulica Verdi");
 
-  // Attivazione di prova (senza Stripe, solo in sviluppo): piano attivo, token omaggio, scheda pubblica.
-  await page.getByRole("listitem").filter({ hasText: "Media" }).getByRole("button", { name: "Prova mensile senza pagare" }).click();
+  // Attivazione di prova (senza Stripe, solo in sviluppo): piano attivo, crediti del piano, scheda pubblica.
+  await page.getByRole("listitem").filter({ hasText: "Normal" }).getByRole("button", { name: "Prova mensile senza pagare" }).click();
   await expect(page.getByText("Piano attuale")).toBeVisible();
-  await expect(page.getByText(/79 € \+ IVA al mese · attivo/)).toBeVisible();
+  await expect(page.getByText(/49 € \+ IVA al mese · attivo/)).toBeVisible();
   await page.goto("/area-partner/token");
-  await expect(page.getByText("Token omaggio del piano Media (attivazione di prova)")).toBeVisible();
+  await expect(page.getByText("Crediti del piano Normal (attivazione di prova)")).toBeVisible();
   await page.goto(profile);
   await expect(page.getByRole("heading", { level: 1, name: "Idraulica Verdi" })).toBeVisible();
 

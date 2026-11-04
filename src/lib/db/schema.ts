@@ -348,6 +348,8 @@ export const portfolioItems = pgTable(
     status: propertyStatus("status"),
     imageUrl: text("image_url"),
     hasBeforeAfter: boolean("has_before_after").notNull().default(false),
+    /** Link YouTube o Vimeo, solo piano Premium (documento del 4/11/2026). */
+    videoUrl: text("video_url"),
     sortOrder: smallint("sort_order").notNull().default(0),
     createdAt: createdAt(),
   },
@@ -553,6 +555,44 @@ export const boosts = pgTable(
     createdAt: createdAt(),
   },
   (t) => [index("boosts_lookup_idx").on(t.categoryId, t.provinceId, t.endsAt)],
+);
+
+/** Espansione "spot" a una provincia vicina, pagata a token (30 giorni): la scheda compare anche lì. */
+export const areaExtensions = pgTable(
+  "area_extensions",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    partnerId: uuid("partner_id")
+      .notNull()
+      .references(() => partners.id, { onDelete: "cascade" }),
+    provinceId: smallint("province_id")
+      .notNull()
+      .references(() => provinces.id),
+    startsAt: timestamp("starts_at", { withTimezone: true }).notNull(),
+    endsAt: timestamp("ends_at", { withTimezone: true }).notNull(),
+    tokensSpent: integer("tokens_spent").notNull(),
+    createdAt: createdAt(),
+  },
+  (t) => [index("area_extensions_lookup_idx").on(t.provinceId, t.endsAt)],
+);
+
+/** Lavoro del portfolio messo in evidenza nella pagina "Ispirazione", pagato a token (7 o 30 giorni). */
+export const showcaseFeatures = pgTable(
+  "showcase_features",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    partnerId: uuid("partner_id")
+      .notNull()
+      .references(() => partners.id, { onDelete: "cascade" }),
+    portfolioItemId: uuid("portfolio_item_id")
+      .notNull()
+      .references(() => portfolioItems.id, { onDelete: "cascade" }),
+    startsAt: timestamp("starts_at", { withTimezone: true }).notNull(),
+    endsAt: timestamp("ends_at", { withTimezone: true }).notNull(),
+    tokensSpent: integer("tokens_spent").notNull(),
+    createdAt: createdAt(),
+  },
+  (t) => [index("showcase_features_ends_idx").on(t.endsAt)],
 );
 
 // ---------------------------------------------------------------------------

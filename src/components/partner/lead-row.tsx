@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ChevronRight, Lock } from "lucide-react";
+import { ChevronRight } from "lucide-react";
 import type { LeadListItem } from "@/lib/data/partner-area";
 import { statusInfo } from "@/lib/leads/status";
 import { cn } from "@/lib/utils";
@@ -18,18 +18,16 @@ export function whenLabel(date: Date, now: Date) {
 /** Componente "Riga lead" di Figma. */
 export function LeadRow({ lead, now }: { lead: LeadListItem; now: Date }) {
   const s = statusInfo(lead.status);
-  const locked = lead.charge === "locked";
   const summary = [lead.requestType, ...lead.answers.filter((a) => a.key === "mq").map((a) => `${a.value} m²`)].join(" · ");
   return (
     <li>
       <Link href={`/area-partner/lead/${lead.id}`} className="flex items-center gap-4 px-5 py-3.5 hover:bg-subtle">
         <span className={cn("hidden w-32 shrink-0 rounded-full px-2.5 py-1 text-center text-caption font-semibold sm:inline-block", s.tone)}>
-          {locked ? "Extra" : s.label}
+          {s.label}
         </span>
         <span className="flex min-w-0 flex-1 flex-col">
           <span className="inline-flex items-center gap-1.5 font-semibold">
-            {locked && <Lock className="size-3.5" aria-label="Contatti nascosti" />}
-            {locked ? lead.clientName.split(" ")[0] : lead.clientName}
+            {lead.clientName}
           </span>
           <span className="truncate text-body-s text-ink-2">{summary}</span>
         </span>

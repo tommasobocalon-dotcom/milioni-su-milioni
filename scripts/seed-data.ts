@@ -179,9 +179,9 @@ export const QUESTIONS: Record<
 
 /** Annuale = 10 mensilità (2 mesi di sconto, PRD §7.1). Prezzi come nel prototipo Figma, da confermare. */
 export const PLANS = [
-  { code: "base", name: "Base", monthlyPriceCents: 3900, yearlyPriceCents: 39000, leadsIncluded: 8, visibilityWeight: 1, maxProvinces: 1, maxServices: 5, maxPortfolioItems: 10, maxUsers: 1, renewalTokens: 0, featuredSlots: false },
-  { code: "media", name: "Media", monthlyPriceCents: 7900, yearlyPriceCents: 79000, leadsIncluded: 25, visibilityWeight: 2, maxProvinces: 2, maxServices: 15, maxPortfolioItems: 30, maxUsers: 2, renewalTokens: 20, featuredSlots: false },
-  { code: "professional", name: "Professional", monthlyPriceCents: 14900, yearlyPriceCents: 149000, leadsIncluded: 60, visibilityWeight: 3, maxProvinces: 4, maxServices: null, maxPortfolioItems: null, maxUsers: 5, renewalTokens: 50, featuredSlots: true },
+  { code: "base", name: "Base", monthlyPriceCents: 1500, yearlyPriceCents: 10800, leadsIncluded: 0, visibilityWeight: 1, maxProvinces: 1, maxServices: 5, maxPortfolioItems: 5, maxUsers: 1, renewalTokens: 0, featuredSlots: false },
+  { code: "normal", name: "Normal", monthlyPriceCents: 4900, yearlyPriceCents: 46800, leadsIncluded: 0, visibilityWeight: 2, maxProvinces: 7, maxServices: 15, maxPortfolioItems: 25, maxUsers: 2, renewalTokens: 80, featuredSlots: true },
+  { code: "premium", name: "Premium", monthlyPriceCents: 12000, yearlyPriceCents: 118800, leadsIncluded: 0, visibilityWeight: 3, maxProvinces: 99, maxServices: null, maxPortfolioItems: null, maxUsers: 5, renewalTokens: 200, featuredSlots: true },
 ];
 
 /** Prezzo in token di un lead oltre quota (PRD §7.4, da confermare in §20). */
@@ -198,7 +198,7 @@ type PartnerSeed = {
   specialties: string[];
   foundedYear: number;
   responseMinutes: number;
-  plan: "base" | "media" | "professional";
+  plan: "base" | "normal" | "premium";
   /** Media voti e numero recensioni da generare. */
   rating: [average: number, count: number];
   /** Province servite (sigle) e comuni extra. */
@@ -237,7 +237,7 @@ export const PARTNERS: PartnerSeed[] = [
     specialties: ["Caldaie a condensazione", "Climatizzazione", "Rifacimento bagno", "Perdite e riparazioni", "Pompe di calore", "Pratiche detrazioni"],
     foundedYear: 2009,
     responseMinutes: 110,
-    plan: "media",
+    plan: "normal",
     rating: [4.8, 126],
     areas: { provinces: ["PD"] },
     prices: [
@@ -267,7 +267,7 @@ export const PARTNERS: PartnerSeed[] = [
     specialties: ["Caldaie", "Impianti a pavimento", "Pronto intervento", "Condomini"],
     foundedYear: 2001,
     responseMinutes: 55,
-    plan: "professional",
+    plan: "premium",
     rating: [4.8, 126],
     areas: { provinces: ["PD", "VE"] },
     prices: [
@@ -314,7 +314,7 @@ export const PARTNERS: PartnerSeed[] = [
     specialties: ["Manutenzione caldaie", "Climatizzatori", "Bollino blu"],
     foundedYear: 2006,
     responseMinutes: 240,
-    plan: "media",
+    plan: "normal",
     rating: [4.5, 71],
     areas: { provinces: ["PD"] },
     prices: [
@@ -335,7 +335,7 @@ export const PARTNERS: PartnerSeed[] = [
     specialties: ["Centro storico", "Bagni", "Caldaie", "Edifici vincolati"],
     foundedYear: 1998,
     responseMinutes: 150,
-    plan: "professional",
+    plan: "premium",
     rating: [4.7, 92],
     areas: { provinces: ["VE"] },
     prices: [
@@ -361,7 +361,7 @@ export const PARTNERS: PartnerSeed[] = [
     specialties: ["Pratiche catastali", "APE", "Successioni", "CILA"],
     foundedYear: 1995,
     responseMinutes: 300,
-    plan: "media",
+    plan: "normal",
     rating: [4.9, 64],
     areas: { provinces: ["PD"] },
     prices: [
@@ -406,7 +406,7 @@ export const PARTNERS: PartnerSeed[] = [
     specialties: ["Impianti civili", "Fotovoltaico", "Certificazioni"],
     foundedYear: 2008,
     responseMinutes: 200,
-    plan: "media",
+    plan: "normal",
     rating: [4.7, 48],
     areas: { provinces: ["TV"] },
     prices: [
@@ -450,7 +450,7 @@ export const PARTNERS: PartnerSeed[] = [
     specialties: ["Interni", "Cappotto termico", "Decorazioni a calce"],
     foundedYear: 1987,
     responseMinutes: 360,
-    plan: "media",
+    plan: "normal",
     rating: [4.8, 57],
     areas: { provinces: ["PD"] },
     prices: [
@@ -471,7 +471,7 @@ export const PARTNERS: PartnerSeed[] = [
     specialties: ["Chiavi in mano", "Bagni", "Cartongesso", "Detrazioni fiscali"],
     foundedYear: 2003,
     responseMinutes: 480,
-    plan: "professional",
+    plan: "premium",
     rating: [4.6, 83],
     areas: { provinces: ["PD", "VE"] },
     prices: [
@@ -496,7 +496,7 @@ export const PARTNERS: PartnerSeed[] = [
     specialties: ["Interior design", "Ristrutturazioni", "Direzione lavori"],
     foundedYear: 2012,
     responseMinutes: 600,
-    plan: "professional",
+    plan: "premium",
     rating: [4.9, 31],
     areas: { provinces: ["TV", "VE"] },
     prices: [
@@ -519,7 +519,7 @@ export const PARTNERS: PartnerSeed[] = [
     specialties: ["Compravendita", "Affitti", "Valutazione gratuita", "Nuove costruzioni", "Immobili di pregio"],
     foundedYear: 1998,
     responseMinutes: 115,
-    plan: "professional",
+    plan: "premium",
     rating: [4.9, 212],
     areas: { provinces: ["PD"] },
     prices: [
@@ -547,7 +547,7 @@ export const PARTNERS: PartnerSeed[] = [
     specialties: ["Residenziale", "Valutazione gratuita"],
     foundedYear: 2010,
     responseMinutes: 170,
-    plan: "media",
+    plan: "normal",
     rating: [4.7, 98],
     areas: { provinces: ["PD"] },
     prices: [
@@ -571,7 +571,7 @@ export const PARTNERS: PartnerSeed[] = [
     specialties: ["Nuove costruzioni", "Case indipendenti"],
     foundedYear: 2005,
     responseMinutes: 1300,
-    plan: "media",
+    plan: "normal",
     rating: [4.6, 61],
     areas: { provinces: ["PD"] },
     prices: [["compravendita", 200, 300, "+ IVA"]],
@@ -607,7 +607,7 @@ export const PARTNERS: PartnerSeed[] = [
     specialties: ["Centro storico", "Compravendita"],
     foundedYear: 1992,
     responseMinutes: 160,
-    plan: "professional",
+    plan: "premium",
     rating: [4.8, 77],
     areas: { provinces: ["TV"] },
     prices: [
@@ -629,7 +629,7 @@ export const PARTNERS: PartnerSeed[] = [
     specialties: ["Mutuo prima casa", "Surroga", "Giovani under 36"],
     foundedYear: 2015,
     responseMinutes: 90,
-    plan: "media",
+    plan: "normal",
     rating: [4.7, 44],
     areas: { provinces: ["PD", "VE", "TV"] },
     prices: [["consulenza-mutuo", 0, 0, "Primo incontro gratuito"]],

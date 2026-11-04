@@ -1,21 +1,22 @@
 import { Suspense } from "react";
 import Link from "next/link";
-import { Rocket } from "lucide-react";
+import { MapPinPlus, Rocket, Sparkles } from "lucide-react";
 import { connection } from "next/server";
-import { setAutoUseTokens, simulateTokenPurchase, startTokenCheckout } from "@/app/area-partner/actions";
+import { simulateTokenPurchase, startTokenCheckout } from "@/app/area-partner/actions";
 import { CheckoutButton, PaymentNotice } from "@/components/partner/checkout-button";
 import { BoostButtons } from "@/components/partner/boost-buttons";
+import { AreaExtensionForm, ShowcaseForm } from "@/components/partner/extra-forms";
 import { PartnerPageHeader } from "@/components/partner/page-header";
 import { PartnerSkeleton } from "@/components/partner/skeleton";
 import { Geco } from "@/components/site/geco";
 import { Button } from "@/components/ui/button";
 import { requirePartner } from "@/lib/auth/session";
 import { stripeConfigured } from "@/lib/billing/stripe";
-import { getLedger, getSubscription, getTokenBalance } from "@/lib/data/partner-area";
+import { getExtras, getLedger, getSubscription, getTokenBalance } from "@/lib/data/partner-area";
 import { demoMode } from "@/lib/demo-mode";
 import { formatEuro } from "@/lib/domain/format";
-import { TOKEN_COST_PER_LEAD } from "@/lib/domain/lead-rules";
-import { BOOST_OPTIONS, packageSaving, TOKEN_PACKAGES } from "@/lib/domain/offers";
+import { canBoost } from "@/lib/domain/ranking";
+import { AREA_EXTENSION, BOOST_OPTIONS, packageSaving, SHOWCASE_OPTIONS, TOKEN_PACKAGES } from "@/lib/domain/offers";
 import { cn } from "@/lib/utils";
 
 export const metadata = { title: "Crediti" };
@@ -37,7 +38,12 @@ async function Tokens({ paid }: { paid: boolean }) {
   const { partner, memberRole } = await requirePartner();
   await connection();
   const now = new Date();
-  const [balance, ledger, sub] = await Promise.all([getTokenBalance(partner.id, now), getLedger(partner.id), getSubscription(partner.id)]);
+  const [balance, ledger, sub, extras] = await Promise.all([
+    getTokenBalance(partner.id, now),
+    getLedger(partner.id),
+    getSubscription(partner.id),
+    getExtras(partner.id, now),
+  ]);
   const dev = demoMode();
   const stripeOn = stripeConfigured();
 
@@ -45,7 +51,7 @@ async function Tokens({ paid }: { paid: boolean }) {
     <div className="flex flex-col gap-6">
       <PartnerPageHeader
         title="Crediti"
-        subtitle="Servono per le richieste extra (oltre quelle del piano) e per mettere la scheda in evidenza. Valgono 12 mesi."
+        subtitle="Servono per il boost, per una provincia vicina e per la vetrina Ispirazione. Valgono 12 mesi."
         partnerName={partner.displayName} logoUrl={partner.logoUrl}
         planCode={sub?.planCode}
       />
@@ -58,26 +64,12 @@ async function Tokens({ paid }: { paid: boolean }) {
             <div>
               <p className="caps-label text-on-brand-muted">Saldo disponibile</p>
               <p className="font-display text-display-xl">{balance}</p>
-              <p className="text-body-s text-on-brand-muted">≈ {Math.floor(balance / TOKEN_COST_PER_LEAD)} richieste extra</p>
+              {sub?.renewalTokens ? (
+                <p className="text-body-s text-on-brand-muted">Il piano {sub.planName} ne aggiunge {sub.renewalTokens} ogni mese</p>
+              ) : null}
             </div>
             <Geco outfit="token" size={96} />
           </div>
-          <form action={setAutoUseTokens} className="flex flex-col gap-2 rounded-md bg-bosco-800 p-4">
-            <label className="flex items-start gap-3 text-body-s">
-              <input
-                type="checkbox"
-                name="auto"
-                defaultChecked={sub?.autoUseTokens}
-                disabled={memberRole !== "owner"}
-                className="mt-0.5 size-5 accent-salvia-300"
-              />
-              <span>Usa i crediti in automatico per le richieste extra ({TOKEN_COST_PER_LEAD} crediti ciascuna)</span>
-            </label>
-            <Button type="submit" variant="light" size="s" disabled={memberRole !== "owner"}>
-              Salva preferenza
-            </Button>
-            <p className="text-caption text-on-brand-muted">Se lo togli, le richieste extra restano nascoste per 48 ore e decidi tu se sbloccarle.</p>
-          </form>
         </section>
 
         <section className="flex flex-col gap-4">
@@ -136,13 +128,22 @@ async function Tokens({ paid }: { paid: boolean }) {
 
       <section className="flex flex-col gap-4 rounded-lg border border-line bg-surface p-6">
         <h2 className="inline-flex items-center gap-2 text-h3 font-semibold">
-          <Rocket className="size-5" aria-hidden /> Metti in evidenza la scheda
+          <Rocket className="size-5" aria-hidden /> Boost: sali in cima ai risultati
         </h2>
         <p className="text-body-s text-ink-2">
-          Posizione sponsorizzata in cima ai risultati per la tua categoria e provincia, sempre etichettata come
+          Per qualche ora compari prima degli altri con il tuo stesso piano, nella tua categoria e provincia, sempre etichettato come
           &quot;Sponsorizzato&quot;.
         </p>
-        <BoostButtons options={BOOST_OPTIONS} balance={balance} />
+        {sub && canBoost(sub.planWeight) ? (
+          <BoostButtons options={BOOST_OPTIONS} balance={balance} />
+        ) : (
+          <p className="rounded-md bg-subtle p-4 text-body-s">
+            Il boost è incluso nei piani Normal e Premium.{" "}
+            <Link href="/area-partner/abbonamento" className="font-semibold text-primary underline">
+              Cambia piano
+            </Link>
+          </p>
+        )}
         <p className="text-caption text-ink-2">
           Vale per la tua categoria nella tua provincia. Se sei già in evidenza, il nuovo periodo parte quando finisce quello attuale. I risultati li trovi in{" "}
           <Link href="/area-partner/statistiche" className="font-semibold text-primary underline">
@@ -151,6 +152,34 @@ async function Tokens({ paid }: { paid: boolean }) {
           .
         </p>
       </section>
+
+      {sub && canBoost(sub.planWeight) && (
+        <div className="grid gap-6 xl:grid-cols-2">
+          <section className="flex flex-col gap-4 rounded-lg border border-line bg-surface p-6">
+            <h2 className="inline-flex items-center gap-2 text-h3 font-semibold">
+              <MapPinPlus className="size-5" aria-hidden /> Lavora anche in una provincia vicina
+            </h2>
+            <p className="text-body-s text-ink-2">
+              Per {AREA_EXTENSION.days} giorni la tua scheda compare anche nelle ricerche di una provincia confinante.{" "}
+              {AREA_EXTENSION.tokens} crediti per provincia.
+            </p>
+            <AreaExtensionForm neighbours={extras.neighbours} tokens={AREA_EXTENSION.tokens} days={AREA_EXTENSION.days} balance={balance} />
+          </section>
+          <section className="flex flex-col gap-4 rounded-lg border border-line bg-surface p-6">
+            <h2 className="inline-flex items-center gap-2 text-h3 font-semibold">
+              <Sparkles className="size-5" aria-hidden /> Un tuo lavoro in Ispirazione
+            </h2>
+            <p className="text-body-s text-ink-2">
+              Il lavoro compare in cima alla pagina{" "}
+              <Link href="/ispirazione" className="font-semibold text-primary underline">
+                Ispirazione
+              </Link>
+              , dove i clienti cercano idee, con la scritta &quot;Sponsorizzato&quot;.
+            </p>
+            <ShowcaseForm items={extras.items} options={SHOWCASE_OPTIONS} balance={balance} />
+          </section>
+        </div>
+      )}
 
       <section className="rounded-lg border border-line bg-surface">
         <h2 className="p-5 text-h4 font-semibold">Movimenti</h2>

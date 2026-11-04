@@ -142,7 +142,7 @@ test("una richiesta dal sito e la risposta per email finiscono nello stesso tick
   await expect(page.getByText(/Mittente non verificato/)).toBeVisible();
 });
 
-test("lead segnalato: il partner segnala, l'amministratore accoglie e il lead viene restituito", async ({ browser }) => {
+test("lead segnalato: il partner segnala e l'amministratore accoglie", async ({ browser }) => {
   const partner = await browser.newPage();
   await login(partner, PARTNER);
   await partner.goto("/area-partner/lead");
@@ -160,7 +160,7 @@ test("lead segnalato: il partner segnala, l'amministratore accoglie e il lead vi
   await expect(row.getByText("Accolta")).toBeVisible();
 
   await partner.reload();
-  await expect(partner.getByText("Segnalazione accolta: questa richiesta non ti è stata conteggiata.")).toBeVisible();
+  await expect(partner.getByText(/: accolto\.$/)).toBeVisible();
 });
 
 test("l'amministratore accredita token e sospende e riattiva un partner", async ({ page }) => {

@@ -8,42 +8,20 @@ const DAY = 24 * HOUR;
 
 /** Ore entro cui il partner può segnalare un lead non valido. */
 export const REPORT_WINDOW_HOURS = 72;
-/** Ore entro cui il partner può sbloccare con i token un lead arrivato oltre quota. */
-export const UNLOCK_WINDOW_HOURS = 48;
 /** Stesso cliente, partner e servizio entro questi giorni = duplicato annullato in automatico. */
 export const DUPLICATE_WINDOW_DAYS = 30;
-/** Costo in token di un lead oltre quota (proposta, da confermare: PRD §20 punto 4–5). */
-export const TOKEN_COST_PER_LEAD = 8;
 
-export type LeadChargeDecision =
-  | { kind: "quota" }
-  | { kind: "token"; tokens: number }
-  | { kind: "locked"; tokens: number; unlockExpiresAt: Date }
-  | { kind: "duplicate" }
-  | { kind: "redirect" };
+/**
+ * Le richieste dei clienti sono gratis e illimitate per tutti i piani (decisione del 4/11/2026):
+ * niente quota, niente richieste extra da sbloccare. "quota" resta il nome della consegna normale nel database.
+ */
+export type LeadChargeDecision = { kind: "quota" } | { kind: "duplicate" } | { kind: "redirect" };
 
-export function decideLeadCharge(input: {
-  accountActive: boolean;
-  isDuplicate: boolean;
-  quotaUsed: number;
-  quotaIncluded: number;
-  tokenBalance: number;
-  autoUseTokens: boolean;
-  tokenCostPerLead: number;
-  now: Date;
-}): LeadChargeDecision {
+export function decideLeadCharge(input: { accountActive: boolean; isDuplicate: boolean }): LeadChargeDecision {
   if (input.isDuplicate) return { kind: "duplicate" };
   // Account sospeso o non attivo: il cliente non resta senza risposta, gli proponiamo alternative.
   if (!input.accountActive) return { kind: "redirect" };
-  if (input.quotaUsed < input.quotaIncluded) return { kind: "quota" };
-  if (input.autoUseTokens && input.tokenBalance >= input.tokenCostPerLead) {
-    return { kind: "token", tokens: input.tokenCostPerLead };
-  }
-  return {
-    kind: "locked",
-    tokens: input.tokenCostPerLead,
-    unlockExpiresAt: new Date(input.now.getTime() + UNLOCK_WINDOW_HOURS * HOUR),
-  };
+  return { kind: "quota" };
 }
 
 export type LeadFingerprint = {

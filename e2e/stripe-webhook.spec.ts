@@ -15,7 +15,7 @@ function signed(event: object, secret = E2E_STRIPE_WEBHOOK_SECRET) {
 }
 
 async function purchases(partnerId: string) {
-  const [{ count }] = await sql<{ count: number }[]>`select count(*)::int as count from token_ledger where partner_id = ${partnerId} and reference = 'Pacchetto Piccolo'`;
+  const [{ count }] = await sql<{ count: number }[]>`select count(*)::int as count from token_ledger where partner_id = ${partnerId} and reference = 'Pacchetto Starter'`;
   return count;
 }
 
@@ -39,7 +39,7 @@ test("pacchetto token pagato: accredito una sola volta anche se Stripe ripete l'
         mode: "payment",
         payment_status: "paid",
         subscription: null,
-        metadata: { kind: "tokens", partnerId, packageCode: "piccolo" },
+        metadata: { kind: "tokens", partnerId, packageCode: "starter" },
       },
     },
   });
@@ -53,6 +53,6 @@ test("pacchetto token pagato: accredito una sola volta anche se Stripe ripete l'
   expect((await request.post("/api/stripe/webhook", signed(event(`evt_b_${sessionId}`, "checkout.session.async_payment_succeeded")))).status()).toBe(200);
 
   expect(await purchases(partnerId)).toBe(before + 1);
-  const [{ amount }] = await sql<{ amount: number }[]>`select amount from token_ledger where partner_id = ${partnerId} and reference = 'Pacchetto Piccolo' order by created_at desc limit 1`;
-  expect(amount).toBe(50);
+  const [{ amount }] = await sql<{ amount: number }[]>`select amount from token_ledger where partner_id = ${partnerId} and reference = 'Pacchetto Starter' order by created_at desc limit 1`;
+  expect(amount).toBe(100);
 });

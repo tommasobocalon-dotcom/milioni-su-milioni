@@ -3,7 +3,6 @@ import { Suspense } from "react";
 import { ArrowRight } from "lucide-react";
 import { connection } from "next/server";
 import { LeadRow } from "@/components/partner/lead-row";
-import { LockedLeadsBanner } from "@/components/partner/locked-banner";
 import { PartnerPageHeader } from "@/components/partner/page-header";
 import { PartnerSkeleton } from "@/components/partner/skeleton";
 import { Geco } from "@/components/site/geco";
@@ -55,7 +54,6 @@ async function Dashboard() {
   const hour = Number(new Intl.DateTimeFormat("it-IT", { hour: "numeric", hour12: false, timeZone: "Europe/Rome" }).format(now));
   const greeting = hour < 13 ? "Buongiorno" : hour < 18 ? "Buon pomeriggio" : "Buonasera";
   const step = nextStep(o.counts.new ?? 0, o.completeness);
-  const left = o.sub ? Math.max(0, o.sub.leadsIncluded - o.sub.leadsUsed) : null;
 
   return (
     <div className="flex max-w-3xl flex-col gap-6">
@@ -77,13 +75,11 @@ async function Dashboard() {
         </ButtonLink>
       </section>
 
-      <LockedLeadsBanner leads={o.locked} now={now} />
-
       <section aria-label="Il tuo piano" className="grid gap-4 sm:grid-cols-2">
         <div className="flex flex-col gap-1 rounded-lg border border-line bg-surface p-5">
-          <p className="text-body-s text-ink-2">Richieste ancora incluse nel piano</p>
-          <p className="font-display text-h1">{o.sub ? `${left} di ${o.sub.leadsIncluded}` : "—"}</p>
-          {o.sub && <p className="text-caption text-ink-2">Tornano a {o.sub.leadsIncluded} il {dateFmt.format(o.sub.currentPeriodEnd)}</p>}
+          <p className="text-body-s text-ink-2">Il tuo piano</p>
+          <p className="font-display text-h1">{o.sub?.planName ?? "—"}</p>
+          {o.sub && <p className="text-caption text-ink-2">Si rinnova il {dateFmt.format(o.sub.currentPeriodEnd)} · richieste illimitate</p>}
         </div>
         <div className="flex flex-col gap-1 rounded-lg border border-line bg-surface p-5">
           <p className="text-body-s text-ink-2">Crediti</p>
