@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { accountStatusFrom, grantsRenewalTokens, periodFromItems, subscriptionStatusFromStripe, tokenMonthsDue, tokenPurchaseFromCheckout } from "./billing";
+import { accountStatusFrom, grantsRenewalTokens, periodFromItems, planFromLookupKey, planLookupKey, subscriptionStatusFromStripe, tokenMonthsDue, tokenPurchaseFromCheckout } from "./billing";
 
 describe("subscriptionStatusFromStripe", () => {
   it("attivo solo con pagamento in regola", () => {
@@ -105,5 +105,18 @@ describe("tokenMonthsDue", () => {
 
   it("mai più di 12 in un anno", () => {
     expect(tokenMonthsDue(start, new Date("2027-06-01T10:00:00Z"))).toBe(12);
+  });
+});
+
+describe("planLookupKey / planFromLookupKey", () => {
+  it("il prezzo Stripe porta piano e periodo nella lookup_key", () => {
+    expect(planLookupKey("normal", "yearly")).toBe("geco_normal_yearly");
+    expect(planFromLookupKey("geco_premium_monthly")).toEqual({ code: "premium", period: "monthly" });
+  });
+
+  it("chiavi estranee o assenti: nessun piano", () => {
+    expect(planFromLookupKey("altro_prezzo")).toBeNull();
+    expect(planFromLookupKey("geco_normal_weekly")).toBeNull();
+    expect(planFromLookupKey(null)).toBeNull();
   });
 });

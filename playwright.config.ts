@@ -41,6 +41,8 @@ export default defineConfig({
       APP_URL: `http://localhost:${E2E_PORT}`,
       NEXT_DIST_DIR: ".next-e2e",
       STRIPE_WEBHOOK_SECRET: E2E_STRIPE_WEBHOOK_SECRET,
+      // I test non chiamano Stripe: anche con la chiave in .env.local si usa l'attivazione di prova.
+      STRIPE_SECRET_KEY: "",
       INBOUND_EMAIL_TOKEN: E2E_INBOUND_EMAIL_TOKEN,
     },
     timeout: 180_000,

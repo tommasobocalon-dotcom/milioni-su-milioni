@@ -4,7 +4,7 @@ import { and, eq, inArray, isNotNull, isNull, or } from "drizzle-orm";
 import Stripe from "stripe";
 import { db } from "@/lib/db/client";
 import { partners, plans, stripeProcessed, subscriptions, tokenLedger } from "@/lib/db/schema";
-import { accountStatusFrom, grantsRenewalTokens, periodFromItems, subscriptionStatusFromStripe, tokenMonthsDue, tokenPurchaseFromCheckout, TRIAL_DAYS } from "@/lib/domain/billing";
+import { accountStatusFrom, grantsRenewalTokens, periodFromItems, planFromLookupKey, planLookupKey, subscriptionStatusFromStripe, tokenMonthsDue, tokenPurchaseFromCheckout, TRIAL_DAYS } from "@/lib/domain/billing";
 import { TOKEN_PACKAGES } from "@/lib/domain/offers";
 import { tokenExpiryFrom } from "@/lib/domain/tokens";
 
@@ -26,8 +26,27 @@ export function stripe(): Stripe {
 
 const appUrl = () => process.env.APP_URL ?? "http://localhost:3000";
 
-/** IVA 22% applicata a ogni addebito (aliquota creata da `npm run stripe:setup`). */
-const taxRates = () => (process.env.STRIPE_TAX_RATE_ID ? [process.env.STRIPE_TAX_RATE_ID] : undefined);
+/** Carta e addebito SEPA (decisione del 26/10/2026), tra quelli attivi nel Dashboard: niente Klarna, Satispay… */
+const PAYMENT_METHODS: Stripe.Checkout.SessionCreateParams.AllowedPaymentMethodType[] = ["card", "sepa_debit"];
+
+let vatRateId: string | undefined;
+
+/**
+ * IVA 22% applicata a ogni addebito: l'aliquota creata da `npm run stripe:setup` (metadato geco=iva22),
+ * cercata in Stripe la prima volta. STRIPE_TAX_RATE_ID, se impostata, ha la precedenza.
+ */
+async function taxRates(): Promise<string[] | undefined> {
+  if (process.env.STRIPE_TAX_RATE_ID) return [process.env.STRIPE_TAX_RATE_ID];
+  vatRateId ??= (await stripe().taxRates.list({ active: true, limit: 100 })).data.find((r) => r.metadata?.geco === "iva22")?.id;
+  return vatRateId ? [vatRateId] : undefined;
+}
+
+/** Prezzo Stripe del piano: l'id salvato nel database o, se manca, quello con la lookup_key del piano. */
+async function planPrice(plan: { code: string; stripeMonthlyPriceId: string | null; stripeYearlyPriceId: string | null }, period: "monthly" | "yearly") {
+  const saved = period === "yearly" ? plan.stripeYearlyPriceId : plan.stripeMonthlyPriceId;
+  if (saved) return saved;
+  return (await stripe().prices.list({ lookup_keys: [planLookupKey(plan.code, period)], active: true, limit: 1 })).data[0]?.id ?? null;
+}
 
 /** Errore da mostrare al partner così com'è. */
 export class BillingError extends Error {}
@@ -43,7 +62,14 @@ async function customerFor({ partnerId, email, name }: Payer): Promise<string> {
   if (p?.customer) return p.customer;
   // La chiave di idempotenza evita due clienti se il partner preme due volte.
   const customer = await stripe().customers.create(
-    { email, name: p?.businessName ?? name, metadata: { partnerId, vatNumber: p?.vat ?? "" }, preferred_locales: ["it"] },
+    {
+      email,
+      name: p?.businessName ?? name,
+      metadata: { partnerId, vatNumber: p?.vat ?? "" },
+      preferred_locales: ["it"],
+      // Partita IVA (11 cifre, già controllata alla registrazione): compare su ricevute e fatture Stripe.
+      ...(p?.vat && /^\d{11}$/.test(p.vat) ? { tax_id_data: [{ type: "eu_vat" as const, value: `IT${p.vat}` }] } : {}),
+    },
     { idempotencyKey: `customer:${partnerId}` },
   );
   await db.update(partners).set({ stripeCustomerId: customer.id }).where(eq(partners.id, partnerId));
@@ -58,10 +84,11 @@ export async function createTokenCheckout(payer: Payer, packageCode: string): Pr
     mode: "payment",
     customer: await customerFor(payer),
     locale: "it",
+    allowed_payment_method_types: PAYMENT_METHODS,
     line_items: [
       {
         quantity: 1,
-        tax_rates: taxRates(),
+        tax_rates: await taxRates(),
         price_data: { currency: "eur", unit_amount: pkg.priceCents, product_data: { name: `Pacchetto token ${pkg.name} · ${pkg.tokens} token` } },
       },
     ],
@@ -78,7 +105,7 @@ export async function createTokenCheckout(payer: Payer, packageCode: string): Pr
 export async function createSubscriptionCheckout(payer: Payer, planCode: string, period: "monthly" | "yearly"): Promise<string> {
   const [plan] = await db.select().from(plans).where(eq(plans.code, planCode));
   if (!plan) throw new BillingError("Piano non valido");
-  const price = period === "yearly" ? plan.stripeYearlyPriceId : plan.stripeMonthlyPriceId;
+  const price = await planPrice(plan, period);
   if (!price) throw new BillingError("Il piano non è ancora collegato a Stripe (npm run stripe:setup)");
   const [open] = await db
     .select({ id: subscriptions.id })
@@ -102,10 +129,11 @@ export async function createSubscriptionCheckout(payer: Payer, planCode: string,
     mode: "subscription",
     customer: await customerFor(payer),
     locale: "it",
+    allowed_payment_method_types: PAYMENT_METHODS,
     line_items: [{ price, quantity: 1 }],
     metadata,
     // Carta chiesta subito (impostazione predefinita di Checkout): alla fine della prova l'addebito parte da solo.
-    subscription_data: { metadata, default_tax_rates: taxRates(), ...(past ? {} : { trial_period_days: TRIAL_DAYS }) },
+    subscription_data: { metadata, default_tax_rates: await taxRates(), ...(past ? {} : { trial_period_days: TRIAL_DAYS }) },
     success_url: `${appUrl()}/area-partner/abbonamento?pagamento=ok`,
     cancel_url: `${appUrl()}/area-partner/abbonamento`,
   });
@@ -117,7 +145,14 @@ export async function createSubscriptionCheckout(payer: Payer, planCode: string,
 export async function createPortalSession(partnerId: string): Promise<string> {
   const [p] = await db.select({ customer: partners.stripeCustomerId }).from(partners).where(eq(partners.id, partnerId));
   if (!p?.customer) throw new BillingError("Nessun pagamento ancora registrato con Stripe");
-  const session = await stripe().billingPortal.sessions.create({ customer: p.customer, locale: "it", return_url: `${appUrl()}/area-partner/abbonamento` });
+  // Configurazione del portale creata da `npm run stripe:setup` (metadato geco=portale); altrimenti quella predefinita.
+  const configuration = (await stripe().billingPortal.configurations.list({ active: true, limit: 100 })).data.find((c) => c.metadata?.geco === "portale")?.id;
+  const session = await stripe().billingPortal.sessions.create({
+    customer: p.customer,
+    locale: "it",
+    return_url: `${appUrl()}/area-partner/abbonamento`,
+    ...(configuration ? { configuration } : {}),
+  });
   return session.url;
 }
 
@@ -150,18 +185,21 @@ async function syncSubscription(subscriptionId: string): Promise<{ id: string; p
     console.error("[stripe] abbonamento senza partner:", sub.id);
     return null;
   }
-  const priceId = sub.items.data[0]?.price.id;
-  if (!priceId) throw new Error(`Abbonamento Stripe ${sub.id} senza voci`);
+  const price = sub.items.data[0]?.price;
+  if (!price) throw new Error(`Abbonamento Stripe ${sub.id} senza voci`);
+  // Il piano si riconosce dalla lookup_key del prezzo (geco_normal_yearly); in alternativa dall'id salvato.
+  const byKey = planFromLookupKey(price.lookup_key);
   const [plan] = await db
     .select({ id: plans.id, monthly: plans.stripeMonthlyPriceId })
     .from(plans)
-    .where(or(eq(plans.stripeMonthlyPriceId, priceId), eq(plans.stripeYearlyPriceId, priceId)));
-  // Senza piano non si può decidere la quota: errore, Stripe ritenta dopo la correzione.
-  if (!plan) throw new Error(`Prezzo Stripe ${priceId} non collegato a nessun piano`);
+    .where(byKey ? eq(plans.code, byKey.code) : or(eq(plans.stripeMonthlyPriceId, price.id), eq(plans.stripeYearlyPriceId, price.id)));
+  // Senza piano non si sa cosa include l'abbonamento: errore, Stripe ritenta dopo la correzione.
+  if (!plan) throw new Error(`Prezzo Stripe ${price.id} non collegato a nessun piano`);
+  const priceId = price.id;
   const { start, end } = periodFromItems(sub.items.data);
   const values = {
     planId: plan.id,
-    period: plan.monthly === priceId ? ("monthly" as const) : ("yearly" as const),
+    period: byKey?.period ?? (plan.monthly === priceId ? ("monthly" as const) : ("yearly" as const)),
     status: subscriptionStatusFromStripe(sub.status),
     currentPeriodStart: start,
     currentPeriodEnd: end,

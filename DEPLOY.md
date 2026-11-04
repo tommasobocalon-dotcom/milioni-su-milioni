@@ -167,20 +167,17 @@ Un solo account [Brevo](https://www.brevo.com) per i codici SMS dei clienti e pe
 
 Abbonamenti (mensile o annuale), pacchetti token e portale clienti passano da Stripe. Sul sito di prova usa **solo la modalità test** (chiavi `sk_test_...`): nessun addebito vero, carta di prova `4242 4242 4242 4242`.
 
-1. **Account e metodi di pagamento.** Su https://dashboard.stripe.com attiva la modalità test. In **Settings → Payment methods** lascia attive *Cards* e attiva *SEPA Direct Debit*.
-2. **Chiave segreta.** **Developers → API keys**: copia la *Secret key* in `STRIPE_SECRET_KEY` (in `.env.local` per il locale, su Vercel per il sito).
-3. **Piani e IVA.** Nel terminale, con il database a cui punta `.env.local`:
+1. **Account e metodi di pagamento.** Su https://dashboard.stripe.com usa la *sandbox* (modalità test). In **Settings → Payment methods** attiva *SEPA Direct Debit* (la carta è già attiva): il Checkout offre solo carta e SEPA, anche se nel Dashboard ci sono altri metodi.
+2. **Chiave segreta.** **Developers → API keys**: copia la *Secret key* (`sk_test_...`) in `.env.local` come `STRIPE_SECRET_KEY=...`. Mai in `.env.example` (va su GitHub) e mai in chat.
+3. **Configurazione automatica.** Nel terminale:
    ```
    npm run stripe:setup
    ```
-   Crea in Stripe un prodotto con prezzo mensile e annuale per ogni piano (prezzi della tabella `plans`), li collega al database e crea l'aliquota IVA 22%. Copia il valore `STRIPE_TAX_RATE_ID` che stampa. Si può rilanciare quando si vuole; va rilanciato dopo `npm run db:reset`. Per il database su Supabase, lancialo con `DATABASE_URL` di Supabase.
-4. **Webhook.** **Developers → Webhooks → Add endpoint**, URL `https://gecoitalia.it/api/stripe/webhook`, eventi:
-   `checkout.session.completed`, `checkout.session.async_payment_succeeded`, `customer.subscription.created`, `customer.subscription.updated`, `customer.subscription.deleted`, `customer.subscription.paused`, `customer.subscription.resumed`, `invoice.paid`.
-   Copia il *Signing secret* (`whsec_...`) in `STRIPE_WEBHOOK_SECRET`. Il webhook non chiede la password del sito di prova: è protetto dalla firma.
-5. **Portale clienti.** **Settings → Billing → Customer portal**: attiva aggiornamento del metodo di pagamento, storico fatture, disdetta *a fine periodo* e cambio piano tra i tre prodotti `Piano ...`.
-6. **Tentativi e sospensione.** **Settings → Billing → Subscriptions and emails**: lascia i tentativi automatici (Smart Retries) e le email di pagamento fallito. Dopo l'ultimo tentativo scegli *cancel the subscription*. Al primo pagamento fallito l'app sospende subito la scheda e la riattiva da sola quando un tentativo va a buon fine.
-7. Su Vercel aggiungi `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_TAX_RATE_ID` e, se vuoi, `CRON_SECRET` (facoltativa: il cron giornaliero dei crediti mensili funziona anche senza, con la variabile risponde solo a Vercel) e fai **Redeploy**.
-8. I prezzi dei piani sono cambiati il 4/11/2026 (Base 15/9, Normal 49/39, Premium 120/99 € al mese): dopo il deploy rilancia `npm run stripe:setup` per creare i prezzi nuovi in Stripe. La prova gratuita di 7 giorni parte da sola al primo abbonamento.
+   Crea o aggiorna in Stripe: un prodotto con prezzo mensile e annuale per ogni piano (riconosciuti dalla lookup_key `geco_<piano>_<periodo>`, quindi il sito online non ha bisogno degli id), l'aliquota IVA 22%, il portale clienti (metodo di pagamento, fatture, disdetta a fine periodo, cambio piano) e il webhook verso `https://gecoitalia.it/api/stripe/webhook`. Alla prima creazione del webhook scrive chiave e segreto in `.env.vercel` (escluso da git). Si può rilanciare quando si vuole.
+4. **Vercel.** Apri `.env.vercel`, copia tutto e incollalo in Vercel → progetto → **Settings → Environment Variables** (il campo *Key* accetta un .env intero), salva e fai **Redeploy**. Bastano queste due variabili: `STRIPE_TAX_RATE_ID` e `CRON_SECRET` sono facoltative.
+5. **Tentativi e sospensione.** **Settings → Billing → Subscriptions and emails**: lascia i tentativi automatici (Smart Retries) e le email di pagamento fallito; dopo l'ultimo tentativo scegli *cancel the subscription*. Al primo pagamento fallito l'app sospende subito la scheda e la riattiva da sola quando un tentativo va a buon fine.
+
+La prova gratuita di 7 giorni parte da sola al primo abbonamento di ogni azienda.
 
 **In locale** il webhook si riceve con la [Stripe CLI](https://docs.stripe.com/stripe-cli):
 ```

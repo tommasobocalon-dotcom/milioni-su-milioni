@@ -77,3 +77,13 @@ function addMonths(date: Date, months: number): Date {
   d.setUTCDate(Math.min(day, last));
   return d;
 }
+
+/** I prezzi dei piani in Stripe si riconoscono dalla lookup_key: niente id da copiare nel database o su Vercel. */
+export function planLookupKey(code: string, period: "monthly" | "yearly"): string {
+  return `geco_${code}_${period}`;
+}
+
+export function planFromLookupKey(key: string | null | undefined): { code: string; period: "monthly" | "yearly" } | null {
+  const m = key?.match(/^geco_([a-z0-9-]+)_(monthly|yearly)$/);
+  return m ? { code: m[1], period: m[2] as "monthly" | "yearly" } : null;
+}
