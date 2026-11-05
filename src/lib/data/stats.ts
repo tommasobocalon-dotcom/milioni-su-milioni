@@ -73,7 +73,7 @@ export async function getPartnerStats(partnerId: string, now: Date, days: StatsP
       .from(reviews)
       .where(and(eq(reviews.partnerId, partnerId), eq(reviews.status, "published"), gte(reviews.createdAt, since), gte(romeDaySql(reviews.createdAt), current[0]))),
     db
-      .select({ id: boosts.id, startsAt: boosts.startsAt, endsAt: boosts.endsAt, tokensSpent: boosts.tokensSpent })
+      .select({ id: boosts.id, placement: boosts.placement, startsAt: boosts.startsAt, endsAt: boosts.endsAt, tokensSpent: boosts.tokensSpent })
       .from(boosts)
       .where(eq(boosts.partnerId, partnerId))
       .orderBy(desc(boosts.startsAt))

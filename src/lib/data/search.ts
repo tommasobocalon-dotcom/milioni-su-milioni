@@ -165,7 +165,7 @@ export async function searchPartners(input: {
     if (!priceByPartner.has(p.partnerId)) priceByPartner.set(p.partnerId, p);
   }
 
-  // Boost attivi per la categoria nella provincia cercata.
+  // Boost "Sponsorizzato nella ricerca" attivi per la categoria nella provincia cercata (quelli della Home non contano qui).
   const boosted = new Set<string>();
   if (input.place) {
     const active = await db
@@ -174,6 +174,7 @@ export async function searchPartners(input: {
       .where(
         and(
           inArray(boosts.partnerId, ids),
+          eq(boosts.placement, "search"),
           eq(boosts.provinceId, input.place.provinceId),
           lte(boosts.startsAt, now),
           gt(boosts.endsAt, now),

@@ -5,26 +5,22 @@ import { Badge, planBadge } from "@/components/ui/badge";
 import { ButtonLink } from "@/components/ui/button";
 import { LogoPartner } from "@/components/ui/logo-partner";
 import { Rating } from "@/components/ui/stars";
-import { CATEGORY_PHOTOS } from "@/lib/data/category-photos";
 import type { PartnerListItem } from "@/lib/data/search";
 import { formatDistanceKm, formatResponseTime } from "@/lib/domain/format";
 
 /**
- * Riquadro grande in cima ai risultati: un'azienda Premium (con boost se c'è), a rotazione tra i visitatori
+ * Riquadro grande in cima ai risultati: un'azienda Premium (con boost "Sponsorizzato nella ricerca" se c'è), a rotazione tra i visitatori
  * (ranking.ts). È un posto a pagamento: l'etichetta "Sponsorizzato" c'è sempre.
  */
 export function FeaturedPartner({ p }: { p: PartnerListItem }) {
   const response = formatResponseTime(p.responseMinutes);
-  // Senza foto dei lavori: la foto del mestiere (archivi aperti, crediti nel footer), mai presentata come lavoro dell'azienda.
-  const trade = p.coverUrl ? null : CATEGORY_PHOTOS[p.categorySlug];
   return (
     <article aria-label={`In evidenza: ${p.displayName}`} className="grid overflow-hidden rounded-lg border border-ambra-500/40 bg-sponsor md:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
       <Link href={p.href} tabIndex={-1} aria-hidden className="relative block aspect-[16/10] bg-subtle md:aspect-auto md:min-h-72">
         {p.coverUrl ? (
           <Image src={p.coverUrl} alt="" fill sizes="(min-width: 768px) 40vw, 100vw" className="object-cover" />
-        ) : trade ? (
-          <Image src={trade.src} alt="" fill sizes="(min-width: 768px) 40vw, 100vw" className="object-cover" />
         ) : (
+          // Senza foto dei lavori si vede il logo dell'azienda (recap del cliente, 5/11/2026).
           <span className="absolute inset-0 flex items-center justify-center">
             <LogoPartner name={p.displayName} src={p.logoUrl} size={96} />
           </span>
@@ -36,7 +32,7 @@ export function FeaturedPartner({ p }: { p: PartnerListItem }) {
           {p.planCode && <Badge kind={planBadge(p.planCode)} />}
         </div>
         <div className="flex items-center gap-3">
-          {(p.coverUrl || trade) && <LogoPartner name={p.displayName} src={p.logoUrl} size={48} />}
+          {p.coverUrl && <LogoPartner name={p.displayName} src={p.logoUrl} size={48} />}
           <h2 className="font-display text-h2">
             <Link href={p.href} className="hover:text-primary hover:underline">
               {p.displayName}

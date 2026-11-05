@@ -34,10 +34,11 @@ export type HomeSponsor = {
 };
 
 /**
- * Aziende "in evidenza" nella fascia loghi della Home: i partner attivi con un boost pagato a token
- * in corso adesso (PRD §7.3). L'ordine cambia a ogni visita, così nessuno sta sempre primo.
+ * Aziende "in evidenza" nella fascia loghi della Home: i partner attivi con un boost "home" pagato a token
+ * in corso adesso (PRD §7.3). Nessun limite: ci stanno tutti, e l'ordine cambia a ogni visita, così nessuno
+ * sta sempre primo e scorrendo esce anche il tuo.
  */
-export async function getHomeSponsors(limit = 16): Promise<HomeSponsor[]> {
+export async function getHomeSponsors(): Promise<HomeSponsor[]> {
   await connection();
   const now = new Date();
   const rows = await db
@@ -57,12 +58,10 @@ export async function getHomeSponsors(limit = 16): Promise<HomeSponsor[]> {
     .innerJoin(categories, eq(categories.id, partners.categoryId))
     .innerJoin(municipalities, eq(municipalities.id, partners.municipalityId))
     .innerJoin(provinces, eq(provinces.id, municipalities.provinceId))
-    .where(and(lte(boosts.startsAt, now), gt(boosts.endsAt, now), eq(partners.accountStatus, "active")))
+    .where(and(eq(boosts.placement, "home"), lte(boosts.startsAt, now), gt(boosts.endsAt, now), eq(partners.accountStatus, "active")))
     .orderBy(asc(partners.id), desc(boosts.endsAt));
 
-  return shuffle(rows)
-    .slice(0, limit)
-    .map((r) => ({
+  return shuffle(rows).map((r) => ({
       id: r.id,
       displayName: r.displayName,
       logoUrl: r.logoUrl,

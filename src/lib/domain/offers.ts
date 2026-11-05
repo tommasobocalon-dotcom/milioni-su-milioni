@@ -13,6 +13,14 @@ export const BOOST_OPTIONS = [
   { hours: 72, tokens: 140 },
 ] as const;
 
+/** I due boost (recap del cliente, 5/11/2026): stessa durata e stesso prezzo per ora, si comprano separati. */
+export const BOOST_PLACEMENTS = {
+  search: "Sponsorizzato nella ricerca",
+  home: "Logo in evidenza in Home",
+} as const;
+export type BoostPlacement = keyof typeof BOOST_PLACEMENTS;
+export const isBoostPlacement = (v: unknown): v is BoostPlacement => typeof v === "string" && Object.hasOwn(BOOST_PLACEMENTS, v);
+
 /** "24 ore", "48 ore"… */
 export const boostLabel = (hours: number) => `${hours} ore`;
 

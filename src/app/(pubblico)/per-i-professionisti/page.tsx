@@ -121,7 +121,7 @@ export default async function ForProfessionalsPage() {
             <div className="flex flex-col gap-2">
               <h3 className="text-h3 font-semibold">Vuoi più visibilità? Usa i crediti</h3>
               <p className="text-body-s text-ink-2">
-                Con i piani Normal e Premium: boost in cima ai risultati per {BOOST_OPTIONS.map((o) => `${boostLabel(o.hours)} (${o.tokens} crediti)`).join(", ")};
+                Con i piani Normal e Premium (il Base non usa crediti): boost in cima alla ricerca oppure con il tuo logo nella fascia della Home, per {BOOST_OPTIONS.map((o) => `${boostLabel(o.hours)} (${o.tokens} crediti)`).join(", ")};
                 una provincia vicina per {AREA_EXTENSION.days} giorni ({AREA_EXTENSION.tokens} crediti); un tuo lavoro in evidenza nella pagina
                 Ispirazione per {SHOWCASE_OPTIONS.map((o) => `${o.days} giorni (${o.tokens} crediti)`).join(" o ")}. Normal include 80 crediti al mese,
                 Premium 200. Se ne servono altri:

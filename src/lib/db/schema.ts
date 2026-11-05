@@ -536,6 +536,9 @@ export const tokenLedger = pgTable(
   (t) => [index("token_ledger_partner_idx").on(t.partnerId, t.createdAt)],
 );
 
+/** Dove si vede il boost: "search" = Sponsorizzato nella ricerca (riquadro grande / primi posti), "home" = logo nella fascia Aziende in evidenza. */
+export const boostPlacement = pgEnum("boost_placement", ["search", "home"]);
+
 export const boosts = pgTable(
   "boosts",
   {
@@ -543,6 +546,7 @@ export const boosts = pgTable(
     partnerId: uuid("partner_id")
       .notNull()
       .references(() => partners.id, { onDelete: "cascade" }),
+    placement: boostPlacement("placement").notNull().default("search"),
     categoryId: uuid("category_id")
       .notNull()
       .references(() => categories.id),

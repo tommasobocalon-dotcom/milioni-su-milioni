@@ -2,7 +2,7 @@
 
 import { and, count, eq, isNotNull, max } from "drizzle-orm";
 import { videoEmbedUrl } from "@/lib/domain/extras";
-import { PREMIUM_WEIGHT } from "@/lib/domain/ranking";
+import { canBoost, PREMIUM_WEIGHT } from "@/lib/domain/ranking";
 import { randomUUID } from "node:crypto";
 import { revalidatePath, updateTag } from "next/cache";
 import { redirect } from "next/navigation";
@@ -19,7 +19,7 @@ import { getListableServices, getPriceList, getSubscription } from "@/lib/data/p
 import { demoMode } from "@/lib/demo-mode";
 import { parseAmount } from "@/lib/domain/format";
 import { canReportLead, REPORT_REASONS } from "@/lib/domain/lead-rules";
-import { TOKEN_PACKAGES } from "@/lib/domain/offers";
+import { BOOST_PLACEMENTS, isBoostPlacement, TOKEN_PACKAGES } from "@/lib/domain/offers";
 import { tokenExpiryFrom } from "@/lib/domain/tokens";
 import { activateAreaExtension, activateBoost, activateShowcase, ExtraNotActivatableError } from "@/lib/leads/service";
 import { LEAD_STATUSES, statusInfo } from "@/lib/leads/status";
@@ -100,7 +100,7 @@ export async function simulateTokenPurchase(code: string) {
   if (!demoMode()) return;
   const { user, partner } = await requirePartner();
   const pkg = TOKEN_PACKAGES.find((p) => p.code === code);
-  if (!pkg) return;
+  if (!pkg || !(await canBuyTokens(partner.id))) return;
   const now = new Date();
   await db.insert(tokenLedger).values({
     partnerId: partner.id,
@@ -116,13 +116,15 @@ export async function simulateTokenPurchase(code: string) {
 
 export type ActionState = { error?: string; ok?: string };
 
-export async function activateBoostAction(hours: number): Promise<ActionState> {
+export async function activateBoostAction(placement: string, hours: number): Promise<ActionState> {
   const { user, partner } = await requirePartner();
+  if (!isBoostPlacement(placement)) return { error: "Tipo di boost non valido" };
   try {
-    const { endsAt } = await activateBoost(partner.id, hours);
-    await db.insert(auditLogs).values({ actor: user.email, action: "boost.activated", entity: "partner", entityId: partner.id, data: { hours } });
+    const { endsAt } = await activateBoost(partner.id, placement, hours);
+    await db.insert(auditLogs).values({ actor: user.email, action: "boost.activated", entity: "partner", entityId: partner.id, data: { placement, hours } });
     revalidatePath("/area-partner", "layout");
-    return { ok: `In evidenza fino al ${endsAt.toLocaleString("it-IT", { day: "numeric", month: "long", hour: "2-digit", minute: "2-digit", timeZone: "Europe/Rome" })}` };
+    const until = endsAt.toLocaleString("it-IT", { day: "numeric", month: "long", hour: "2-digit", minute: "2-digit", timeZone: "Europe/Rome" });
+    return { ok: `In evidenza fino al ${until} (${BOOST_PLACEMENTS[placement]})` };
   } catch (e) {
     if (e instanceof ExtraNotActivatableError) return { error: e.message };
     throw e;
@@ -437,7 +439,15 @@ async function billingAction(run: (payer: { partnerId: string; email: string; na
   }
 }
 
+/** I crediti si comprano solo con Normal e Premium: il Base non ha extra a token (recap del cliente, 5/11/2026). */
+async function canBuyTokens(partnerId: string) {
+  const sub = await getSubscription(partnerId);
+  return !!sub && canBoost(sub.planWeight);
+}
+
 export async function startTokenCheckout(code: string): Promise<CheckoutState> {
+  const { partner } = await requirePartner();
+  if (!(await canBuyTokens(partner.id))) return { error: "I crediti sono inclusi nei piani Normal e Premium" };
   return billingAction((payer) => createTokenCheckout(payer, code), "billing.token_checkout");
 }
 

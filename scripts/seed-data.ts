@@ -393,7 +393,6 @@ export const PARTNERS: PartnerSeed[] = [
     ],
     portfolio: [],
     hours: H_STUDIO,
-    boosted: true,
   },
   {
     slug: "elettro-bortolin",

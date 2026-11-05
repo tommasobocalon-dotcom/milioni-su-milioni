@@ -260,14 +260,18 @@ export async function seed(db: Db) {
 
     if (p.boosted) {
       const province = PROVINCES.find((pr) => pr.id === m.provinceId)!;
-      await db.insert(s.boosts).values({
-        partnerId: row.id,
-        categoryId: categoryIds.get(p.category)!,
-        provinceId: province.id,
-        startsAt: new Date(now.getTime() - 2 * DAY),
-        endsAt: new Date(now.getTime() + 5 * DAY),
-        tokensSpent: 60,
-      });
+      // Entrambi i boost: Sponsorizzato nella ricerca e logo nella fascia della Home.
+      await db.insert(s.boosts).values(
+        (["search", "home"] as const).map((placement) => ({
+          partnerId: row.id,
+          placement,
+          categoryId: categoryIds.get(p.category)!,
+          provinceId: province.id,
+          startsAt: new Date(now.getTime() - 2 * DAY),
+          endsAt: new Date(now.getTime() + 5 * DAY),
+          tokensSpent: 60,
+        })),
+      );
     }
   }
 

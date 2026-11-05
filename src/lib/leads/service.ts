@@ -3,7 +3,7 @@ import { and, desc, eq, gt, isNotNull, ne } from "drizzle-orm";
 import { db } from "@/lib/db/client";
 import { areaExtensions, boosts, leadEvents, leads, municipalities, partners, plans, portfolioItems, provinces, showcaseFeatures, subscriptions, tokenLedger, type LeadAnswer } from "@/lib/db/schema";
 import { neighbourProvinces } from "@/lib/domain/extras";
-import { AREA_EXTENSION, BOOST_OPTIONS, SHOWCASE_OPTIONS } from "@/lib/domain/offers";
+import { AREA_EXTENSION, BOOST_OPTIONS, BOOST_PLACEMENTS, type BoostPlacement, SHOWCASE_OPTIONS } from "@/lib/domain/offers";
 import { decideLeadCharge, isDuplicateLead, DUPLICATE_WINDOW_DAYS } from "@/lib/domain/lead-rules";
 import { canBoost } from "@/lib/domain/ranking";
 import { InsufficientTokensError, planConsumption, type LedgerEntry } from "@/lib/domain/tokens";
@@ -140,9 +140,10 @@ async function payExtra(tx: Tx, partnerId: string, tokens: number, reference: st
 
 /**
  * Boost della scheda pagato a token (solo Normal e Premium), per la categoria e la provincia del partner.
- * Se un boost è già attivo, il nuovo parte alla sua scadenza (si allunga, non si sovrappone).
+ * Due tipi separati: "search" (Sponsorizzato nella ricerca) e "home" (logo nella fascia della Home).
+ * Se un boost dello stesso tipo è già attivo, il nuovo parte alla sua scadenza (si allunga, non si sovrappone).
  */
-export async function activateBoost(partnerId: string, hours: number, now = new Date()) {
+export async function activateBoost(partnerId: string, placement: BoostPlacement, hours: number, now = new Date()) {
   const option = BOOST_OPTIONS.find((o) => o.hours === hours);
   if (!option) throw new ExtraNotActivatableError("Durata non valida");
   return db.transaction(async (tx) => {
@@ -150,13 +151,13 @@ export async function activateBoost(partnerId: string, hours: number, now = new 
     const [last] = await tx
       .select({ endsAt: boosts.endsAt })
       .from(boosts)
-      .where(and(eq(boosts.partnerId, partnerId), gt(boosts.endsAt, now)))
+      .where(and(eq(boosts.partnerId, partnerId), eq(boosts.placement, placement), gt(boosts.endsAt, now)))
       .orderBy(desc(boosts.endsAt))
       .limit(1);
     const startsAt = last?.endsAt ?? now;
     const endsAt = new Date(startsAt.getTime() + option.hours * 3_600_000);
-    await payExtra(tx, partnerId, option.tokens, `Boost ${option.hours} ore`, now);
-    await tx.insert(boosts).values({ partnerId, categoryId: p.categoryId, provinceId: p.provinceId, startsAt, endsAt, tokensSpent: option.tokens, createdAt: now });
+    await payExtra(tx, partnerId, option.tokens, `${BOOST_PLACEMENTS[placement]} ${option.hours} ore`, now);
+    await tx.insert(boosts).values({ partnerId, placement, categoryId: p.categoryId, provinceId: p.provinceId, startsAt, endsAt, tokensSpent: option.tokens, createdAt: now });
     return { startsAt, endsAt };
   });
 }

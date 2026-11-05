@@ -13,6 +13,7 @@ import { requirePartner } from "@/lib/auth/session";
 import { getSubscription, getTokenBalance } from "@/lib/data/partner-area";
 import { canBoost } from "@/lib/domain/ranking";
 import { getPartnerStats, type PartnerStats } from "@/lib/data/stats";
+import { BOOST_PLACEMENTS } from "@/lib/domain/offers";
 import { boostedDays, boostUplift, change, parsePeriod, STATS_PERIODS, stepRate, type StatsPeriod } from "@/lib/domain/stats";
 import { LEAD_STATUSES } from "@/lib/leads/status";
 import { cn } from "@/lib/utils";
@@ -56,9 +57,11 @@ async function Stats({ days }: { days: StatsPeriod }) {
   const [s, tokenBalance] = await Promise.all([getPartnerStats(partner.id, now, days), getTokenBalance(partner.id, now)]);
   const t = s.totals;
   const prev = s.previousTotals;
-  const active = s.boosts.find((b) => b.active);
-  const boostMask = boostedDays(s.days, s.boosts);
-  const measuredUplift = boostUplift(s.history.views, boostedDays(s.history.days, s.boosts));
+  // Il grafico misura la ricerca: contano solo i boost "Sponsorizzato nella ricerca", non quelli della Home.
+  const searchBoosts = s.boosts.filter((b) => b.placement === "search");
+  const active = searchBoosts.find((b) => b.active);
+  const boostMask = boostedDays(s.days, searchBoosts);
+  const measuredUplift = boostUplift(s.history.views, boostedDays(s.history.days, searchBoosts));
 
   return (
     <div className="flex flex-col gap-6">
@@ -132,6 +135,7 @@ async function Stats({ days }: { days: StatsPeriod }) {
               <thead className="text-caption text-ink-2">
                 <tr>
                   <th className="py-2 font-medium">Periodo</th>
+                  <th className="py-2 font-medium">Tipo</th>
                   <th className="py-2 text-right font-medium">Crediti usati</th>
                   <th className="py-2 text-right font-medium">Stato</th>
                 </tr>
@@ -142,6 +146,7 @@ async function Stats({ days }: { days: StatsPeriod }) {
                     <td className="py-2">
                       {dateFmt.format(b.startsAt)} – {dateFmt.format(b.endsAt)}
                     </td>
+                    <td className="py-2">{BOOST_PLACEMENTS[b.placement]}</td>
                     <td className="py-2 text-right">{b.tokensSpent}</td>
                     <td className="py-2 text-right">{b.active ? "Attivo" : b.upcoming ? "Programmato" : "Concluso"}</td>
                   </tr>

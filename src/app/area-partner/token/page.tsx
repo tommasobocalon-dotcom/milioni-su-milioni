@@ -46,6 +46,7 @@ async function Tokens({ paid }: { paid: boolean }) {
   ]);
   const dev = demoMode();
   const stripeOn = stripeConfigured();
+  const canUseTokens = !!sub && canBoost(sub.planWeight);
 
   return (
     <div className="flex flex-col gap-6">
@@ -74,6 +75,15 @@ async function Tokens({ paid }: { paid: boolean }) {
 
         <section className="flex flex-col gap-4">
           <h2 className="text-h3 font-semibold">Compra crediti</h2>
+          {!canUseTokens ? (
+            <p className="rounded-md bg-subtle p-4 text-body-s">
+              I crediti sono inclusi nei piani Normal e Premium: con il piano Base non si comprano.{" "}
+              <Link href="/area-partner/abbonamento" className="font-semibold text-primary underline">
+                Cambia piano
+              </Link>
+            </p>
+          ) : (
+          <>
           <ul className="grid gap-4 md:grid-cols-3">
             {TOKEN_PACKAGES.map((p) => {
               const saving = packageSaving(p.tokens, p.priceCents);
@@ -123,18 +133,20 @@ async function Tokens({ paid }: { paid: boolean }) {
               ? "Ambiente di prova: l'acquisto accredita i crediti senza pagamento. Con Stripe configurato il pagamento passa dal Checkout di Stripe, con ricevuta via email."
               : "Pagamento anticipato con Stripe (carta o addebito SEPA), con ricevuta via email."}
           </p>
+          </>
+          )}
         </section>
       </div>
 
       <section className="flex flex-col gap-4 rounded-lg border border-line bg-surface p-6">
         <h2 className="inline-flex items-center gap-2 text-h3 font-semibold">
-          <Rocket className="size-5" aria-hidden /> Boost: sali in cima ai risultati
+          <Rocket className="size-5" aria-hidden /> Boost: più visibilità per qualche ora
         </h2>
         <p className="text-body-s text-ink-2">
-          Per qualche ora compari prima degli altri con il tuo stesso piano, nella tua categoria e provincia, sempre etichettato come
-          &quot;Sponsorizzato&quot;.
+          Due boost separati, sempre etichettati come &quot;Sponsorizzato&quot;: in cima alla ricerca (prima degli altri con il tuo stesso
+          piano, mai sopra un piano più alto) oppure con il tuo logo nella fascia Aziende in evidenza della Home.
         </p>
-        {sub && canBoost(sub.planWeight) ? (
+        {canUseTokens ? (
           <BoostButtons options={BOOST_OPTIONS} balance={balance} />
         ) : (
           <p className="rounded-md bg-subtle p-4 text-body-s">
@@ -145,7 +157,7 @@ async function Tokens({ paid }: { paid: boolean }) {
           </p>
         )}
         <p className="text-caption text-ink-2">
-          Vale per la tua categoria nella tua provincia. Se sei già in evidenza, il nuovo periodo parte quando finisce quello attuale. I risultati li trovi in{" "}
+          Il boost nella ricerca vale per la tua categoria nella tua provincia. Se un boost dello stesso tipo è già attivo, il nuovo periodo parte quando finisce quello attuale. I risultati li trovi in{" "}
           <Link href="/area-partner/statistiche" className="font-semibold text-primary underline">
             Statistiche
           </Link>
@@ -153,7 +165,7 @@ async function Tokens({ paid }: { paid: boolean }) {
         </p>
       </section>
 
-      {sub && canBoost(sub.planWeight) && (
+      {canUseTokens && (
         <div className="grid gap-6 xl:grid-cols-2">
           <section className="flex flex-col gap-4 rounded-lg border border-line bg-surface p-6">
             <h2 className="inline-flex items-center gap-2 text-h3 font-semibold">
