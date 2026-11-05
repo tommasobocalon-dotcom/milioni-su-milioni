@@ -1,11 +1,11 @@
 import Link from "next/link";
-import { Clock, MapPin, Star } from "lucide-react";
+import { MapPin, Star } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { ButtonLink } from "@/components/ui/button";
 import { LogoPartner } from "@/components/ui/logo-partner";
 import { Rating } from "@/components/ui/stars";
 import type { PartnerListItem } from "@/lib/data/search";
-import { formatDistanceKm, formatResponseTime } from "@/lib/domain/format";
+import { formatDistanceKm } from "@/lib/domain/format";
 import { cn } from "@/lib/utils";
 
 /**
@@ -21,7 +21,6 @@ export function PartnerCard({
   headingLevel?: 2 | 3;
 }) {
   const H = `h${headingLevel}` as "h2" | "h3";
-  const response = formatResponseTime(p.responseMinutes);
   const premium = p.planCode === "premium";
   const normal = p.planCode === "normal";
   return (
@@ -74,11 +73,6 @@ export function PartnerCard({
           </p>
           <Rating average={p.rating.average} count={p.rating.count} />
           <p className="flex flex-wrap gap-x-4 gap-y-1 text-body-s text-ink-2">
-            {response && (
-              <span className="inline-flex items-center gap-1">
-                <Clock className="size-4" aria-hidden /> Risponde in {response}
-              </span>
-            )}
             <span className="inline-flex items-center gap-1">
               <MapPin className="size-4" aria-hidden />
               {p.municipalityName} ({p.provinceCode})

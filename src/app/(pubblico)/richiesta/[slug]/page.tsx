@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
-import { ArrowLeft, Clock } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import { Geco } from "@/components/site/geco";
 import { LeadWizard } from "@/components/site/lead-wizard";
 import { TrackEvent } from "@/components/site/track-event";
@@ -10,7 +10,6 @@ import { LogoPartner } from "@/components/ui/logo-partner";
 import { getMunicipalities } from "@/lib/data/catalog";
 import { getRequestContext } from "@/lib/data/partners";
 import { listPublicPartnerPaths } from "@/lib/data/paths";
-import { formatResponseTime } from "@/lib/domain/format";
 
 export const metadata: Metadata = { title: "Richiedi un contatto", robots: { index: false } };
 
@@ -34,7 +33,6 @@ export default function RequestPage({ params, searchParams }: PageProps<"/richie
 async function Request({ slug, service }: { slug: string; service?: string }) {
   const [ctx, places] = await Promise.all([getRequestContext(slug), getMunicipalities()]);
   if (!ctx || ctx.partner.accountStatus !== "active") notFound();
-  const response = formatResponseTime(ctx.partner.responseMinutes);
   return (
     <div className="flex flex-col gap-6">
       <Suspense>
@@ -56,11 +54,6 @@ async function Request({ slug, service }: { slug: string; service?: string }) {
               </p>
             </div>
           </div>
-          {response && (
-            <p className="inline-flex items-center gap-1.5 text-body-s">
-              <Clock className="size-4" aria-hidden /> Di solito risponde in {response}
-            </p>
-          )}
           <div className="flex items-start gap-3 rounded-md bg-surface p-4">
             <Geco outfit="pensa" size={56} />
             <p className="text-body-s">

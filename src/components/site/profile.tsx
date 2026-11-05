@@ -3,7 +3,6 @@ import Link from "next/link";
 import {
   BadgeCheck,
   CalendarDays,
-  Clock,
   Home,
   Image as ImageIcon,
   MapPin,
@@ -22,7 +21,6 @@ import {
   formatEuro,
   formatPriceRange,
   formatRating,
-  formatResponseTime,
   PRICE_UNIT_LABEL,
   type PriceUnit,
 } from "@/lib/domain/format";
@@ -36,7 +34,6 @@ const dateFmt = new Intl.DateTimeFormat("it-IT", {
 /** Profilo pubblico del partner (PRD §5.4), stesso impianto per agenzie e professionisti. */
 export function ProfileView({ p }: { p: PartnerProfile }) {
   const isAgency = p.type === "agency";
-  const response = formatResponseTime(p.responseMinutes);
   const plan = publicPlanBadge(p.planCode);
   const portfolioLabel = isAgency ? "Immobili" : "Lavori svolti";
 
@@ -93,12 +90,6 @@ export function ProfileView({ p }: { p: PartnerProfile }) {
             </p>
             <div className="flex flex-wrap items-center gap-x-5 gap-y-1 text-body-s text-ink-2">
               <Rating average={p.rating.average} count={p.rating.count} />
-              {response && (
-                <span className="inline-flex items-center gap-1">
-                  <Clock className="size-4" aria-hidden /> Risponde in{" "}
-                  {response}
-                </span>
-              )}
               {p.verified && (
                 <span className="inline-flex items-center gap-1">
                   <ShieldCheck className="size-4" aria-hidden /> P.IVA
@@ -436,7 +427,6 @@ export function ProfileView({ p }: { p: PartnerProfile }) {
                 </div>
               </div>
               <ul className="flex flex-col gap-1.5 text-body-s">
-                {response && <li>✓ Risposta media in {response}</li>}
                 <li>✓ Numero verificato con SMS, niente spam</li>
                 <li>✓ I tuoi dati vanno solo a questo partner</li>
               </ul>
