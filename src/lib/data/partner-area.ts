@@ -264,3 +264,13 @@ export async function getExtras(partnerId: string, now: Date) {
     items: items.map((i) => ({ ...i, activeUntil: showcaseEnd.get(i.id) ?? null })),
   };
 }
+
+/** La prova gratuita spetta solo a chi non ha mai avuto un abbonamento Stripe (vedi createSubscriptionCheckout). */
+export async function hadStripeSubscription(partnerId: string): Promise<boolean> {
+  const [row] = await db
+    .select({ id: subscriptions.id })
+    .from(subscriptions)
+    .where(and(eq(subscriptions.partnerId, partnerId), isNotNull(subscriptions.stripeSubscriptionId)))
+    .limit(1);
+  return !!row;
+}

@@ -41,9 +41,9 @@ test("un'azienda si registra, la scheda resta nascosta fino all'attivazione del 
   expect(await (await request.get(profile)).text()).not.toContain("Idraulica Verdi");
 
   // Attivazione di prova (senza Stripe, solo in sviluppo): piano attivo, crediti del piano, scheda pubblica.
-  await page.getByRole("listitem").filter({ hasText: "Normal" }).getByRole("button", { name: "Prova mensile senza pagare" }).click();
-  await expect(page.getByText("Piano attuale")).toBeVisible();
-  await expect(page.getByText(/49 € \+ IVA al mese · attivo/)).toBeVisible();
+  await page.getByRole("button", { name: "Scegli Normal (prova senza pagare)" }).click();
+  await expect(page.getByRole("heading", { level: 1, name: "Il tuo abbonamento" })).toBeVisible();
+  await expect(page.getByText("49 € al mese + IVA")).toBeVisible();
   await page.goto("/area-partner/token");
   await expect(page.getByText("Crediti del piano Normal (attivazione di prova)")).toBeVisible();
   await page.goto(profile);
