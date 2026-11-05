@@ -195,7 +195,7 @@ export async function Results({ mode, params }: { mode: "agency" | "pro"; params
           <p id="ordinamento" className="flex gap-2 rounded-md bg-subtle p-3 text-caption text-ink-2">
             <Info className="size-4 shrink-0" aria-hidden />
             <span>
-              Come ordiniamo: mostriamo solo chi lavora nella zona cercata, poi prima i piani più alti (Premium, Normal, Base)
+              Come ordiniamo: mostriamo solo chi lavora nella zona cercata, poi prima i piani più alti (Partner Elite con il bordo oro, Partner Pro con il bordo verde, poi gli altri)
               e chi ha un boost attivo, etichettato &quot;Sponsorizzato&quot;. Tra aziende dello stesso piano l&apos;ordine cambia a
               ogni visita.{" "}
               <Link href="/come-funziona#ordinamento" className="font-semibold text-primary underline">

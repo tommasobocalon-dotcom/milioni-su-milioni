@@ -1,7 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { Clock, MapPin } from "lucide-react";
-import { Badge, planBadge } from "@/components/ui/badge";
+import { Badge, publicPlanBadge } from "@/components/ui/badge";
 import { ButtonLink } from "@/components/ui/button";
 import { LogoPartner } from "@/components/ui/logo-partner";
 import { Rating } from "@/components/ui/stars";
@@ -14,11 +14,26 @@ import { formatDistanceKm, formatResponseTime } from "@/lib/domain/format";
  */
 export function FeaturedPartner({ p }: { p: PartnerListItem }) {
   const response = formatResponseTime(p.responseMinutes);
+  const plan = publicPlanBadge(p.planCode);
   return (
-    <article aria-label={`In evidenza: ${p.displayName}`} className="grid overflow-hidden rounded-lg border border-ambra-500/40 bg-sponsor md:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
-      <Link href={p.href} tabIndex={-1} aria-hidden className="relative block aspect-[16/10] bg-subtle md:aspect-auto md:min-h-72">
+    <article
+      aria-label={`In evidenza: ${p.displayName}`}
+      className="grid overflow-hidden rounded-lg border border-ambra-500/40 bg-sponsor md:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]"
+    >
+      <Link
+        href={p.href}
+        tabIndex={-1}
+        aria-hidden
+        className="relative block aspect-[16/10] bg-subtle md:aspect-auto md:min-h-72"
+      >
         {p.coverUrl ? (
-          <Image src={p.coverUrl} alt="" fill sizes="(min-width: 768px) 40vw, 100vw" className="object-cover" />
+          <Image
+            src={p.coverUrl}
+            alt=""
+            fill
+            sizes="(min-width: 768px) 40vw, 100vw"
+            className="object-cover"
+          />
         ) : (
           // Senza foto dei lavori si vede il logo dell'azienda (recap del cliente, 5/11/2026).
           <span className="absolute inset-0 flex items-center justify-center">
@@ -29,10 +44,12 @@ export function FeaturedPartner({ p }: { p: PartnerListItem }) {
       <div className="flex flex-col gap-3 p-6">
         <div className="flex flex-wrap items-center gap-2">
           <Badge kind="sponsored" />
-          {p.planCode && <Badge kind={planBadge(p.planCode)} />}
+          {plan && <Badge kind={plan} />}
         </div>
         <div className="flex items-center gap-3">
-          {p.coverUrl && <LogoPartner name={p.displayName} src={p.logoUrl} size={48} />}
+          {p.coverUrl && (
+            <LogoPartner name={p.displayName} src={p.logoUrl} size={48} />
+          )}
           <h2 className="font-display text-h2">
             <Link href={p.href} className="hover:text-primary hover:underline">
               {p.displayName}
@@ -57,13 +74,19 @@ export function FeaturedPartner({ p }: { p: PartnerListItem }) {
         </p>
         {p.price && (
           <p className="self-start rounded-md bg-surface px-2.5 py-1 text-body-s">
-            {p.price.serviceName} <strong className="font-semibold">{p.price.label}</strong>
+            {p.price.serviceName}{" "}
+            <strong className="font-semibold">{p.price.label}</strong>
             <span title="Prezzo indicativo pubblicato dal partner"> *</span>
           </p>
         )}
         <div className="mt-auto flex flex-wrap items-center gap-3 pt-2">
-          <ButtonLink href={`/richiesta/${p.slug}`}>Richiedi contatto</ButtonLink>
-          <Link href={p.href} className="text-body-s font-semibold text-primary hover:underline">
+          <ButtonLink href={`/richiesta/${p.slug}`}>
+            Richiedi contatto
+          </ButtonLink>
+          <Link
+            href={p.href}
+            className="text-body-s font-semibold text-primary hover:underline"
+          >
             Vedi il profilo
           </Link>
         </div>
