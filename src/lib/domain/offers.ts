@@ -1,9 +1,9 @@
-/** Pacchetti token e boost (documento "Costo e funzioni definitive", 4/11/2026). Prezzi IVA esclusa. */
+/** Pacchetti token e boost (documento "Costo e funzioni definitive", 4/11/2026). Prezzi IVA esclusa, aggiornati il 5/11/2026. */
 
 export const TOKEN_PACKAGES = [
-  { code: "starter", name: "Starter", tokens: 100, priceCents: 1900 },
-  { code: "pro", name: "Pro", tokens: 300, priceCents: 4900, highlight: true },
-  { code: "business", name: "Business", tokens: 750, priceCents: 9900 },
+  { code: "starter", name: "Starter", tokens: 100, priceCents: 1899 },
+  { code: "pro", name: "Pro", tokens: 300, priceCents: 4899, highlight: true },
+  { code: "business", name: "Business", tokens: 750, priceCents: 9899 },
 ] as const;
 
 /** Boost temporaneo ("Flash Sponsor"), solo per i piani Normal e Premium (ranking.ts, canBoost). */
