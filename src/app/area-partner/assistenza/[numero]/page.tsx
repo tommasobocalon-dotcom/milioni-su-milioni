@@ -4,7 +4,6 @@ import { Suspense } from "react";
 import { ArrowLeft } from "lucide-react";
 import { replySupportTicket } from "@/app/area-partner/actions";
 import { PartnerSkeleton } from "@/components/partner/skeleton";
-import { Geco } from "@/components/site/geco";
 import { MessageForm } from "@/components/ui/message-form";
 import { TicketStatusPill } from "@/components/ui/ticket-status";
 import { requirePartner } from "@/lib/auth/session";
@@ -51,7 +50,6 @@ async function Ticket({ number: raw }: { number: string }) {
           const team = m.kind === "reply";
           return (
             <li key={m.id} className={cn("flex gap-3", team ? "" : "flex-row-reverse")}>
-              {team && <Geco outfit="partner" size={40} decorative />}
               <div className={cn("flex max-w-[85%] flex-col gap-1 rounded-lg border p-4", team ? "border-salvia-300 bg-subtle" : "border-line bg-surface")}>
                 <p className="text-caption text-ink-2">
                   <span className="font-semibold text-ink">{team ? `${m.authorName.split(" ")[0]} · Assistenza geco` : m.authorName}</span> ·{" "}

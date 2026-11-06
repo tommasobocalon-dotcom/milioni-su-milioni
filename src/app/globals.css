@@ -61,8 +61,10 @@
   --color-success: var(--color-bosco-500);
 
   /* Tipografia */
-  --font-display: var(--font-fraunces), Georgia, serif;
-  --font-sans: var(--font-dm-sans), system-ui, sans-serif;
+  --font-display: var(--font-manrope), system-ui, sans-serif;
+  /* Titoli sempre in grassetto, anche su <p>/<span> senza classe di peso */
+  --font-display--font-variation-settings: "wght" 700;
+  --font-sans: var(--font-inter), system-ui, sans-serif;
 
   --text-display-xl: 3.5rem;
   --text-display-xl--line-height: 4rem;
@@ -114,61 +116,6 @@
   to {
     transform: translateX(-50%);
   }
-}
-
-/*
- * Animazioni del geco fatte in CSS (componente Geco; le pose che muovono un braccio sono WebP animati).
- * Le monete ruotano attorno al perno impostato dal componente con transform-origin.
- * Con "riduci movimento" il geco resta fermo.
- */
-@media (prefers-reduced-motion: no-preference) {
-  .geco-razzo {
-    animation: geco-razzo 2s ease-in-out infinite alternate;
-  }
-  .geco-moneta {
-    animation: geco-moneta 2.4s ease-in-out infinite;
-  }
-  .geco-aggrappato {
-    transform-origin: 50% 20%;
-    animation: geco-aggrappato 3.5s ease-in-out infinite;
-  }
-  .geco-pensa {
-    transform-origin: 50% 90%;
-    animation: geco-pensa 4s ease-in-out infinite;
-  }
-  .geco-arrampica {
-    animation: geco-arrampica 2.4s ease-in-out infinite;
-  }
-}
-
-@keyframes geco-razzo {
-  from { transform: translateY(0) rotate(0); }
-  to { transform: translateY(-2.5%) rotate(-1.5deg); }
-}
-
-@keyframes geco-moneta {
-  0%, 100% { transform: translateY(0) rotate(0); }
-  50% { transform: translateY(-4%) rotate(18deg); }
-}
-
-@keyframes geco-aggrappato {
-  0%, 70%, 100% { transform: translateY(0) rotate(0); }
-  75% { transform: translateY(2%) rotate(1deg); }
-  80% { transform: translateY(1%) rotate(-1deg); }
-  85% { transform: translateY(3%) rotate(0.5deg); }
-  92% { transform: translateY(0) rotate(0); }
-}
-
-@keyframes geco-pensa {
-  0%, 100% { transform: rotate(0); }
-  50% { transform: rotate(-2.5deg) translateY(-1%); }
-}
-
-@keyframes geco-arrampica {
-  0%, 100% { transform: translateY(0) rotate(0); }
-  25% { transform: translateY(-2%) rotate(-1.5deg); }
-  50% { transform: translateY(-3%) rotate(0); }
-  75% { transform: translateY(-2%) rotate(1.5deg); }
 }
 
 /*

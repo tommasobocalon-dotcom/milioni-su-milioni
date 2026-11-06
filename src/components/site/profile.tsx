@@ -9,7 +9,6 @@ import {
   ShieldCheck,
 } from "lucide-react";
 import { Suspense } from "react";
-import { Geco } from "@/components/site/geco";
 import { GoogleReviewsSection } from "@/components/site/google-reviews";
 import { Badge, publicPlanBadge } from "@/components/ui/badge";
 import { ButtonLink } from "@/components/ui/button";
@@ -308,7 +307,6 @@ export function ProfileView({ p }: { p: PartnerProfile }) {
                   <h2 className="font-display text-h2">
                     Recensioni verificate
                   </h2>
-                  <Geco outfit="recensioni" size={44} />
                 </div>
                 {p.rating.count === 0 ? (
                   <p className="text-body-s text-ink-2">
@@ -416,7 +414,6 @@ export function ProfileView({ p }: { p: PartnerProfile }) {
           <aside className="flex flex-col gap-6 lg:sticky lg:top-24 lg:self-start">
             <section className="flex flex-col gap-4 rounded-lg border border-line bg-surface p-6">
               <div className="flex items-center gap-3">
-                <Geco outfit={isAgency ? "casa" : "professionista"} size={56} />
                 <div>
                   <h2 className="text-h4 font-semibold">
                     Richiedi un contatto

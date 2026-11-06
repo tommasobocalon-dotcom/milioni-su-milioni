@@ -2,7 +2,6 @@
 
 import { useEffect, useRef, useState } from "react";
 import { BadgeCheck, Check, Clock, MapPin, Search, SlidersHorizontal, Star, Wrench } from "lucide-react";
-import { Geco } from "@/components/site/geco";
 import { useReducedMotion } from "@/lib/hooks/use-reduced-motion";
 import { TIMINGS } from "@/lib/leads/options";
 import { cn } from "@/lib/utils";
@@ -112,7 +111,6 @@ export function HowItWorks() {
         </div>
 
         <div data-reveal className="relative flex justify-center rounded-xl bg-brand-soft px-6 py-12 md:py-16">
-          <Geco outfit="saluto" size={156} className="pointer-events-none absolute bottom-6 left-4 hidden xl:block" />
           <Phone active={active} />
         </div>
       </div>

@@ -15,7 +15,6 @@ import {
   Zap,
   type LucideIcon,
 } from "lucide-react";
-import { Geco, type GecoOutfit } from "@/components/site/geco";
 import { getCategories } from "@/lib/data/catalog";
 import { cn } from "@/lib/utils";
 
@@ -102,14 +101,13 @@ export async function EntryBlocks({ id }: { id: string }) {
           Un lavoro in casa o una casa nuova: parti da qui e confronta chi lavora davvero nella tua zona.
         </p>
       </div>
-      <div className="grid grid-cols-1 gap-x-6 gap-y-20 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <Panel
           tone="white"
           title="Trova un professionista"
           text="Prezzi indicativi e recensioni solo da clienti verificati."
           tiles={pro}
           all={{ href: "/trova-professionista", label: "Tutti i professionisti" }}
-          outfit="professionista"
         />
         <Panel
           tone="sage"
@@ -117,7 +115,6 @@ export async function EntryBlocks({ id }: { id: string }) {
           text="Comprare, vendere o affittare, con chi conosce la zona."
           tiles={home}
           all={{ href: "/trova-casa", label: "Tutte le agenzie" }}
-          outfit="casa"
         />
       </div>
     </section>
@@ -130,14 +127,12 @@ function Panel(props: {
   text: string;
   tiles: TileData[];
   all: { href: string; label: string };
-  outfit: GecoOutfit;
 }) {
   const sage = props.tone === "sage";
   return (
     <div data-reveal className={cn("relative rounded-xl p-6 md:p-8", sage ? "bg-brand-soft [--reveal-shift:8%]" : "bg-surface")}>
-      <Geco outfit={props.outfit} size={104} className="pointer-events-none absolute -top-[60px] right-5 md:right-8" />
-      <h3 className="pr-24 font-display text-h1 tracking-[-0.02em] sm:pr-28">{props.title}</h3>
-      <p className="mt-2 max-w-md pr-16 text-body text-neutro-700 sm:pr-0">{props.text}</p>
+      <h3 className="font-display text-h1 tracking-[-0.02em]">{props.title}</h3>
+      <p className="mt-2 max-w-md text-body text-neutro-700">{props.text}</p>
       <ul className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3">
         {props.tiles.map((t) => (
           <li key={t.key}>

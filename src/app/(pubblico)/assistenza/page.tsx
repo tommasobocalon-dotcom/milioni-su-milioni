@@ -2,9 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
 import { Mail } from "lucide-react";
-import { Geco } from "@/components/site/geco";
 import { SupportForm } from "@/components/site/support-form";
-import { getSessionUser } from "@/lib/auth/session";
+import { getAnySessionUser } from "@/lib/auth/session";
 import { supportEmail } from "@/lib/support/service";
 
 export const metadata: Metadata = {
@@ -24,7 +23,6 @@ export default function SupportPage() {
     <div className="container-page grid gap-10 py-12 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.3fr)] lg:grid-rows-[auto_1fr] lg:gap-x-16 lg:gap-y-8">
       <div className="flex flex-col gap-6 lg:col-start-1">
         <div className="flex items-end gap-4">
-          <Geco outfit="saluto" size={72} />
           <h1 className="font-display text-h1">Come ti aiutiamo?</h1>
         </div>
         <p className="text-body-l text-neutro-700">
@@ -70,6 +68,6 @@ export default function SupportPage() {
 
 /** Chi è entrato trova nome ed email già compilati. */
 async function FormWithSession() {
-  const user = await getSessionUser();
+  const user = await getAnySessionUser();
   return <SupportForm user={user ? { name: user.name, email: user.email } : null} />;
 }

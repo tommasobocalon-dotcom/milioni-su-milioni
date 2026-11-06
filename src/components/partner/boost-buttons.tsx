@@ -11,8 +11,16 @@ const HINTS: Record<BoostPlacement, string> = {
   home: "Logo e nome nella fascia che scorre in Home, a rotazione con le altre aziende.",
 };
 
-export function BoostButtons({ options, balance }: { options: readonly { hours: number; tokens: number }[]; balance: number }) {
-  const [placement, setPlacement] = useState<BoostPlacement>("search");
+export function BoostButtons({
+  options,
+  balance,
+  initialPlacement = "search",
+}: {
+  options: readonly { hours: number; tokens: number }[];
+  balance: number;
+  initialPlacement?: BoostPlacement;
+}) {
+  const [placement, setPlacement] = useState<BoostPlacement>(initialPlacement);
   const [state, setState] = useState<ActionState>({});
   const [pending, start] = useTransition();
   return (

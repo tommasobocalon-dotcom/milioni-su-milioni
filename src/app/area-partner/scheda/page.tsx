@@ -57,9 +57,9 @@ async function Profile() {
       <ComingSoon
         title="Prossimamente"
         items={[
-          "copertina e orari (logo, dati aziendali e descrizione si modificano in Profilo)",
+          "copertina (logo, dati aziendali, descrizione, specializzazioni e orari si modificano in Profilo)",
           "categoria, servizi e zone servite entro i limiti del piano",
-          "indicatore di completezza con i consigli del geco",
+          "indicatore di completezza con i consigli per migliorare la scheda",
           "collaboratori con accesso limitato",
         ]}
       />

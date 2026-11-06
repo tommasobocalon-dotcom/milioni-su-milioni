@@ -1,10 +1,12 @@
+import Image from "next/image";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { Suspense } from "react";
 import { Check } from "lucide-react";
-import { Geco } from "@/components/site/geco";
 import { LoginForm, type Audience } from "@/components/site/login-form";
 import { Wordmark } from "@/components/site/wordmark";
 import { DEMO_ACCOUNT } from "@/lib/auth/demo";
+import { getSessionUser, landingPathFor } from "@/lib/auth/session";
 import { demoMode } from "@/lib/demo-mode";
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
@@ -53,17 +55,26 @@ async function OAuthNotice({ searchParams }: { searchParams: SearchParams }) {
   );
 }
 
+/**
+ * Chi è già entrato da questo accesso (sessione di 30 giorni) non rivede il login. Le sessioni sono separate:
+ * essere dentro come azienda non salta il login clienti, e viceversa.
+ */
+async function RedirectIfSignedIn({ audience, searchParams }: { audience: Audience; searchParams: SearchParams }) {
+  const user = await getSessionUser(audience);
+  if (!user) return null;
+  const { next } = await searchParams;
+  redirect(await landingPathFor(user.id, audience, typeof next === "string" ? next : undefined));
+}
+
 /** Cosa cambia tra l'accesso dei clienti (/accedi) e quello delle aziende (/accedi/azienda). */
 const SCREEN = {
   client: {
-    outfit: "saluto",
     claim: "Casa e lavori di casa, con persone verificate del Veneto.",
     points: ["Richieste dei clienti verificate con un SMS", "Recensioni solo da chi ha fatto una richiesta", "Prezzi indicativi prima di chiamare"],
     switchText: "Hai un'attività?",
     switchLink: { href: "/accedi/azienda", label: "Vai all'accesso aziende" },
   },
   business: {
-    outfit: "partner",
     claim: "Richieste verificate dalla tua zona, senza intermediari.",
     points: ["Ogni richiesta arriva con il numero verificato via SMS", "Richieste, crediti e abbonamento in un'unica area", "La tua scheda compare appena il piano è attivo"],
     switchText: "Cerchi casa o un professionista?",
@@ -77,6 +88,9 @@ export function AuthScreen({ audience, searchParams }: { audience: Audience; sea
   const demo = demoMode() && audience === "business" ? DEMO_ACCOUNT : undefined;
   return (
     <AuthShell audience={audience}>
+      <Suspense fallback={null}>
+        <RedirectIfSignedIn audience={audience} searchParams={searchParams} />
+      </Suspense>
       {/* Un solo modulo, mai sostituito dopo il caricamento: quello che si scrive non va perso. */}
       <LoginForm
         audience={audience}
@@ -120,7 +134,7 @@ export function AuthShell({ audience = "client", children }: { audience?: Audien
         </p>
       </div>
       <aside className="hidden flex-col justify-center gap-10 bg-brand px-16 py-16 text-on-brand lg:flex">
-        <Geco outfit={screen.outfit} size={220} priority />
+        <Image src="/logo/gecoitalia-chiaro.png" alt="" width={790} height={523} className="h-auto w-64" />
         <div className="flex max-w-md flex-col gap-6">
           <p className="font-display text-h2">{screen.claim}</p>
           <ul className="flex flex-col gap-3 text-body text-on-brand-muted">

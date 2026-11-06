@@ -5,7 +5,6 @@ import { connection } from "next/server";
 import { LeadRow } from "@/components/partner/lead-row";
 import { PartnerPageHeader } from "@/components/partner/page-header";
 import { PartnerSkeleton } from "@/components/partner/skeleton";
-import { Geco } from "@/components/site/geco";
 import { ButtonLink } from "@/components/ui/button";
 import { requirePartner } from "@/lib/auth/session";
 import { getOverview } from "@/lib/data/partner-area";
@@ -65,7 +64,6 @@ async function Dashboard() {
       />
 
       <section className="flex flex-col gap-4 rounded-lg bg-brand-soft p-6 sm:flex-row sm:items-center">
-        <Geco outfit="partner" size={80} />
         <div className="flex flex-1 flex-col gap-1">
           <h2 className="text-h3 font-semibold">{step.title}</h2>
           <p className="text-body text-neutro-700">{step.text}</p>

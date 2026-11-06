@@ -16,7 +16,10 @@ const csp = [
   // Cloudflare Turnstile (antispam): script e iframe del widget, verifica dal browser.
   `script-src 'self' 'unsafe-inline' https://challenges.cloudflare.com${isDev ? " 'unsafe-eval'" : ""}`,
   "frame-src https://challenges.cloudflare.com https://www.youtube-nocookie.com https://player.vimeo.com",
-  `connect-src 'self' https://challenges.cloudflare.com${isDev ? " ws:" : ""}`,
+  // MapLibre gira in un web worker creato da un blob.
+  "worker-src 'self' blob:",
+  // Turnstile + tile di OpenStreetMap (mappa dei risultati).
+  `connect-src 'self' https://challenges.cloudflare.com https://tile.openstreetmap.org${isDev ? " ws:" : ""}`,
   ...(isDev ? [] : ["upgrade-insecure-requests"]),
 ].join("; ");
 

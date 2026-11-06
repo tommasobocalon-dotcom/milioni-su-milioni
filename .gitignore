@@ -55,3 +55,6 @@ next-env.d.ts
 
 # fotogrammi di controllo di design/geco/anima.mjs --prove
 /design/geco/prove/
+
+# worker di MapLibre copiato da scripts/copy-maplibre-worker.mjs (prebuild/predev)
+/public/maplibre-gl-worker.mjs

@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import { BadgeCheck, Check, Inbox, PhoneCall, Search } from "lucide-react";
-import { Geco } from "@/components/site/geco";
 import { PlanPicker, type PlanCard } from "@/components/site/pro/plan-picker";
 import { ButtonLink } from "@/components/ui/button";
 import { CATEGORY_PHOTOS } from "@/lib/data/category-photos";
@@ -163,7 +162,6 @@ export default async function ForProfessionalsPage() {
 
       <section className="bg-brand-soft">
         <div className="container-page flex flex-col items-start gap-6 py-12 md:flex-row md:items-center">
-          <Geco outfit="partner" size={96} />
           <div className="flex flex-1 flex-col gap-1">
             <h2 className="font-display text-h2">Pronto a ricevere richieste?</h2>
             <p className="text-body text-neutro-700">Registri l&apos;attività in pochi minuti e scegli il piano.</p>

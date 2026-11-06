@@ -5,7 +5,6 @@ import { Suspense } from "react";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { Landmark } from "lucide-react";
-import { Geco } from "@/components/site/geco";
 import { PartnerCard } from "@/components/site/partner-card";
 import { ButtonLink } from "@/components/ui/button";
 import { findPlace } from "@/lib/data/catalog";
@@ -55,7 +54,6 @@ async function Sent({ id }: { id: string }) {
   if (!lead.verifiedAt) {
     return (
       <div className="mx-auto flex max-w-xl flex-col items-center gap-4 text-center">
-        <Geco outfit="pensa" size={140} />
         <h1 className="font-display text-h1">Richiesta non ancora confermata</h1>
         <p className="text-body text-ink-2">Manca la verifica del numero con il codice SMS.</p>
         <ButtonLink href={`/richiesta/${lead.partnerSlug}`}>Ricomincia la richiesta</ButtonLink>
@@ -72,7 +70,6 @@ async function Sent({ id }: { id: string }) {
   return (
     <div className="flex flex-col gap-10">
       <section className="flex flex-col items-start gap-6 rounded-xl bg-brand-soft p-8 md:flex-row md:items-center">
-        <Geco outfit="saluto" size={140} />
         <div className="flex flex-col gap-3">
           <h1 className="font-display text-h1">
             {duplicate ? "Richiesta già inviata" : unavailable ? "Il partner non è disponibile" : "Richiesta inviata!"}

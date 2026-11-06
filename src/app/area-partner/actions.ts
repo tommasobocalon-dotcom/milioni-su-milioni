@@ -18,6 +18,7 @@ import { auditLogs, leadEvents, leads, partners, partnerServices, plans, portfol
 import { getListableServices, getPriceList, getSubscription } from "@/lib/data/partner-area";
 import { demoMode } from "@/lib/demo-mode";
 import { parseAmount } from "@/lib/domain/format";
+import { parseOpeningHours, parseSpecialties } from "@/lib/domain/profile-fields";
 import { canReportLead, REPORT_REASONS } from "@/lib/domain/lead-rules";
 import { BOOST_PLACEMENTS, isBoostPlacement, TOKEN_PACKAGES } from "@/lib/domain/offers";
 import { tokenExpiryFrom } from "@/lib/domain/tokens";
@@ -179,6 +180,12 @@ const ProfileSchema = z.object({
   description: z.string().trim().min(20, "La descrizione deve avere almeno 20 caratteri").max(2000),
   phone: z.string().trim().max(30).optional(),
   email: z.union([z.literal(""), z.email("Email non valida")]).optional(),
+  specialties: z.string().max(1000).optional(),
+  openingHours: z.string().max(1500).optional(),
+  foundedYear: z.preprocess(
+    (v) => (v === "" ? undefined : v),
+    z.coerce.number("Anno di fondazione non valido").int("Anno di fondazione non valido").min(1800, "Anno di fondazione non valido").max(new Date().getFullYear(), "Anno di fondazione non valido").optional(),
+  ),
 });
 
 /** Riconosce il formato dai primi byte del file: il tipo dichiarato dal browser non basta. */
@@ -208,9 +215,11 @@ export async function updateProfile(_prev: ActionState, formData: FormData): Pro
   const { user, partner, memberRole } = await requirePartner();
   const field = (k: string) => formData.get(k) ?? undefined;
   const parsed = ProfileSchema.safeParse(
-    Object.fromEntries(["firstName", "lastName", "businessName", "vatNumber", "address", "tagline", "description", "phone", "email"].map((k) => [k, field(k)])),
+    Object.fromEntries(["firstName", "lastName", "businessName", "vatNumber", "address", "tagline", "description", "phone", "email", "specialties", "openingHours", "foundedYear"].map((k) => [k, field(k)])),
   );
   if (!parsed.success) return { error: parsed.error.issues[0].message };
+  const openingHours = parseOpeningHours(parsed.data.openingHours ?? "");
+  if ("error" in openingHours) return openingHours;
 
   const logo = await saveImage("partners", partner.id, formData.get("logo"));
   if (logo && "error" in logo) return logo;
@@ -230,6 +239,10 @@ export async function updateProfile(_prev: ActionState, formData: FormData): Pro
         description: d.description,
         phone: d.phone || null,
         email: d.email || null,
+        specialties: parseSpecialties(d.specialties ?? ""),
+        openingHours,
+        foundedYear: d.foundedYear ?? null,
+        hideDirectContacts: formData.get("hideDirectContacts") === "on",
         ...(logo && { logoUrl: logo.url }),
       })
       .where(eq(partners.id, partner.id));
@@ -425,7 +438,8 @@ export type CheckoutState = { url?: string; error?: string };
 
 /** Pagamenti e portale Stripe: solo il titolare dell'account. L'esito arriva dal webhook, non da qui. */
 async function billingAction(run: (payer: { partnerId: string; email: string; name: string }) => Promise<string>, action: string): Promise<CheckoutState> {
-  const { user, partner, memberRole } = await requirePartner();
+  // Checkout e portale Stripe devono funzionare anche da sospeso: è così che il partner si riattiva.
+  const { user, partner, memberRole } = await requirePartner({ allowSuspended: true });
   if (memberRole !== "owner") return { error: "Solo il titolare dell'account può gestire i pagamenti" };
   if (!stripeConfigured()) return { error: "I pagamenti online non sono ancora attivi" };
   try {

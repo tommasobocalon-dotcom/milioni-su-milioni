@@ -9,7 +9,6 @@ const GROUPS = [
   [
     { href: "/area-partner/scheda", label: "Scheda pubblica" },
     { href: "/area-partner/listino", label: "Prezzi" },
-    { href: "/area-partner/profilo", label: "Dati account" },
   ],
   [
     { href: "/area-partner/abbonamento", label: "Abbonamento" },

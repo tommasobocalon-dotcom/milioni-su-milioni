@@ -2,22 +2,22 @@ import type { Metadata, Viewport } from "next";
 import localFont from "next/font/local";
 import "./globals.css";
 
-const fraunces = localFont({
-  variable: "--font-fraunces",
-  src: "./fonts/fraunces-latin-600-normal.woff2",
-  weight: "600",
+const manrope = localFont({
+  variable: "--font-manrope",
+  src: "./fonts/manrope-latin-wght-normal.woff2",
+  weight: "200 800",
   display: "swap",
 });
-const dmSans = localFont({
-  variable: "--font-dm-sans",
-  src: "./fonts/dm-sans-latin-wght-normal.woff2",
-  weight: "100 1000",
+const inter = localFont({
+  variable: "--font-inter",
+  src: "./fonts/inter-latin-wght-normal.woff2",
+  weight: "100 900",
   display: "swap",
 });
 
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.APP_URL ?? "http://localhost:3000"),
-  title: { default: "geco — Casa e lavori di casa in Veneto", template: "%s · geco" },
+  title: { default: "GecoItalia — Casa e lavori di casa in Veneto", template: "%s · GecoItalia" },
   description:
     "Confronta agenzie immobiliari, tecnici e artigiani verificati della tua zona. Richiedi un contatto in pochi minuti, con prezzi indicativi e recensioni verificate.",
 };
@@ -28,7 +28,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="it" className={`${fraunces.variable} ${dmSans.variable} h-full antialiased`}>
+    <html lang="it" className={`${manrope.variable} ${inter.variable} h-full antialiased`}>
       <body className="flex min-h-full flex-col">{children}</body>
     </html>
   );

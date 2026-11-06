@@ -19,7 +19,8 @@ async function login(page: Page, email: string) {
     await page.waitForURL(/\/admin$/);
     return;
   }
-  await page.goto("/accedi");
+  // I partner entrano dall'accesso aziende.
+  await page.goto("/accedi/azienda");
   await page.getByRole("textbox", { name: /^Email/ }).fill(email);
   await page.getByLabel(/^Password/).fill("geco-demo-2026");
   await page.locator("form").getByRole("button", { name: "Accedi" }).click();

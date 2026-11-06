@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { Geco } from "@/components/site/geco";
 import { ButtonLink } from "@/components/ui/button";
 
 export const metadata: Metadata = {
@@ -12,7 +11,6 @@ export default function HowItWorksPage() {
   return (
     <div className="container-page flex max-w-4xl flex-col gap-12 py-12">
       <header className="flex flex-col items-start gap-6 md:flex-row md:items-center">
-        <Geco outfit="saluto" size={140} />
         <div className="flex flex-col gap-3">
           <h1 className="font-display text-h1">Come funziona</h1>
           <p className="text-body-l text-ink-2">

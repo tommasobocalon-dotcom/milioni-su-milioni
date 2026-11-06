@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Flag, Globe, LayoutDashboard, LifeBuoy, LogOut, ScrollText, Star, Store } from "lucide-react";
 import { logoutAdmin } from "@/app/admin/actions";
-import { Geco } from "@/components/site/geco";
+import { Wordmark } from "@/components/site/wordmark";
 import { cn } from "@/lib/utils";
 
 const NAV = [
@@ -49,15 +49,10 @@ export function AdminSidebar({ ticketBadge, siteHref }: { ticketBadge: React.Rea
   return (
     <aside className="flex shrink-0 flex-col bg-brand text-on-brand lg:sticky lg:top-0 lg:h-screen lg:w-64">
       <div className="flex items-center justify-between px-4 py-4 lg:px-5 lg:py-6">
-        <Link href="/admin" className="inline-flex items-center gap-2" aria-label="Gestionale geco, panoramica">
-          <span className="inline-flex size-9 items-center justify-center overflow-hidden rounded-full bg-bosco-800">
-            <Geco outfit="partner" size={36} className="translate-y-0.5 scale-125" />
-          </span>
-          <span className="flex flex-col">
-            <span className="font-display text-h3 leading-none">geco</span>
-            <span className="text-caption text-on-brand-muted">Gestionale</span>
-          </span>
-        </Link>
+        <span className="flex flex-col gap-1">
+          <Wordmark inverted href="/admin" label="Gestionale GecoItalia, panoramica" />
+          <span className="text-caption text-on-brand-muted">Gestionale</span>
+        </span>
         <form action={logoutAdmin} className="lg:hidden">
           <button className="inline-flex items-center gap-1.5 rounded-md px-2 py-1.5 text-body-s text-on-brand-muted hover:text-on-brand">
             <LogOut className="size-4" aria-hidden /> Esci

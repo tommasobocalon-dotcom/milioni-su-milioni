@@ -16,7 +16,12 @@ export async function GET(request: NextRequest) {
     return true;
   });
   // Chi è già dentro torna nella sua area (l'avviso "conferma la tua email" sparisce o resta col tasto per rimandarlo).
-  const user = await getSessionUser();
-  const target = user ? await landingPathFor(user.id) : `/accedi?avviso=${confirmed ? "email-confermata" : "link-scaduto"}`;
+  const client = await getSessionUser("client");
+  const business = client ? null : await getSessionUser("business");
+  const target = client
+    ? await landingPathFor(client.id, "client")
+    : business
+      ? await landingPathFor(business.id, "business")
+      : `/accedi?avviso=${confirmed ? "email-confermata" : "link-scaduto"}`;
   return NextResponse.redirect(new URL(target, request.url), 303);
 }

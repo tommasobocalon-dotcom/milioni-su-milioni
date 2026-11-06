@@ -37,7 +37,8 @@ export async function adminSignIn(_prev: AdminSignInState, formData: FormData): 
 
 /** Esce e torna alla pagina di accesso del gestionale (non a quella del sito). */
 export async function logoutAdmin() {
-  await destroySession();
+  await destroySession("client");
+  await destroySession("business");
   redirect("/admin/accedi");
 }
 const Body = z.string().trim().min(2, "Scrivi il messaggio").max(MESSAGE_MAX, "Messaggio troppo lungo");

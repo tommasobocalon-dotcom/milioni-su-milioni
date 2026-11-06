@@ -3,7 +3,6 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { ArrowLeft } from "lucide-react";
-import { Geco } from "@/components/site/geco";
 import { LeadWizard } from "@/components/site/lead-wizard";
 import { TrackEvent } from "@/components/site/track-event";
 import { LogoPartner } from "@/components/ui/logo-partner";
@@ -55,9 +54,8 @@ async function Request({ slug, service }: { slug: string; service?: string }) {
             </div>
           </div>
           <div className="flex items-start gap-3 rounded-md bg-surface p-4">
-            <Geco outfit="pensa" size={56} />
             <p className="text-body-s">
-              <span className="font-semibold">Il geco suggerisce:</span> indica metri quadri e tempi anche se sono una stima. Il
+              <span className="font-semibold">Consiglio:</span> indica metri quadri e tempi anche se sono una stima. Il
               primo contatto sarà più utile e il preventivo più preciso.
             </p>
           </div>

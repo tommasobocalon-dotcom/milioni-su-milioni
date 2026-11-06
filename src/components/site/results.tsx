@@ -1,12 +1,12 @@
 import Link from "next/link";
 import { ChevronRight, Info, SlidersHorizontal } from "lucide-react";
-import { Geco } from "@/components/site/geco";
 import { PartnerCard } from "@/components/site/partner-card";
 import { Button } from "@/components/ui/button";
 import { ChipLink } from "@/components/ui/chip";
 import { Input, Select } from "@/components/ui/field";
 import { findPlace, getCategories, getCategoryBySlug, getMunicipalities, getServicesForCategory } from "@/lib/data/catalog";
 import { FeaturedPartner } from "@/components/site/featured-partner";
+import { ResultsMap, type MapPoint } from "@/components/site/results-map";
 import { searchPartners, type SortKey } from "@/lib/data/search";
 
 export type ResultsParams = {
@@ -65,6 +65,11 @@ export async function Results({ mode, params }: { mode: "agency" | "pro"; params
     const s = q.toString();
     return s ? `${basePath}?${s}` : basePath;
   };
+
+  // Marker della mappa: featured + risultati con coordinate valide.
+  const mapPoints: MapPoint[] = [...(featured ? [featured] : []), ...results]
+    .filter((p) => Number.isFinite(p.lat) && Number.isFinite(p.lng))
+    .map((p) => ({ id: p.id, name: p.displayName, href: p.href, lat: p.lat, lng: p.lng }));
 
   const what = mode === "agency" ? "Agenzie immobiliari" : category?.pluralName ?? "Professionisti e artigiani";
   const where = place ? `a ${place.name}` : "in Veneto";
@@ -212,13 +217,13 @@ export async function Results({ mode, params }: { mode: "agency" | "pro"; params
           >
             <SlidersHorizontal className="size-4" aria-hidden /> Filtri e ordinamento
           </a>
+          {mapPoints.length > 0 && <ResultsMap points={mapPoints} />}
           {featured && <FeaturedPartner p={featured} />}
           {results.map((p) => (
             <PartnerCard key={p.id} p={p} />
           ))}
           {total === 0 && (
             <div className="flex flex-col items-center gap-4 rounded-lg border border-line bg-surface p-10 text-center">
-              <Geco outfit="pensa" size={120} />
               <h2 className="text-h3 font-semibold">Nessun risultato con questi filtri</h2>
               <p className="max-w-md text-body-s text-ink-2">
                 Prova ad allargare la zona o a togliere un filtro. Stiamo attivando nuovi partner in tutto il Veneto.

@@ -32,11 +32,11 @@ export function CheckoutButton({ action, children, ...props }: { action: () => P
   );
 }
 
-/** Ritorno dal Checkout: il pagamento è avviato, la conferma arriva dal webhook. */
-export function PaymentNotice({ children }: { children: ReactNode }) {
+/** Ritorno dal Checkout: pagamento già ricevuto, oppure avviato con la conferma in arrivo dal webhook. */
+export function PaymentNotice({ received, children }: { received?: boolean; children: ReactNode }) {
   return (
     <p role="status" className="rounded-lg bg-subtle p-4 text-body-s">
-      <strong>Pagamento avviato.</strong> {children}
+      <strong>{received ? "Pagamento ricevuto." : "Pagamento avviato."}</strong> {children}
     </p>
   );
 }

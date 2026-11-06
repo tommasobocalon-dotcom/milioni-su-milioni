@@ -1,7 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
 
 async function login(page: Page) {
-  await page.goto("/accedi");
+  await page.goto("/accedi/azienda");
   await page.getByRole("textbox", { name: /^Email/ }).fill("mario@rossiimpianti.it");
   await page.getByLabel(/^Password/).fill("geco-demo-2026");
   await page.locator("form").getByRole("button", { name: "Accedi" }).click();
@@ -73,7 +73,32 @@ test("chi crea un account senza azienda entra come cliente nell'Area cliente", a
   await page.getByRole("button", { name: "Crea il tuo account" }).click();
   await expect(page).toHaveURL(/\/area-cliente$/);
   await expect(page.getByRole("heading", { name: "Le tue richieste" })).toBeVisible();
+  // L'accesso clienti non apre l'Area Partner: serve il login aziende.
   await page.goto("/area-partner");
+  await expect(page).toHaveURL(/\/accedi\/azienda$/);
+});
+
+test("accesso aziende e accesso clienti sono separati", async ({ page }) => {
+  await login(page);
+  // Entrato come azienda, l'Area cliente chiede comunque il login clienti.
+  await page.goto("/area-cliente");
+  await expect(page).toHaveURL(/\/accedi$/);
+  await expect(page.getByRole("heading", { level: 1, name: "Bentornato su geco" })).toBeVisible();
+  // Stesse credenziali dall'accesso clienti: si entra nell'Area cliente, non nell'Area Partner.
+  // Pagina ricaricata per intero: dopo il redirect il modulo può non essere ancora pronto a ricevere il testo.
+  await page.goto("/accedi");
+  await page.getByRole("textbox", { name: /^Email/ }).fill("mario@rossiimpianti.it");
+  await page.getByLabel(/^Password/).fill("geco-demo-2026");
+  await page.locator("form").getByRole("button", { name: "Accedi" }).click();
+  await expect(page).toHaveURL(/\/area-cliente$/);
+  // Le due sessioni restano attive: "Area aziende" porta dritto all'Area Partner.
+  await page.goto("/accedi/azienda");
+  await expect(page).toHaveURL(/\/area-partner$/);
+  // Uscire dall'Area Partner non chiude la sessione clienti.
+  // Nel menu ci sono due "Esci": quello del telefono (prima) e quello del computer (ultimo), che è la vista dei test.
+  await page.getByRole("complementary").getByRole("button", { name: "Esci" }).last().click();
+  await expect(page).toHaveURL(/\/accedi\/azienda$/);
+  await page.goto("/area-cliente");
   await expect(page).toHaveURL(/\/area-cliente$/);
 });
 
@@ -88,10 +113,11 @@ test("campanella, profilo, boost, statistiche, assistenza e lavori svolti", asyn
   const after = before - 1;
   await expect(page.getByRole("link", { name: after ? `Posta in arrivo, ${after} da leggere` : "Posta in arrivo" }).first()).toBeVisible();
 
-  // Dati account: un file che non è un'immagine viene rifiutato, logo, foto, dati aziendali e sede vengono salvati.
-  await page.getByRole("link", { name: "La mia attività" }).first().click();
-  await page.getByRole("link", { name: "Dati account" }).click();
-  await expect(page.getByRole("heading", { level: 1, name: "Dati account" })).toBeVisible();
+  // Profilo: dalla vista si passa alla modifica; un file che non è un'immagine viene rifiutato, logo, foto, dati aziendali e sede vengono salvati.
+  await page.getByRole("link", { name: "Profilo", exact: true }).first().click();
+  await expect(page.getByRole("heading", { level: 1, name: "Profilo" })).toBeVisible();
+  await page.getByRole("link", { name: "Modifica profilo" }).click();
+  await expect(page.getByRole("heading", { level: 1, name: "Modifica profilo" })).toBeVisible();
   const photo = page.getByLabel(/foto profilo/);
   await photo.setInputFiles({ name: "finto.png", mimeType: "image/png", buffer: Buffer.from("<html>no</html>") });
   await page.getByRole("button", { name: "Salva" }).click();
@@ -106,6 +132,11 @@ test("campanella, profilo, boost, statistiche, assistenza e lavori svolti", asyn
   await page.getByLabel(/^Ragione sociale/).fill("Rossi Impianti S.r.l.");
   await page.getByLabel(/^Sede legale/).fill("Via Piave 12, 30171 Venezia (VE)");
   await page.getByLabel(/Frase di presentazione/).fill("Impianti idraulici e caldaie a Mestre");
+  await page.getByLabel(/^Specializzazioni/).fill("caldaie, bagni, Caldaie");
+  await page.getByLabel(/^Orari/).fill("Lun–Ven 8–18");
+  await page.getByRole("button", { name: "Salva il profilo" }).click();
+  await expect(page.getByText("Scrivi gli orari come «Lun–Ven: 8:00–18:00» (riga 1)")).toBeVisible();
+  await page.getByLabel(/^Orari/).fill("Lun–Ven: 8:00–18:00\nSabato: su appuntamento");
   await page.getByRole("button", { name: "Salva il profilo" }).click();
   await expect(page.getByText("Profilo aggiornato")).toBeVisible();
   await page.reload();
@@ -113,6 +144,13 @@ test("campanella, profilo, boost, statistiche, assistenza e lavori svolti", asyn
   await expect(page.getByLabel(/^Sede legale/)).toHaveValue("Via Piave 12, 30171 Venezia (VE)");
   await expect(page.locator('img[src*="avatars"]')).toBeVisible();
   await expect(page.locator('img[src*="uploads%2Fpartners"]').first()).toBeVisible();
+  await page.getByRole("link", { name: "Torna al profilo" }).click();
+  // La pagina di modifica resta nel DOM nascosta (Activity di Next): si guarda dentro le sezioni della vista.
+  await expect(page.getByRole("region", { name: "Azienda" }).getByText("Via Piave 12, 30171 Venezia (VE)")).toBeVisible();
+  const presentation = page.getByRole("region", { name: "Presentazione" });
+  await expect(presentation.getByText("Sabato: su appuntamento")).toBeVisible();
+  await expect(presentation.getByText("caldaie", { exact: true })).toBeVisible();
+  await expect(presentation.getByText("Caldaie", { exact: true })).toHaveCount(0);
 
   // Boost a token, poi visibile nelle statistiche.
   await page.goto("/area-partner/token");

@@ -9,8 +9,8 @@ import { TOKEN_PACKAGES } from "@/lib/domain/offers";
 import { tokenExpiryFrom } from "@/lib/domain/tokens";
 
 /**
- * Stripe Billing e Checkout (PRD §7, §13.1). Il webhook è l'unica fonte di verità: le azioni creano
- * solo le sessioni di pagamento, abbonamenti e token cambiano quando Stripe conferma l'incasso.
+ * Stripe Billing e Checkout (PRD §7, §13.1). Le azioni creano solo le sessioni di pagamento: abbonamenti e
+ * token cambiano quando Stripe conferma l'incasso, via webhook o rileggendo la sessione al ritorno dal Checkout.
  */
 
 let client: Stripe | undefined;
@@ -95,7 +95,7 @@ export async function createTokenCheckout(payer: Payer, packageCode: string): Pr
     metadata,
     payment_intent_data: { metadata },
     invoice_creation: { enabled: true, invoice_data: { metadata } },
-    success_url: `${appUrl()}/area-partner/token?pagamento=ok`,
+    success_url: `${appUrl()}/api/stripe/ritorno?session_id={CHECKOUT_SESSION_ID}`,
     cancel_url: `${appUrl()}/area-partner/token`,
   });
   if (!session.url) throw new Error("Stripe non ha restituito l'indirizzo del Checkout");
@@ -134,7 +134,7 @@ export async function createSubscriptionCheckout(payer: Payer, planCode: string,
     metadata,
     // Carta chiesta subito (impostazione predefinita di Checkout): alla fine della prova l'addebito parte da solo.
     subscription_data: { metadata, default_tax_rates: await taxRates(), ...(past ? {} : { trial_period_days: TRIAL_DAYS }) },
-    success_url: `${appUrl()}/area-partner/abbonamento?pagamento=ok`,
+    success_url: `${appUrl()}/api/stripe/ritorno?session_id={CHECKOUT_SESSION_ID}`,
     cancel_url: `${appUrl()}/area-partner/abbonamento`,
   });
   if (!session.url) throw new Error("Stripe non ha restituito l'indirizzo del Checkout");
@@ -228,30 +228,81 @@ async function syncSubscription(subscriptionId: string): Promise<{ id: string; p
 
 const idOf = (v: string | { id: string } | null | undefined) => (typeof v === "string" ? v : (v?.id ?? null));
 
+/** Checkout concluso: abbonamento allineato e, per i pacchetti pagati, crediti nel registro (una volta sola). */
+async function applyCheckoutSession(session: Stripe.Checkout.Session): Promise<void> {
+  const subscriptionId = idOf(session.subscription);
+  if (subscriptionId) await syncSubscription(subscriptionId);
+  const purchase = tokenPurchaseFromCheckout(session);
+  if (!purchase) return;
+  const now = new Date();
+  await db.transaction(async (tx) => {
+    if (!(await firstTime(tx, `checkout:${session.id}`))) return;
+    await tx.insert(tokenLedger).values({
+      partnerId: purchase.partnerId,
+      kind: "purchase",
+      amount: purchase.tokens,
+      expiresAt: tokenExpiryFrom(now),
+      reference: `Pacchetto ${purchase.name}`,
+      createdAt: now,
+    });
+  });
+}
+
+/** Periodo pagato: arrivano i crediti del piano (la prima quota mensile; le altre dell'annuale dal cron mensile). */
+async function grantInvoiceTokens(invoice: Stripe.Invoice): Promise<void> {
+  const subscriptionId = idOf(invoice.parent?.subscription_details?.subscription);
+  // La fattura a 0 € della prova gratuita non porta crediti: arrivano col primo pagamento vero.
+  if (invoice.status !== "paid" || !subscriptionId || !grantsRenewalTokens(invoice.billing_reason) || invoice.amount_paid <= 0) return;
+  const synced = await syncSubscription(subscriptionId);
+  if (!synced) return;
+  const now = new Date();
+  await db.transaction(async (tx) => {
+    if (!(await firstTime(tx, `invoice:${invoice.id}`))) return;
+    const [plan] = await tx
+      .select({ name: plans.name, tokens: plans.renewalTokens })
+      .from(subscriptions)
+      .innerJoin(plans, eq(plans.id, subscriptions.planId))
+      .where(eq(subscriptions.id, synced.id));
+    if (!plan?.tokens) return;
+    await tx.insert(tokenLedger).values({
+      partnerId: synced.partnerId,
+      kind: "credit",
+      amount: plan.tokens,
+      expiresAt: tokenExpiryFrom(now),
+      reference: `Crediti del piano ${plan.name}`,
+      createdAt: now,
+    });
+  });
+}
+
+/**
+ * Ritorno dal Checkout: rilegge la sessione da Stripe e ne applica gli effetti subito, senza aspettare il
+ * webhook (che in locale senza Stripe CLI non arriva). Gli effetti sono gli stessi del webhook e idempotenti:
+ * se arrivano entrambi, i crediti si accreditano una volta. Ignora le sessioni di un altro partner.
+ */
+export async function confirmCheckoutReturn(
+  sessionId: string,
+  partnerId: string,
+): Promise<{ kind: "tokens" | "subscription"; confirmed: boolean } | null> {
+  const session = await stripe().checkout.sessions.retrieve(sessionId);
+  const kind = session.metadata?.kind;
+  if (session.metadata?.partnerId !== partnerId || (kind !== "tokens" && kind !== "subscription")) return null;
+  // Con l'addebito SEPA la sessione è completa ma l'incasso arriva giorni dopo (webhook async_payment_succeeded).
+  const confirmed = session.status === "complete" && session.payment_status !== "unpaid";
+  if (!confirmed) return { kind, confirmed };
+  await applyCheckoutSession(session);
+  const invoiceId = idOf(session.invoice);
+  if (invoiceId) await grantInvoiceTokens(await stripe().invoices.retrieve(invoiceId));
+  return { kind, confirmed };
+}
+
 /** Effetti di un evento webhook già verificato. Ogni effetto è idempotente. */
 export async function handleStripeEvent(event: Stripe.Event): Promise<void> {
   switch (event.type) {
     case "checkout.session.completed":
-    case "checkout.session.async_payment_succeeded": {
-      const session = event.data.object;
-      const subscriptionId = idOf(session.subscription);
-      if (subscriptionId) await syncSubscription(subscriptionId);
-      const purchase = tokenPurchaseFromCheckout(session);
-      if (!purchase) return;
-      const now = new Date();
-      await db.transaction(async (tx) => {
-        if (!(await firstTime(tx, `checkout:${session.id}`))) return;
-        await tx.insert(tokenLedger).values({
-          partnerId: purchase.partnerId,
-          kind: "purchase",
-          amount: purchase.tokens,
-          expiresAt: tokenExpiryFrom(now),
-          reference: `Pacchetto ${purchase.name}`,
-          createdAt: now,
-        });
-      });
+    case "checkout.session.async_payment_succeeded":
+      await applyCheckoutSession(event.data.object);
       return;
-    }
 
     case "customer.subscription.created":
     case "customer.subscription.updated":
@@ -261,34 +312,9 @@ export async function handleStripeEvent(event: Stripe.Event): Promise<void> {
       await syncSubscription(event.data.object.id);
       return;
 
-    case "invoice.paid": {
-      // Periodo pagato: arrivano i token del piano (la prima quota mensile; le altre dell'annuale dal cron mensile).
-      const invoice = event.data.object;
-      const subscriptionId = idOf(invoice.parent?.subscription_details?.subscription);
-      // La fattura a 0 € della prova gratuita non porta token: arrivano col primo pagamento vero.
-      if (!subscriptionId || !grantsRenewalTokens(invoice.billing_reason) || invoice.amount_paid <= 0) return;
-      const synced = await syncSubscription(subscriptionId);
-      if (!synced) return;
-      const now = new Date();
-      await db.transaction(async (tx) => {
-        if (!(await firstTime(tx, `invoice:${invoice.id}`))) return;
-        const [plan] = await tx
-          .select({ name: plans.name, tokens: plans.renewalTokens })
-          .from(subscriptions)
-          .innerJoin(plans, eq(plans.id, subscriptions.planId))
-          .where(eq(subscriptions.id, synced.id));
-        if (!plan?.tokens) return;
-        await tx.insert(tokenLedger).values({
-          partnerId: synced.partnerId,
-          kind: "credit",
-          amount: plan.tokens,
-          expiresAt: tokenExpiryFrom(now),
-          reference: `Crediti del piano ${plan.name}`,
-          createdAt: now,
-        });
-      });
+    case "invoice.paid":
+      await grantInvoiceTokens(event.data.object);
       return;
-    }
 
     default:
       return;

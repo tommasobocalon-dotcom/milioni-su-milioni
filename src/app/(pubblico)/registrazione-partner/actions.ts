@@ -44,7 +44,7 @@ const FIELDS = Object.keys(SignupSchema.shape);
  * primo pagamento non è confermato. Il badge "Verificato" arriva dopo il controllo del team.
  */
 export async function registerPartner(_prev: SignupState, formData: FormData): Promise<SignupState> {
-  const user = await requireUser();
+  const user = await requireUser("business");
   const [member] = await db.select({ id: partnerMembers.partnerId }).from(partnerMembers).where(eq(partnerMembers.userId, user.id)).limit(1);
   if (member) redirect("/area-partner/abbonamento");
 

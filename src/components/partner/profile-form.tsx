@@ -1,6 +1,7 @@
 "use client";
 
 import { startTransition, useActionState, useState } from "react";
+import Link from "next/link";
 import { Camera } from "lucide-react";
 import { updateProfile, type ActionState } from "@/app/area-partner/actions";
 import { Button } from "@/components/ui/button";
@@ -20,6 +21,11 @@ export type ProfileValues = {
   description: string;
   phone: string | null;
   email: string | null;
+  specialties: string[];
+  /** Una riga per fascia, già pronta per il campo di testo. */
+  openingHours: string;
+  foundedYear: number | null;
+  hideDirectContacts: boolean;
 };
 
 const ACCEPT = "image/png,image/jpeg,image/webp";
@@ -53,7 +59,7 @@ function ImagePicker({ name, label, current, alt, round }: { name: string; label
   );
 }
 
-/** Profilo: persona (nome, cognome, foto) e azienda (logo, dati fiscali, sede, presentazione, contatti). */
+/** Modifica profilo: persona (nome, cognome, foto), azienda (logo, dati fiscali, sede, presentazione, contatti) e dati della scheda pubblica. */
 export function ProfileForm({ values, canEditFiscal }: { values: ProfileValues; canEditFiscal: boolean }) {
   const [state, action, pending] = useActionState<ActionState, FormData>(updateProfile, {});
   const fullName = `${values.firstName} ${values.lastName}`.trim();
@@ -106,13 +112,40 @@ export function ProfileForm({ values, canEditFiscal }: { values: ProfileValues; 
             <Input id="email" name="email" type="email" autoComplete="email" defaultValue={values.email ?? ""} />
           </Field>
         </div>
+        <label className="flex items-start gap-3 text-body-s">
+          <input type="checkbox" name="hideDirectContacts" defaultChecked={values.hideDirectContacts} className="mt-0.5 size-5 accent-primary" />
+          <span>
+            <span className="font-semibold">Nascondi telefono ed email sulla scheda pubblica</span>
+            <span className="block text-ink-2">I clienti ti scrivono solo dal modulo di richiesta, con il numero verificato.</span>
+          </span>
+        </label>
+      </section>
+
+      <section className="flex flex-col gap-5 rounded-lg border border-line bg-surface p-6">
+        <h2 className="text-h3 font-semibold">Scheda pubblica</h2>
+        <Field label="Specializzazioni" htmlFor="specialties" help="Separate da virgola, fino a 12. Es.: caldaie, bagni, impianti a pavimento">
+          <Input id="specialties" name="specialties" defaultValue={values.specialties.join(", ")} maxLength={1000} />
+        </Field>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field label="Anno di fondazione" htmlFor="foundedYear">
+            <Input id="foundedYear" name="foundedYear" inputMode="numeric" defaultValue={values.foundedYear ?? ""} maxLength={4} placeholder="2005" />
+          </Field>
+        </div>
+        <Field label="Orari" htmlFor="openingHours" help="Una riga per fascia, es. «Lun–Ven: 8:00–18:00». Vuoto = orari non mostrati">
+          <Textarea id="openingHours" name="openingHours" defaultValue={values.openingHours} maxLength={1500} rows={4} placeholder={"Lun–Ven: 8:00–18:00\nSabato: su appuntamento"} />
+        </Field>
       </section>
 
       {state.error && <p className="text-body-s text-error">{state.error}</p>}
       {state.ok && <p className="text-body-s text-brand">{state.ok}</p>}
-      <Button type="submit" disabled={pending} className="self-start">
-        {pending ? "Salvataggio…" : "Salva il profilo"}
-      </Button>
+      <div className="flex flex-wrap items-center gap-3">
+        <Button type="submit" disabled={pending}>
+          {pending ? "Salvataggio…" : "Salva il profilo"}
+        </Button>
+        <Link href="/area-partner/profilo" className="text-body-s font-semibold text-primary underline">
+          Torna al profilo
+        </Link>
+      </div>
     </form>
   );
 }

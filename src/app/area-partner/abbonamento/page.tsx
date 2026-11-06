@@ -29,7 +29,7 @@ export default function SubscriptionPage({ searchParams }: PageProps<"/area-part
   return (
     <Suspense fallback={<PartnerSkeleton />}>
       {searchParams.then((sp) => (
-        <Subscription paid={sp.pagamento === "ok"} welcome={sp.benvenuto === "1"} />
+        <Subscription payment={sp.pagamento === "ricevuto" ? "received" : sp.pagamento === "ok" ? "started" : null} welcome={sp.benvenuto === "1"} />
       ))}
     </Suspense>
   );
@@ -46,16 +46,22 @@ async function Chooser({ owner, demo, trial }: { owner: boolean; demo: boolean; 
   return <PlanChooser plans={plans} demo={demo} owner={owner} trial={trial} />;
 }
 
-async function Subscription({ paid, welcome }: { paid: boolean; welcome: boolean }) {
-  const { partner, memberRole } = await requirePartner();
+async function Subscription({ payment, welcome }: { payment: "received" | "started" | null; welcome: boolean }) {
+  // Pagina raggiungibile anche con account sospeso: è qui che il partner paga per riattivarsi.
+  const { partner, memberRole } = await requirePartner({ allowSuspended: true });
   const [sub, hadStripe] = await Promise.all([getSubscription(partner.id), hadStripeSubscription(partner.id)]);
   const stripeOn = stripeConfigured();
   const owner = memberRole === "owner";
   const demo = !stripeOn && demoMode();
   const canChoose = stripeOn || demo;
-  const notice = paid && (
-    <PaymentNotice>Il piano si attiva appena Stripe conferma il pagamento: con la carta in pochi secondi, con l&apos;addebito SEPA in qualche giorno lavorativo.</PaymentNotice>
-  );
+  const notice =
+    payment === "received" ? (
+      <PaymentNotice received>Il piano è attivo. La ricevuta arriva per email.</PaymentNotice>
+    ) : (
+      payment === "started" && (
+        <PaymentNotice>Il piano si attiva appena Stripe conferma il pagamento: con la carta in pochi secondi, con l&apos;addebito SEPA in qualche giorno lavorativo.</PaymentNotice>
+      )
+    );
   const chooser = canChoose ? (
     <Chooser owner={owner} demo={demo} trial={!hadStripe} />
   ) : (

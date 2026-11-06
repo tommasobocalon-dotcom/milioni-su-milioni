@@ -66,7 +66,7 @@ export function SiteFooter() {
       </div>
       <div className="bg-bosco-800">
         <div className="container-page flex flex-col gap-3 py-5 text-body-s md:flex-row md:items-start md:justify-between md:gap-8">
-          <p>© 2026 geco (nome provvisorio) · Veneto, Italia</p>
+          <p>© 2026 GecoItalia · Veneto, Italia</p>
         </div>
         <details className="container-page pb-5 text-body-s">
           <summary className="cursor-pointer self-start hover:text-on-brand">Crediti di foto e mappe</summary>

@@ -3,16 +3,17 @@
 import { Suspense } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Building2, Coins, House, Inbox, LifeBuoy, LogOut } from "lucide-react";
-import { logout } from "@/app/accedi/actions";
-import { Geco } from "@/components/site/geco";
+import { Building2, Coins, House, Inbox, LifeBuoy, LogOut, UserRound } from "lucide-react";
+import { logoutBusiness } from "@/app/accedi/actions";
+import { Wordmark } from "@/components/site/wordmark";
 import { cn } from "@/lib/utils";
 
-/** Menu ridotto a 5 voci: le pagine collegate stanno sotto la stessa voce (schede in `PartnerTabs`). */
+/** Menu ridotto a 6 voci: le pagine collegate stanno sotto la stessa voce (schede in `PartnerTabs`). */
 const NAV = [
   { href: "/area-partner", label: "Home", icon: House, also: ["/area-partner/statistiche", "/area-partner/notifiche"] },
   { href: "/area-partner/lead", label: "Richieste clienti", icon: Inbox, also: [] },
-  { href: "/area-partner/scheda", label: "La mia attività", icon: Building2, also: ["/area-partner/listino", "/area-partner/profilo"] },
+  { href: "/area-partner/scheda", label: "La mia attività", icon: Building2, also: ["/area-partner/listino"] },
+  { href: "/area-partner/profilo", label: "Profilo", icon: UserRound, also: [] },
   { href: "/area-partner/abbonamento", label: "Piano e crediti", icon: Coins, also: ["/area-partner/token"] },
   { href: "/area-partner/assistenza", label: "Aiuto", icon: LifeBuoy, also: [] },
 ];
@@ -49,15 +50,10 @@ export function PartnerSidebar({ bell }: { bell: React.ReactNode }) {
   return (
     <aside className="flex shrink-0 flex-col bg-brand text-on-brand lg:sticky lg:top-0 lg:h-screen lg:w-64">
       <div className="flex items-center justify-between px-4 py-4 lg:px-5 lg:py-6">
-        <Link href="/" className="inline-flex items-center gap-2" aria-label="geco, sito pubblico">
-          <span className="inline-flex size-9 items-center justify-center overflow-hidden rounded-full bg-bosco-800">
-            <Geco outfit="saluto" size={36} className="translate-y-0.5 scale-125" />
-          </span>
-          <span className="font-display text-h3 leading-none">geco</span>
-        </Link>
+        <Wordmark inverted label="GecoItalia, sito pubblico" />
         <div className="flex items-center gap-1">
           {bell}
-          <form action={logout} className="lg:hidden">
+          <form action={logoutBusiness} className="lg:hidden">
             <button className="inline-flex items-center gap-1.5 rounded-md px-2 py-1.5 text-body-s text-on-brand-muted hover:text-on-brand">
               <LogOut className="size-4" aria-hidden /> Esci
             </button>
@@ -71,7 +67,7 @@ export function PartnerSidebar({ bell }: { bell: React.ReactNode }) {
         </Suspense>
       </nav>
       <div className="hidden p-4 lg:block">
-        <form action={logout}>
+        <form action={logoutBusiness}>
           <button className="inline-flex w-full items-center gap-2 rounded-md px-3 py-2 text-body-s text-on-brand-muted hover:bg-bosco-800 hover:text-on-brand">
             <LogOut className="size-4" aria-hidden /> Esci
           </button>

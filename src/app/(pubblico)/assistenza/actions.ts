@@ -1,7 +1,7 @@
 "use server";
 
 import { z } from "zod";
-import { getSessionUser } from "@/lib/auth/session";
+import { getAnySessionUser } from "@/lib/auth/session";
 import { normalizeEmail } from "@/lib/domain/otp";
 import { MESSAGE_MAX, TICKET_TOPICS } from "@/lib/domain/support";
 import { ipRateLimited } from "@/lib/security/ip-limit";
@@ -24,7 +24,7 @@ const Schema = z.object({
  * Chi è entrato con il suo account scrive con la sua email (identità verificata).
  */
 export async function sendSupportRequest(input: Record<SupportField, string>, turnstileToken?: string): Promise<SupportResult> {
-  const user = await getSessionUser();
+  const user = await getAnySessionUser();
   const parsed = Schema.safeParse(user ? { ...input, email: user.email } : input);
   if (!parsed.success) {
     const issue = parsed.error.issues[0];

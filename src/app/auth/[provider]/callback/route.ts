@@ -28,7 +28,7 @@ async function complete(
       origin: request.nextUrl.origin,
     });
     const userId = await userForOAuthProfile(profile);
-    await createSession(userId);
+    await createSession(userId, audience);
     target = await landingPathFor(userId, audience);
   } catch (e) {
     if (!(e instanceof OAuthError)) console.error("[auth] accesso con", provider, "non riuscito:", e);

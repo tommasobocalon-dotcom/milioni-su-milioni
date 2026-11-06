@@ -21,7 +21,7 @@ export default function ClientAreaPage() {
   return (
     <div className="container-page flex flex-col gap-8 py-10">
       <Suspense fallback={null}>
-        <EmailVerifyBanner />
+        <EmailVerifyBanner audience="client" />
       </Suspense>
       <Suspense fallback={<div className="h-64 animate-pulse rounded-lg bg-muted" />}>
         <ClientArea />

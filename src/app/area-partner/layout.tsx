@@ -20,7 +20,7 @@ export default function PartnerLayout({ children }: LayoutProps<"/area-partner">
       <main id="contenuto" className="min-w-0 flex-1 px-4 py-6 sm:px-8 lg:py-8">
         <Suspense fallback={null}>
           <div className="mb-6 empty:hidden">
-            <EmailVerifyBanner />
+            <EmailVerifyBanner audience="business" />
           </div>
         </Suspense>
         {/* L'URL è un dato della richiesta: le schede arrivano dentro un Suspense. */}

@@ -4,20 +4,15 @@ import { and, count, eq, gt, sql } from "drizzle-orm";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { consumeAuthToken, sendEmailVerificationLink, sendPasswordResetLink } from "@/lib/auth/email-links";
-import { createSession, destroySession, landingPathFor, requireUser, type Audience } from "@/lib/auth/session";
+import { createSession, destroySession, getAnySessionUser, landingPathFor, type Audience } from "@/lib/auth/session";
 import { ipRateLimited } from "@/lib/security/ip-limit";
 import { TURNSTILE_ERROR, turnstileOk } from "@/lib/security/turnstile";
 import { db } from "@/lib/db/client";
 import { auditLogs, oauthAccounts, sessions, users } from "@/lib/db/schema";
-import { safeNextPath } from "@/lib/domain/format";
 import { normalizeEmail } from "@/lib/domain/otp";
 import { burnPasswordCheck, hashPassword, PASSWORD_MAX, passwordProblem, verifyPassword } from "@/lib/domain/password";
 
 export type AuthResult = { ok: false; error: string; field?: "name" | "email" | "password" };
-
-async function landingFor(userId: string, audience: Audience, next?: string) {
-  return safeNextPath(next) ?? (await landingPathFor(userId, audience));
-}
 
 /** Anti forza bruta per email: oltre 10 password sbagliate in 15 minuti l'accesso si ferma. */
 const FAILED_LIMIT = { attempts: 10, minutes: 15 };
@@ -52,8 +47,8 @@ export async function signIn(rawEmail: string, password: string, next?: string, 
     await db.insert(auditLogs).values({ actor: email, action: "auth.login_failed", entity: "login", entityId: email });
     return { ok: false, error: "Email o password non corretti" };
   }
-  await createSession(user.id);
-  redirect(await landingFor(user.id, audience, next));
+  await createSession(user.id, audience);
+  redirect(await landingPathFor(user.id, audience, next));
 }
 
 export async function signUp(
@@ -89,13 +84,20 @@ export async function signUp(
   await db.insert(auditLogs).values({ actor: email, action: "auth.signup", entity: "user", entityId: created.id });
   // Un intoppo del provider email non deve bloccare la registrazione: il link si può rimandare dall'area personale.
   await sendEmailVerificationLink({ id: created.id, email, name }).catch((e) => console.error("[auth] email di conferma non inviata:", e));
-  await createSession(created.id);
-  redirect(await landingFor(created.id, audience, next));
+  await createSession(created.id, audience);
+  redirect(await landingPathFor(created.id, audience, next));
 }
 
+/** Esce dall'accesso clienti (Area cliente). */
 export async function logout() {
-  await destroySession();
+  await destroySession("client");
   redirect("/accedi");
+}
+
+/** Esce dall'accesso aziende (Area Partner). */
+export async function logoutBusiness() {
+  await destroySession("business");
+  redirect("/accedi/azienda");
 }
 
 export type LinkResult = { ok: true; devLink?: string } | AuthResult;
@@ -131,7 +133,8 @@ export async function resetPassword(token: string, password: string): Promise<Au
 
 /** Rimanda il link di conferma dell'email a chi è dentro e non l'ha ancora confermata. */
 export async function resendEmailVerification(): Promise<LinkResult> {
-  const user = await requireUser();
+  const user = await getAnySessionUser();
+  if (!user) redirect("/accedi");
   const [row] = await db.select({ verified: users.emailVerifiedAt }).from(users).where(eq(users.id, user.id)).limit(1);
   if (row?.verified) return { ok: true };
   const { devLink } = await sendEmailVerificationLink(user);

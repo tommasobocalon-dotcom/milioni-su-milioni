@@ -8,7 +8,6 @@ import { BoostButtons } from "@/components/partner/boost-buttons";
 import { AreaExtensionForm, ShowcaseForm } from "@/components/partner/extra-forms";
 import { PartnerPageHeader } from "@/components/partner/page-header";
 import { PartnerSkeleton } from "@/components/partner/skeleton";
-import { Geco } from "@/components/site/geco";
 import { Button } from "@/components/ui/button";
 import { requirePartner } from "@/lib/auth/session";
 import { stripeConfigured } from "@/lib/billing/stripe";
@@ -16,7 +15,7 @@ import { getExtras, getLedger, getSubscription, getTokenBalance } from "@/lib/da
 import { demoMode } from "@/lib/demo-mode";
 import { formatEuro } from "@/lib/domain/format";
 import { canBoost } from "@/lib/domain/ranking";
-import { AREA_EXTENSION, BOOST_OPTIONS, packageSaving, SHOWCASE_OPTIONS, TOKEN_PACKAGES } from "@/lib/domain/offers";
+import { AREA_EXTENSION, BOOST_OPTIONS, type BoostPlacement, isBoostPlacement, packageSaving, SHOWCASE_OPTIONS, TOKEN_PACKAGES } from "@/lib/domain/offers";
 import { cn } from "@/lib/utils";
 
 export const metadata = { title: "Crediti" };
@@ -28,13 +27,13 @@ export default function TokenPage({ searchParams }: PageProps<"/area-partner/tok
   return (
     <Suspense fallback={<PartnerSkeleton />}>
       {searchParams.then((sp) => (
-        <Tokens paid={sp.pagamento === "ok"} />
+        <Tokens payment={sp.pagamento === "ricevuto" ? "received" : sp.pagamento === "ok" ? "started" : null} placement={isBoostPlacement(sp.boost) ? sp.boost : "search"} />
       ))}
     </Suspense>
   );
 }
 
-async function Tokens({ paid }: { paid: boolean }) {
+async function Tokens({ payment, placement }: { payment: "received" | "started" | null; placement: BoostPlacement }) {
   const { partner, memberRole } = await requirePartner();
   await connection();
   const now = new Date();
@@ -57,7 +56,8 @@ async function Tokens({ paid }: { paid: boolean }) {
         planCode={sub?.planCode}
       />
 
-      {paid && <PaymentNotice>I crediti compaiono nel saldo appena Stripe conferma il pagamento: con la carta in pochi secondi, con l&apos;addebito SEPA in qualche giorno lavorativo.</PaymentNotice>}
+      {payment === "received" && <PaymentNotice received>I crediti sono già nel saldo. La ricevuta arriva per email.</PaymentNotice>}
+      {payment === "started" && <PaymentNotice>I crediti compaiono nel saldo appena Stripe conferma il pagamento: con la carta in pochi secondi, con l&apos;addebito SEPA in qualche giorno lavorativo.</PaymentNotice>}
 
       <div className="grid gap-6 xl:grid-cols-[340px_1fr]">
         <section className="flex flex-col gap-4 rounded-lg bg-brand p-6 text-on-brand">
@@ -69,7 +69,6 @@ async function Tokens({ paid }: { paid: boolean }) {
                 <p className="text-body-s text-on-brand-muted">Il piano {sub.planName} ne aggiunge {sub.renewalTokens} ogni mese</p>
               ) : null}
             </div>
-            <Geco outfit="token" size={96} />
           </div>
         </section>
 
@@ -77,9 +76,11 @@ async function Tokens({ paid }: { paid: boolean }) {
           <h2 className="text-h3 font-semibold">Compra crediti</h2>
           {!canUseTokens ? (
             <p className="rounded-md bg-subtle p-4 text-body-s">
-              I crediti sono inclusi nei piani Normal e Premium: con il piano Base non si comprano.{" "}
+              {sub
+                ? "I crediti sono inclusi nei piani Normal e Premium: con il piano Base non si comprano."
+                : "Per usare i crediti attiva prima un piano Normal o Premium."}{" "}
               <Link href="/area-partner/abbonamento" className="font-semibold text-primary underline">
-                Cambia piano
+                {sub ? "Cambia piano" : "Scegli il piano"}
               </Link>
             </p>
           ) : (
@@ -138,7 +139,7 @@ async function Tokens({ paid }: { paid: boolean }) {
         </section>
       </div>
 
-      <section className="flex flex-col gap-4 rounded-lg border border-line bg-surface p-6">
+      <section id="boost" className="flex scroll-mt-24 flex-col gap-4 rounded-lg border border-line bg-surface p-6">
         <h2 className="inline-flex items-center gap-2 text-h3 font-semibold">
           <Rocket className="size-5" aria-hidden /> Boost: più visibilità per qualche ora
         </h2>
@@ -147,12 +148,12 @@ async function Tokens({ paid }: { paid: boolean }) {
           piano, mai sopra un piano più alto) oppure con il tuo logo nella fascia Aziende in evidenza della Home.
         </p>
         {canUseTokens ? (
-          <BoostButtons options={BOOST_OPTIONS} balance={balance} />
+          <BoostButtons options={BOOST_OPTIONS} balance={balance} initialPlacement={placement} />
         ) : (
           <p className="rounded-md bg-subtle p-4 text-body-s">
             Il boost è incluso nei piani Normal e Premium.{" "}
             <Link href="/area-partner/abbonamento" className="font-semibold text-primary underline">
-              Cambia piano
+              {sub ? "Cambia piano" : "Scegli il piano"}
             </Link>
           </p>
         )}

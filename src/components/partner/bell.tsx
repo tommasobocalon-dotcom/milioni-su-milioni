@@ -22,7 +22,8 @@ export function BellLink({ unread }: { unread: number }) {
 
 /** Campanella con il numero di lead nuovi, non ancora aperti. */
 export async function UnreadBell() {
-  const { partner } = await requirePartner();
+  // Nel layout su ogni pagina (anche abbonamento): da sospeso non deve rimbalzare via, o va in loop.
+  const { partner } = await requirePartner({ allowSuspended: true });
   const counts = await countLeadsByStatus(partner.id);
   return <BellLink unread={counts.new ?? 0} />;
 }

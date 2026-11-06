@@ -6,7 +6,6 @@ import { BoostProjection } from "@/components/partner/boost-projection";
 import { PartnerPageHeader } from "@/components/partner/page-header";
 import { PartnerSkeleton } from "@/components/partner/skeleton";
 import { TrendChart } from "@/components/partner/trend-chart";
-import { Geco } from "@/components/site/geco";
 import { ButtonLink } from "@/components/ui/button";
 import { ChipLink } from "@/components/ui/chip";
 import { requirePartner } from "@/lib/auth/session";
@@ -44,7 +43,6 @@ async function Stats({ days }: { days: StatsPeriod }) {
       <div className="flex flex-col gap-6">
         <PartnerPageHeader title="Statistiche" partnerName={partner.displayName} logoUrl={partner.logoUrl} planCode={sub?.planCode} />
         <section className="flex flex-col items-start gap-4 rounded-lg bg-brand-soft p-6 sm:flex-row sm:items-center">
-          <Geco outfit="partner" size={80} />
           <div className="flex flex-1 flex-col gap-1">
             <h2 className="text-h3 font-semibold">Le statistiche sono incluse nei piani Normal e Premium</h2>
             <p className="text-body text-neutro-700">Visite alla scheda, richieste ricevute, da dove arrivano i clienti e quanto rende un boost.</p>
@@ -164,7 +162,7 @@ async function Stats({ days }: { days: StatsPeriod }) {
         tokenBalance={tokenBalance}
       />
 
-      <GecoTip s={s} />
+      <StatsTip s={s} />
     </div>
   );
 }
@@ -332,7 +330,6 @@ function Reviews({ reviews, days }: { reviews: PartnerStats["reviews"]; days: nu
       </h2>
       {reviews.count === 0 || reviews.rating == null ? (
         <div className="flex items-center gap-3">
-          <Geco outfit="recensioni" size={64} />
           <p className="text-body-s text-ink-2">
             Nessuna nuova recensione negli ultimi {days} giorni. Le recensioni arrivano solo dai clienti che ti hanno contattato dal sito.
           </p>
@@ -365,7 +362,7 @@ function Reviews({ reviews, days }: { reviews: PartnerStats["reviews"]; days: nu
 }
 
 /** Un consiglio alla volta, scelto dal punto più debole del percorso (regole fisse). */
-function GecoTip({ s }: { s: PartnerStats }) {
+function StatsTip({ s }: { s: PartnerStats }) {
   const t = s.totals;
   const unhandled = s.leadsByStatus.new ?? 0;
   const tip =
@@ -378,9 +375,8 @@ function GecoTip({ s }: { s: PartnerStats }) {
           : { text: "Chi vede prezzi indicativi chiede più spesso un contatto: tieni aggiornato il listino.", href: "/area-partner/listino", cta: "Apri il listino" };
   return (
     <aside className="flex flex-col items-start gap-4 rounded-lg bg-brand-soft p-5 sm:flex-row sm:items-center">
-      <Geco outfit="pensa" size={72} />
       <p className="flex-1 text-body-s">
-        <span className="font-semibold">Il geco suggerisce:</span> {tip.text}
+        <span className="font-semibold">Consiglio:</span> {tip.text}
       </p>
       <ButtonLink href={tip.href} size="s" variant="secondary">
         {tip.cta}

@@ -57,7 +57,7 @@ export default function PartnerSignupPage() {
 }
 
 async function SignupStep() {
-  const user = await getSessionUser();
+  const user = await getSessionUser("business");
   if (!user) {
     return (
       <>

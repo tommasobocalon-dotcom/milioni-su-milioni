@@ -4,7 +4,6 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { ArrowRight, MapPin, Search } from "lucide-react";
-import { Geco } from "@/components/site/geco";
 import { PROVINCE_BLOCKS } from "@/lib/data/home-content";
 import { VENETO_PROVINCES, VENETO_VIEWBOX } from "@/lib/data/veneto-map";
 import { cn } from "@/lib/utils";
@@ -24,7 +23,6 @@ export function ProvinceExplorer() {
     <div className="mt-12 grid grid-cols-1 items-center gap-10 lg:mt-16 lg:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)] lg:gap-16">
       <div data-reveal className="relative mx-auto w-full max-w-[18rem] sm:max-w-sm lg:max-w-none">
         {/* Il geco si arrampica sulle Dolomiti, in provincia di Belluno. */}
-        <Geco outfit="arrampicata" size={120} className="pointer-events-none absolute top-[2%] right-[2%] w-[20%] rotate-12" />
         <svg viewBox={VENETO_VIEWBOX} className="h-auto w-full" aria-hidden>
           {VENETO_PROVINCES.map((p) => {
             const block = PROVINCE_BLOCKS.find((b) => b.code === p.code);

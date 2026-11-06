@@ -6,6 +6,8 @@ import { cn } from "@/lib/utils";
 
 /** Loghi minimi per metà nastro: con poche aziende la fila si ripete, così il nastro riempie lo schermo e scorre sempre. */
 const MIN_PER_HALF = 8;
+/** Scelta del boost "Logo in evidenza in Home" nell'Area Partner; chi non è entrato passa prima dal login aziende. */
+const BOOST_HREF = `/accedi/azienda?next=${encodeURIComponent("/area-partner/token?boost=home#boost")}`;
 
 /**
  * Fascia divisoria con i loghi delle aziende in evidenza: partner con un boost pagato a token in corso.
@@ -76,7 +78,7 @@ export async function SponsorStrip() {
           Come funzionano i contenuti sponsorizzati
         </Link>
         <Link
-          href="/per-i-professionisti"
+          href={BOOST_HREF}
           className="group/link inline-flex items-center gap-1.5 font-semibold text-primary hover:text-primary-hover"
         >
           Metti in evidenza la tua azienda
@@ -136,7 +138,7 @@ function SponsorRow({
       {cta && (
         <li>
           <Link
-            href="/per-i-professionisti"
+            href={BOOST_HREF}
             tabIndex={copy ? -1 : undefined}
             className="group/logo mx-4 flex h-16 items-center gap-3 rounded-full bg-subtle px-5 text-body-s font-semibold whitespace-nowrap text-primary transition-colors hover:bg-brand-soft"
           >
