@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react";
 import { LngLatBounds, Map as MaplibreMap, Marker, NavigationControl, Popup, setWorkerUrl, type StyleSpecification } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
+import { cn } from "@/lib/utils";
 
 // Turbopack non riscrive l'URL del worker di MapLibre: lo serviamo come file statico (copiato in public da
 // scripts/copy-maplibre-worker.mjs, allineato alla versione del pacchetto a ogni build).
@@ -30,7 +31,7 @@ const esc = (s: string) => s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&
  * Mappa dei risultati di ricerca (PRD §5.2): un marker per partner, con nome e link alla scheda.
  * La vista si adatta ai marker; con un marker solo si centra su di esso.
  */
-export function ResultsMap({ points }: { points: MapPoint[] }) {
+export function ResultsMap({ points, className }: { points: MapPoint[]; className?: string }) {
   const container = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -55,14 +56,27 @@ export function ResultsMap({ points }: { points: MapPoint[] }) {
       const popup = new Popup({ offset: 24, closeButton: false }).setHTML(
         `<a href="${esc(p.href)}" class="font-semibold text-primary underline">${esc(p.name)}</a>`,
       );
-      new Marker({ color: "#1f3a2b" }).setLngLat([p.lng, p.lat]).setPopup(popup).addTo(map);
+      new Marker({ color: "#344e41" }).setLngLat([p.lng, p.lat]).setPopup(popup).addTo(map);
       bounds.extend([p.lng, p.lat]);
     }
-    if (points.length > 1) map.fitBounds(bounds, { padding: 48, maxZoom: 14 });
+    if (points.length > 1) map.fitBounds(bounds, { padding: 32, maxZoom: 14 });
 
-    return () => map.remove();
+    // Il contenitore può cambiare misura (colonna a tutta altezza): la mappa si adatta.
+    const resize = new ResizeObserver(() => map.resize());
+    resize.observe(container.current);
+
+    return () => {
+      resize.disconnect();
+      map.remove();
+    };
   }, [points]);
 
   if (points.length === 0) return null;
-  return <div ref={container} className="h-72 w-full overflow-hidden rounded-lg border border-line md:h-80" aria-label="Mappa dei risultati" />;
+  return (
+    <div
+      ref={container}
+      className={cn("h-72 w-full overflow-hidden rounded-lg border border-line md:h-80", className)}
+      aria-label="Mappa dei risultati"
+    />
+  );
 }

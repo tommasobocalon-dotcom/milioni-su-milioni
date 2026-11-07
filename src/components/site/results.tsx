@@ -112,103 +112,107 @@ export async function Results({ mode, params }: { mode: "agency" | "pro"; params
       </div>
 
       <div className="grid grid-cols-1 gap-8 lg:grid-cols-[280px_minmax(0,1fr)]">
-        <aside
-          id="filtri"
-          aria-label="Filtri"
-          className="order-2 flex scroll-mt-20 flex-col gap-6 self-start rounded-lg border border-line bg-surface p-5 lg:order-1"
-        >
-          <h2 className="flex items-center gap-2 text-h4 font-semibold">
-            <SlidersHorizontal className="size-4" aria-hidden /> Filtri
-          </h2>
+        {/* Colonna sinistra: filtri e, sotto, la mappa piccola dei risultati. */}
+        <div className="order-2 flex flex-col gap-4 self-start lg:order-1">
+          <aside
+            id="filtri"
+            aria-label="Filtri"
+            className="flex scroll-mt-20 flex-col gap-6 rounded-lg border border-line bg-surface p-5"
+          >
+            <h2 className="flex items-center gap-2 text-h4 font-semibold">
+              <SlidersHorizontal className="size-4" aria-hidden /> Filtri
+            </h2>
 
-          <form action={basePath} method="get" className="flex flex-col gap-3">
-            {category && mode === "pro" && <input type="hidden" name="categoria" value={category.slug} />}
-            {service && <input type="hidden" name="servizio" value={service.slug} />}
-            {params.voto && <input type="hidden" name="voto" value={params.voto} />}
-            <label htmlFor="dove" className="text-body-s font-semibold">
-              Zona
-            </label>
-            <Input id="dove" name="dove" list="comuni-filtro" defaultValue={place?.name ?? params.dove ?? ""} placeholder="Comune" />
-            <datalist id="comuni-filtro">
-              {places.map((p) => (
-                <option key={p.id} value={p.name} />
-              ))}
-            </datalist>
-            <label htmlFor="ordina" className="text-body-s font-semibold">
-              Ordina per
-            </label>
-            <Select id="ordina" name="ordina" defaultValue={sort}>
-              {SORTS.map((s) => (
-                <option key={s.value} value={s.value} disabled={s.value === "distanza" && !place}>
-                  {s.label}
-                </option>
-              ))}
-            </Select>
-            <Button type="submit" variant="secondary" size="s">
-              Applica
-            </Button>
-          </form>
+            <form action={basePath} method="get" className="flex flex-col gap-3">
+              {category && mode === "pro" && <input type="hidden" name="categoria" value={category.slug} />}
+              {service && <input type="hidden" name="servizio" value={service.slug} />}
+              {params.voto && <input type="hidden" name="voto" value={params.voto} />}
+              <label htmlFor="dove" className="text-body-s font-semibold">
+                Zona
+              </label>
+              <Input id="dove" name="dove" list="comuni-filtro" defaultValue={place?.name ?? params.dove ?? ""} placeholder="Comune" />
+              <datalist id="comuni-filtro">
+                {places.map((p) => (
+                  <option key={p.id} value={p.name} />
+                ))}
+              </datalist>
+              <label htmlFor="ordina" className="text-body-s font-semibold">
+                Ordina per
+              </label>
+              <Select id="ordina" name="ordina" defaultValue={sort}>
+                {SORTS.map((s) => (
+                  <option key={s.value} value={s.value} disabled={s.value === "distanza" && !place}>
+                    {s.label}
+                  </option>
+                ))}
+              </Select>
+              <Button type="submit" variant="secondary" size="s">
+                Applica
+              </Button>
+            </form>
 
-          {mode === "pro" && (
+            {mode === "pro" && (
+              <fieldset className="flex flex-col gap-2">
+                <legend className="mb-2 text-body-s font-semibold">Tipo di professionista</legend>
+                <div className="flex flex-wrap gap-2">
+                  <ChipLink href={href({ categoria: undefined, servizio: undefined })} selected={!category}>
+                    Tutti
+                  </ChipLink>
+                  {proCategories.map((c) => (
+                    <ChipLink key={c.id} href={href({ categoria: c.slug, servizio: undefined })} selected={category?.id === c.id}>
+                      {c.name}
+                    </ChipLink>
+                  ))}
+                </div>
+              </fieldset>
+            )}
+
+            {categoryServices.length > 0 && (
+              <fieldset className="flex flex-col gap-2">
+                <legend className="mb-2 text-body-s font-semibold">{mode === "agency" ? "Cosa ti serve" : "Lavoro specifico"}</legend>
+                <div className="flex flex-wrap gap-2">
+                  {categoryServices.map((s) => (
+                    <ChipLink
+                      key={s.id}
+                      href={href({ servizio: service?.id === s.id ? undefined : s.slug })}
+                      selected={service?.id === s.id}
+                    >
+                      {s.name}
+                    </ChipLink>
+                  ))}
+                </div>
+              </fieldset>
+            )}
+
             <fieldset className="flex flex-col gap-2">
-              <legend className="mb-2 text-body-s font-semibold">Tipo di professionista</legend>
+              <legend className="mb-2 text-body-s font-semibold">Valutazione minima</legend>
               <div className="flex flex-wrap gap-2">
-                <ChipLink href={href({ categoria: undefined, servizio: undefined })} selected={!category}>
-                  Tutti
-                </ChipLink>
-                {proCategories.map((c) => (
-                  <ChipLink key={c.id} href={href({ categoria: c.slug, servizio: undefined })} selected={category?.id === c.id}>
-                    {c.name}
+                {[
+                  ["", "Tutte"],
+                  ["4", "4+"],
+                  ["4.5", "4,5+"],
+                ].map(([v, l]) => (
+                  <ChipLink key={l} href={href({ voto: v || undefined })} selected={(params.voto ?? "") === v}>
+                    {l}
                   </ChipLink>
                 ))}
               </div>
             </fieldset>
-          )}
 
-          {categoryServices.length > 0 && (
-            <fieldset className="flex flex-col gap-2">
-              <legend className="mb-2 text-body-s font-semibold">{mode === "agency" ? "Cosa ti serve" : "Lavoro specifico"}</legend>
-              <div className="flex flex-wrap gap-2">
-                {categoryServices.map((s) => (
-                  <ChipLink
-                    key={s.id}
-                    href={href({ servizio: service?.id === s.id ? undefined : s.slug })}
-                    selected={service?.id === s.id}
-                  >
-                    {s.name}
-                  </ChipLink>
-                ))}
-              </div>
-            </fieldset>
-          )}
-
-          <fieldset className="flex flex-col gap-2">
-            <legend className="mb-2 text-body-s font-semibold">Valutazione minima</legend>
-            <div className="flex flex-wrap gap-2">
-              {[
-                ["", "Tutte"],
-                ["4", "4+"],
-                ["4.5", "4,5+"],
-              ].map(([v, l]) => (
-                <ChipLink key={l} href={href({ voto: v || undefined })} selected={(params.voto ?? "") === v}>
-                  {l}
-                </ChipLink>
-              ))}
-            </div>
-          </fieldset>
-
-          <p id="ordinamento" className="flex gap-2 rounded-md bg-subtle p-3 text-caption text-ink-2">
-            <Info className="size-4 shrink-0" aria-hidden />
-            <span>
-              Come ordiniamo: mostriamo solo chi lavora nella zona cercata, poi prima i piani più alti (Partner Elite con il bordo oro, Partner Pro con il bordo verde, poi gli altri)
-              e chi ha un boost attivo, etichettato &quot;Sponsorizzato&quot;. Tra aziende dello stesso piano l&apos;ordine cambia a
-              ogni visita.{" "}
-              <Link href="/come-funziona#ordinamento" className="font-semibold text-primary underline">
-                Dettagli
-              </Link>
-            </span>
-          </p>
-        </aside>
+            <p id="ordinamento" className="flex gap-2 rounded-md bg-subtle p-3 text-caption text-ink-2">
+              <Info className="size-4 shrink-0" aria-hidden />
+              <span>
+                Come ordiniamo: mostriamo solo chi lavora nella zona cercata, poi prima i piani più alti (Partner Elite con il bordo oro, Partner Pro con il bordo verde, poi gli altri)
+                e chi ha un boost attivo, etichettato &quot;Sponsorizzato&quot;. Tra aziende dello stesso piano l&apos;ordine cambia a
+                ogni visita.{" "}
+                <Link href="/come-funziona#ordinamento" className="font-semibold text-primary underline">
+                  Dettagli
+                </Link>
+              </span>
+            </p>
+          </aside>
+          {mapPoints.length > 0 && <ResultsMap points={mapPoints} className="h-64 md:h-64" />}
+        </div>
 
         <section aria-label="Risultati" className="order-1 flex flex-col gap-4 lg:order-2">
           <a
@@ -217,7 +221,6 @@ export async function Results({ mode, params }: { mode: "agency" | "pro"; params
           >
             <SlidersHorizontal className="size-4" aria-hidden /> Filtri e ordinamento
           </a>
-          {mapPoints.length > 0 && <ResultsMap points={mapPoints} />}
           {featured && <FeaturedPartner p={featured} />}
           {results.map((p) => (
             <PartnerCard key={p.id} p={p} />

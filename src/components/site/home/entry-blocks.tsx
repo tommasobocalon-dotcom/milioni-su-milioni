@@ -1,95 +1,34 @@
+import Image from "next/image";
 import Link from "next/link";
-import {
-  ArrowRight,
-  BrickWall,
-  DraftingCompass,
-  Droplet,
-  FileCheck,
-  House,
-  KeyRound,
-  Landmark,
-  PaintRoller,
-  Ruler,
-  Tag,
-  Wrench,
-  Zap,
-  type LucideIcon,
-} from "lucide-react";
+import { ArrowRight } from "lucide-react";
+import { ButtonLink } from "@/components/ui/button";
 import { getCategories } from "@/lib/data/catalog";
+import { CATEGORY_PHOTOS, type CategoryPhoto } from "@/lib/data/category-photos";
 import { cn } from "@/lib/utils";
 
-type TileData = { key: string; label: string; note: string; href: string; icon: LucideIcon };
+type Shortcut = { label: string; href: string };
 
-const PRO_ICONS: Record<string, LucideIcon> = {
-  idraulico: Droplet,
-  elettricista: Zap,
-  geometra: Ruler,
-  architetto: DraftingCompass,
-  imbianchino: PaintRoller,
-  ristrutturazioni: BrickWall,
-};
-
-/** Riga sotto il nome della categoria: cosa fanno, in parole semplici. */
-const PRO_NOTES: Record<string, string> = {
-  idraulico: "Bagni, caldaie e perdite",
-  elettricista: "Impianti e fotovoltaico",
-  geometra: "APE, catasto e pratiche",
-  architetto: "Progetti e interni",
-  imbianchino: "Pareti e cappotto",
-  ristrutturazioni: "Lavori chiavi in mano",
-};
-
-/**
- * Lato casa: i servizi delle agenzie più i due partner che servono a chi compra, vende o affitta
- * (consulenti mutui e APE dei geometri, PRD §5.2 "partner B2B nel percorso Trova Casa").
- */
-const HOME_TILES: (TileData & { needs?: string })[] = [
-  { key: "comprare", label: "Comprare casa", note: "Agenzie della tua zona", href: "/trova-casa?servizio=compravendita", icon: KeyRound },
-  { key: "vendere", label: "Vendere casa", note: "Valutazione e vendita", href: "/trova-casa?servizio=valutazione", icon: Tag },
-  { key: "affittare", label: "Affittare", note: "Cercare o dare in affitto", href: "/trova-casa?servizio=affitti", icon: House },
-  {
-    key: "mutuo",
-    label: "Mutuo per la casa",
-    note: "Consulenti del credito",
-    href: "/trova-professionista?categoria=consulente-mutui",
-    icon: Landmark,
-    needs: "consulente-mutui",
-  },
-  {
-    key: "ape",
-    label: "Certificato APE",
-    note: "Per vendere o affittare",
-    href: "/trova-professionista?categoria=geometra&servizio=ape",
-    icon: FileCheck,
-    needs: "geometra",
-  },
+/** Scorciatoie del lato agenzie: i servizi più cercati da chi compra, vende o affitta. */
+const HOME_SHORTCUTS: Shortcut[] = [
+  { label: "Comprare", href: "/trova-casa?servizio=compravendita" },
+  { label: "Vendere", href: "/trova-casa?servizio=valutazione" },
+  { label: "Affittare", href: "/trova-casa?servizio=affitti" },
 ];
 
-/** Tessere per lato: cinque voci più "Tutti", così i due riquadri hanno la stessa misura. */
-const PER_SIDE = 5;
-
 /**
- * I due grandi accessi della Home (PRD §5.1) come due riquadri gemelli di tessere (componente "Tile categoria"):
- * professionisti a sinistra, casa e agenzie a destra.
+ * I due grandi accessi della Home (PRD §5.1): professionisti a sinistra, agenzie a destra.
+ * Ogni blocco ha una foto del mestiere (crediti nel footer), titolo, descrizione, scorciatoie e il bottone della ricerca.
  */
 export async function EntryBlocks({ id }: { id: string }) {
   const categories = await getCategories();
-  const available = new Set(categories.map((c) => c.slug));
 
   // Le categorie di tecnici e artigiani con più partner attivi, a parità nell'ordine del catalogo.
-  const pro: TileData[] = categories
+  const proShortcuts: Shortcut[] = categories
     .filter((c) => c.partnerType === "technician" || c.partnerType === "artisan")
     .map((c, i) => ({ c, i }))
     .sort((a, b) => b.c.partnerCount - a.c.partnerCount || a.i - b.i)
-    .slice(0, PER_SIDE)
-    .map(({ c }) => ({
-      key: c.slug,
-      label: c.pluralName,
-      note: PRO_NOTES[c.slug] ?? (c.partnerCount === 1 ? "1 partner" : `${c.partnerCount} partner`),
-      href: `/trova-professionista?categoria=${c.slug}`,
-      icon: PRO_ICONS[c.slug] ?? Wrench,
-    }));
-  const home = HOME_TILES.filter((t) => !t.needs || available.has(t.needs)).slice(0, PER_SIDE);
+    .slice(0, 3)
+    .map(({ c }) => ({ label: c.pluralName, href: `/trova-professionista?categoria=${c.slug}` }));
 
   return (
     <section aria-labelledby={id} className="container-page pt-24 pb-28 md:pt-32 md:pb-36">
@@ -101,78 +40,82 @@ export async function EntryBlocks({ id }: { id: string }) {
           Un lavoro in casa o una casa nuova: parti da qui e confronta chi lavora davvero nella tua zona.
         </p>
       </div>
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        <Panel
+      <div className="mx-auto grid max-w-4xl grid-cols-1 gap-6 sm:grid-cols-2">
+        <Block
           tone="white"
-          title="Trova un professionista"
-          text="Prezzi indicativi e recensioni solo da clienti verificati."
-          tiles={pro}
-          all={{ href: "/trova-professionista", label: "Tutti i professionisti" }}
+          photo={CATEGORY_PHOTOS.imbianchino}
+          label="Tecnici e artigiani"
+          title="Cerca professionisti"
+          text="Geometri, tecnici e artigiani della tua zona, con prezzi indicativi e recensioni solo da clienti verificati."
+          shortcuts={proShortcuts}
+          href="/trova-professionista"
+          cta="Cerca un professionista"
         />
-        <Panel
+        <Block
           tone="sage"
-          title="Trova un'agenzia"
-          text="Comprare, vendere o affittare, con chi conosce la zona."
-          tiles={home}
-          all={{ href: "/trova-casa", label: "Tutte le agenzie" }}
+          photo={CATEGORY_PHOTOS["agenzia-immobiliare"]}
+          label="Agenzie immobiliari"
+          title="Cerca agenzie"
+          text="Comprare, vendere o affittare casa con le agenzie immobiliari che conoscono la zona."
+          shortcuts={HOME_SHORTCUTS}
+          href="/trova-casa"
+          cta="Cerca un'agenzia"
         />
       </div>
     </section>
   );
 }
 
-function Panel(props: {
+function Block(props: {
   tone: "white" | "sage";
+  photo: CategoryPhoto;
+  label: string;
   title: string;
   text: string;
-  tiles: TileData[];
-  all: { href: string; label: string };
+  shortcuts: Shortcut[];
+  href: string;
+  cta: string;
 }) {
   const sage = props.tone === "sage";
   return (
-    <div data-reveal className={cn("relative rounded-xl p-6 md:p-8", sage ? "bg-brand-soft [--reveal-shift:8%]" : "bg-surface")}>
-      <h3 className="font-display text-h1 tracking-[-0.02em]">{props.title}</h3>
-      <p className="mt-2 max-w-md text-body text-neutro-700">{props.text}</p>
-      <ul className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3">
-        {props.tiles.map((t) => (
-          <li key={t.key}>
-            <Tile tile={t} sage={sage} />
-          </li>
-        ))}
-        <li>
-          <Link
-            href={props.all.href}
-            className={cn(
-              "group/tile flex h-full min-h-[10rem] flex-col justify-between gap-4 rounded-lg p-4 text-on-brand transition-[background-color,transform] duration-200 hover:-translate-y-0.5",
-              sage ? "bg-primary hover:bg-primary-hover" : "bg-brand hover:bg-bosco-700",
-            )}
-          >
-            <span className="text-body font-semibold">{props.all.label}</span>
-            <ArrowRight className="size-6 transition-transform duration-200 group-hover/tile:translate-x-1" aria-hidden />
-          </Link>
-        </li>
-      </ul>
-    </div>
-  );
-}
-
-function Tile({ tile, sage }: { tile: TileData; sage: boolean }) {
-  const Icon = tile.icon;
-  return (
-    <Link
-      href={tile.href}
-      className={cn(
-        "group/tile flex h-full min-h-[10rem] flex-col justify-between gap-4 rounded-lg p-4 transition-[background-color,color,transform] duration-200 hover:-translate-y-0.5 hover:bg-brand hover:text-on-brand",
-        sage ? "bg-surface/70" : "bg-page",
-      )}
+    <article
+      data-reveal
+      className={cn("group/block flex flex-col rounded-xl p-3", sage ? "bg-brand-soft [--reveal-shift:8%]" : "bg-surface")}
     >
-      <span className="inline-flex size-11 items-center justify-center rounded-full bg-subtle text-primary transition-colors group-hover/tile:bg-bosco-800 group-hover/tile:text-on-brand">
-        <Icon className="size-5" aria-hidden />
-      </span>
-      <span className="flex flex-col gap-0.5">
-        <span className="text-body font-semibold">{tile.label}</span>
-        <span className="text-body-s text-ink-2 transition-colors group-hover/tile:text-salvia-200">{tile.note}</span>
-      </span>
-    </Link>
+      <div className="relative aspect-[4/3] overflow-hidden rounded-lg bg-muted">
+        <Image
+          src={props.photo.src}
+          alt={props.photo.alt}
+          fill
+          sizes="(min-width: 896px) 430px, (min-width: 640px) 50vw, 100vw"
+          className="object-cover transition-transform duration-700 ease-out motion-safe:group-hover/block:scale-[1.04]"
+        />
+      </div>
+      <div className="flex flex-1 flex-col gap-3 px-3 pt-6 pb-3 md:px-5 md:pt-7 md:pb-5">
+        <p className="caps-label text-primary">{props.label}</p>
+        <h3 className="font-display text-h1 tracking-[-0.02em]">{props.title}</h3>
+        <p className="text-body text-neutro-700">{props.text}</p>
+        <ul aria-label="Scorciatoie" className="mt-1 flex flex-wrap gap-2">
+          {props.shortcuts.map((s) => (
+            <li key={s.href}>
+              <Link
+                href={s.href}
+                className={cn(
+                  "inline-flex rounded-full px-3 py-1 text-body-s font-medium text-brand transition-colors",
+                  sage ? "bg-surface/70 hover:bg-surface" : "bg-subtle hover:bg-brand-soft",
+                )}
+              >
+                {s.label}
+              </Link>
+            </li>
+          ))}
+        </ul>
+        <div className="mt-auto pt-6">
+          <ButtonLink href={props.href}>
+            {props.cta} <ArrowRight className="transition-transform duration-200 group-hover/block:translate-x-0.5" aria-hidden />
+          </ButtonLink>
+        </div>
+      </div>
+    </article>
   );
 }
