@@ -51,7 +51,7 @@ export async function sendEmail(to: string, subject: string, text: string, optio
   if (provider === "resend") return sendWithResend(to, subject, text, options.replyTo);
   if (provider === "brevo") {
     const from = process.env.EMAIL_FROM || "info@gecoitalia.it";
-    return brevo("email", brevoEmailRequest({ apiKey: apiKey(), from, fromName: "geco", to, subject, text, replyTo: options.replyTo }));
+    return brevo("email", brevoEmailRequest({ apiKey: apiKey(), from, fromName: "GecoItalia", to, subject, text, replyTo: options.replyTo }));
   }
   throw new DeliveryError(`Provider email "${provider}" sconosciuto`);
 }

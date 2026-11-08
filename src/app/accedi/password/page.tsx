@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
-import Link from "next/link";
-import { RequestResetForm } from "@/components/site/password-reset-forms";
+import { BackToLogin, RequestResetForm } from "@/components/site/password-reset-forms";
 import { AuthShell } from "../auth-screen";
 
 export const metadata: Metadata = { title: "Password dimenticata", robots: { index: false } };
@@ -14,10 +13,7 @@ export default function ForgotPasswordPage() {
       </div>
       <RequestResetForm />
       <p className="text-body-s text-ink-2">
-        Te la sei ricordata?{" "}
-        <Link href="/accedi" className="font-semibold text-primary underline">
-          Torna all&apos;accesso
-        </Link>
+        Te la sei ricordata? <BackToLogin />
       </p>
     </AuthShell>
   );

@@ -49,6 +49,32 @@ test("conferma email e recupero password con i link monouso", async ({ page }) =
   await expect(page).toHaveURL(/\/area-cliente$/);
 });
 
+test("password dimenticata dall'accesso aziende: la nuova password riporta all'area aziende", async ({ page }) => {
+  const email = `recupero-azienda-${Date.now()}@example.com`;
+  await page.goto("/accedi/azienda");
+  await page.getByRole("button", { name: "Registra l'attività" }).click();
+  await page.getByLabel(/^Nome e cognome/).fill("Luca Verdi");
+  await page.getByRole("textbox", { name: /^Email/ }).fill(email);
+  await page.getByLabel(/^Password/).fill("password iniziale 1");
+  await page.getByRole("button", { name: "Continua con i dati dell'attività" }).click();
+  await expect(page).toHaveURL(/\/registrazione-partner$/);
+
+  await page.context().clearCookies();
+  await page.goto("/accedi/azienda");
+  await page.getByRole("link", { name: "Password dimenticata?" }).click();
+  await expect(page).toHaveURL(/\/accedi\/password\?per=azienda$/);
+  await expect(page.getByRole("link", { name: "Torna all'accesso" })).toHaveAttribute("href", "/accedi/azienda");
+  await page.getByRole("textbox", { name: /^Email/ }).fill(email);
+  await page.getByRole("button", { name: "Mandami il link" }).click();
+  const link = await page.getByRole("link", { name: "Apri il link" }).getAttribute("href");
+  expect(link).toMatch(/\/accedi\/nuova-password\?token=.+&per=azienda$/);
+  await page.goto(link!);
+  await page.getByLabel(/^Nuova password/).fill("password nuova 2");
+  await page.getByRole("button", { name: "Salva e accedi" }).click();
+  // Account senza attività: l'accesso aziende porta a completare la registrazione partner.
+  await expect(page).toHaveURL(/\/registrazione-partner$/);
+});
+
 test("password dimenticata con un'email non iscritta: stessa risposta, nessun link", async ({ page }) => {
   await page.goto("/accedi/password");
   await page.getByRole("textbox", { name: /^Email/ }).fill(`nessuno-${Date.now()}@example.com`);

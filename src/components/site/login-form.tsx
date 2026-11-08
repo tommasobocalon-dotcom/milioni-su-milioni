@@ -18,7 +18,7 @@ export type { Audience };
 const noSubscribe = () => () => {};
 
 /** Parametro dell'indirizzo letto nel browser: la pagina resta statica e il modulo non viene rimontato. */
-function useQueryParam(name: string) {
+export function useQueryParam(name: string) {
   return useSyncExternalStore(
     noSubscribe,
     () => new URLSearchParams(window.location.search).get(name) ?? undefined,
@@ -68,8 +68,8 @@ export function LoginForm({
   const [pending, start] = useTransition();
   const signup = mode === "signup";
   const copy = COPY[audience];
-  // Google e Apple riportano chi parte dall'accesso aziende alla pagina aziende (vedi /auth/[provider]).
-  const providerQuery = audience === "business" ? "?per=azienda" : "";
+  // Google e Apple solo per i clienti: le aziende entrano con email e password.
+  const providers = audience === "client";
 
   function switchMode(to: Mode) {
     setMode(to);
@@ -121,21 +121,27 @@ export function LoginForm({
         ))}
       </div>
 
-      {/* Link normali, non <Link>: le route /auth/* rimandano al sito del provider con una navigazione completa. */}
-      <div className="flex flex-col gap-3">
-        <a href={`/auth/google${providerQuery}`} className={cn(providerLink, "border border-line bg-surface text-ink hover:bg-crema-100")}>
-          <GoogleIcon /> Continua con Google
-        </a>
-        <a href={`/auth/apple${providerQuery}`} className={cn(providerLink, "bg-black text-white hover:bg-neutro-900")}>
-          <AppleIcon /> Continua con Apple
-        </a>
-      </div>
+      {providers && (
+        <>
+          {/* Link normali, non <Link>: le route /auth/* rimandano al sito del provider con una navigazione completa. */}
+          <div className="flex flex-col gap-3">
+            {/* eslint-disable-next-line @next/next/no-html-link-for-pages -- route handler, non una pagina */}
+            <a href="/auth/google" className={cn(providerLink, "border border-line bg-surface text-ink hover:bg-crema-100")}>
+              <GoogleIcon /> Continua con Google
+            </a>
+            {/* eslint-disable-next-line @next/next/no-html-link-for-pages -- route handler, non una pagina */}
+            <a href="/auth/apple" className={cn(providerLink, "bg-black text-white hover:bg-neutro-900")}>
+              <AppleIcon /> Continua con Apple
+            </a>
+          </div>
 
-      <div className="flex items-center gap-3 text-body-s text-ink-2" role="separator" aria-label="oppure con l'email">
-        <span className="h-px flex-1 bg-line" />
-        oppure con l&apos;email
-        <span className="h-px flex-1 bg-line" />
-      </div>
+          <div className="flex items-center gap-3 text-body-s text-ink-2" role="separator" aria-label="oppure con l'email">
+            <span className="h-px flex-1 bg-line" />
+            oppure con l&apos;email
+            <span className="h-px flex-1 bg-line" />
+          </div>
+        </>
+      )}
 
       <form method="post" onSubmit={submit} className="flex flex-col gap-4" noValidate>
         {signup && (
@@ -198,7 +204,10 @@ export function LoginForm({
         {/* Antispam solo sulla creazione dell'account: l'accesso ha già i suoi limiti di tentativi. */}
         {signup && <Turnstile onToken={setTurnstileToken} resetKey={turnstileReset} />}
         {!signup && (
-          <Link href="/accedi/password" className="-mt-2 self-end text-body-s font-semibold text-primary underline">
+          <Link
+            href={audience === "business" ? "/accedi/password?per=azienda" : "/accedi/password"}
+            className="-mt-2 self-end text-body-s font-semibold text-primary underline"
+          >
             Password dimenticata?
           </Link>
         )}

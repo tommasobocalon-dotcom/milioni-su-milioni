@@ -4,12 +4,30 @@ import { useState, useTransition } from "react";
 import Link from "next/link";
 import { ArrowRight, Eye, EyeOff } from "lucide-react";
 import { requestPasswordReset, resetPassword, type AuthResult } from "@/app/accedi/actions";
+import type { Audience } from "@/lib/auth/session";
 import { Button } from "@/components/ui/button";
 import { Field, Input } from "@/components/ui/field";
+import { useQueryParam } from "./login-form";
 import { Turnstile } from "./turnstile";
+
+/** ?per=azienda: la richiesta parte dall'accesso aziende e la nuova password riporta all'Area Partner. */
+function useAudience(): Audience {
+  return useQueryParam("per") === "azienda" ? "business" : "client";
+}
+
+/** "Torna all'accesso" verso la pagina da cui si è partiti. */
+export function BackToLogin() {
+  const audience = useAudience();
+  return (
+    <Link href={audience === "business" ? "/accedi/azienda" : "/accedi"} className="font-semibold text-primary underline">
+      Torna all&apos;accesso
+    </Link>
+  );
+}
 
 /** "Password dimenticata": chiede l'email e risponde sempre allo stesso modo. */
 export function RequestResetForm() {
+  const audience = useAudience();
   const [error, setError] = useState<AuthResult | null>(null);
   const [sent, setSent] = useState<{ email: string; devLink?: string } | null>(null);
   const [turnstileToken, setTurnstileToken] = useState("");
@@ -22,7 +40,7 @@ export function RequestResetForm() {
     // Campo non controllato: quello che si scrive prima che la pagina sia pronta non va perso.
     const email = String(new FormData(e.currentTarget).get("email") ?? "");
     start(async () => {
-      const res = await requestPasswordReset(email, turnstileToken);
+      const res = await requestPasswordReset(email, turnstileToken, audience);
       if (res.ok) setSent({ email, devLink: res.devLink });
       else {
         setError(res);
@@ -35,7 +53,7 @@ export function RequestResetForm() {
     return (
       <div className="flex flex-col gap-4" role="status">
         <p className="text-body">
-          Se <strong>{sent.email}</strong> è iscritta a geco, tra poco ti arriva un&apos;email con il link per scegliere una nuova password. Il
+          Se <strong>{sent.email}</strong> è iscritta a GecoItalia, tra poco ti arriva un&apos;email con il link per scegliere una nuova password. Il
           link vale un&apos;ora.
         </p>
         <p className="text-body-s text-ink-2">Non la trovi? Guarda nella posta indesiderata, oppure riprova tra qualche minuto.</p>
@@ -79,7 +97,7 @@ export function RequestResetForm() {
 }
 
 /** Nuova password dal link ricevuto per email. */
-export function NewPasswordForm({ token }: { token: string }) {
+export function NewPasswordForm({ token, audience }: { token: string; audience: Audience }) {
   const [show, setShow] = useState(false);
   const [error, setError] = useState<AuthResult | null>(null);
   const [pending, start] = useTransition();
@@ -90,7 +108,7 @@ export function NewPasswordForm({ token }: { token: string }) {
     const password = String(new FormData(e.currentTarget).get("password") ?? "");
     start(async () => {
       // Se va tutto bene l'azione fa redirect nell'area personale.
-      const res = await resetPassword(token, password);
+      const res = await resetPassword(token, password, audience);
       if (res && !res.ok) setError(res);
     });
   }
@@ -125,7 +143,7 @@ export function NewPasswordForm({ token }: { token: string }) {
       {error && !error.field && (
         <p role="alert" className="rounded-md border border-error bg-error-soft px-3.5 py-2.5 text-body-s text-error">
           {error.error}{" "}
-          <Link href="/accedi/password" className="font-semibold underline">
+          <Link href={audience === "business" ? "/accedi/password?per=azienda" : "/accedi/password"} className="font-semibold underline">
             Chiedi un nuovo link
           </Link>
         </p>

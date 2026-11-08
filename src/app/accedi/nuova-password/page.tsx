@@ -23,16 +23,17 @@ export default function NewPasswordPage({ searchParams }: PageProps<"/accedi/nuo
 }
 
 async function TokenStep({ searchParams }: { searchParams: PageProps<"/accedi/nuova-password">["searchParams"] }) {
-  const { token } = await searchParams;
+  const { token, per } = await searchParams;
+  const business = per === "azienda";
   if (typeof token === "string" && token && (await authTokenValid(token, "password_reset"))) {
-    return <NewPasswordForm token={token} />;
+    return <NewPasswordForm token={token} audience={business ? "business" : "client"} />;
   }
   return (
     <div className="flex flex-col gap-4">
       <p role="alert" className="rounded-md border border-error bg-error-soft px-3.5 py-2.5 text-body-s text-error">
         Questo link è scaduto o è già stato usato. I link valgono un&apos;ora e una volta sola.
       </p>
-      <ButtonLink href="/accedi/password" className="self-start">
+      <ButtonLink href={business ? "/accedi/password?per=azienda" : "/accedi/password"} className="self-start">
         Chiedi un nuovo link
       </ButtonLink>
     </div>

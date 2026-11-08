@@ -4,22 +4,18 @@ import { createRemoteJWKSet, jwtVerify } from "jose";
 import { and, eq, sql } from "drizzle-orm";
 import { db } from "@/lib/db/client";
 import { auditLogs, oauthAccounts, users } from "@/lib/db/schema";
-import type { Audience } from "@/lib/auth/session";
 import { appleClientSecret, pkceChallenge, type JwtClaims } from "@/lib/domain/oauth";
 import { normalizeEmail } from "@/lib/domain/otp";
 
 /**
- * Accesso con Google e Apple (OpenID Connect, authorization code). Niente librerie esterne:
- * lo stato del giro (state, nonce, PKCE) sta in un cookie httpOnly di 10 minuti.
+ * Accesso con Google e Apple (OpenID Connect, authorization code), solo per l'area clienti:
+ * le aziende entrano con email e password. Niente librerie esterne: lo stato del giro
+ * (state, nonce, PKCE) sta in un cookie httpOnly di 10 minuti.
  */
 
 export type OAuthProvider = "google" | "apple";
 export const OAUTH_COOKIE = "geco_oauth";
-
-/** Pagina di accesso da cui è partito il giro ("azienda" o assente): si torna lì e si sceglie l'area d'arrivo. */
-export const OAUTH_AUDIENCE_COOKIE = "geco_oauth_per";
-export const audienceFromParam = (value: string | null | undefined): Audience => (value === "azienda" ? "business" : "client");
-export const loginPathFor = (audience: Audience) => (audience === "business" ? "/accedi/azienda" : "/accedi");
+export const CLIENT_LOGIN_PATH = "/accedi";
 
 // Chiavi pubbliche dei provider per verificare la firma dell'id_token (jose le scarica e le mette in cache).
 const jwks = {

@@ -2,6 +2,7 @@ import "server-only";
 import { and, count, eq, gt, isNull } from "drizzle-orm";
 import { db } from "@/lib/db/client";
 import { authTokens, users } from "@/lib/db/schema";
+import type { Audience } from "@/lib/auth/session";
 import { AUTH_TOKEN_TTL_MINUTES, authTokenUsable, hashAuthToken, newAuthToken, type AuthTokenPurpose } from "@/lib/domain/auth-token";
 import { sendEmail, showDevLinks } from "@/lib/notify";
 
@@ -57,16 +58,17 @@ export async function consumeAuthToken(
 /** Per lo sviluppo e il sito di prova: il link da mostrare a schermo, visto che l'email non parte davvero. */
 export type DevLink = { devLink?: string };
 
-export async function sendPasswordResetLink(email: string): Promise<DevLink> {
+/** `audience`: da quale accesso è partita la richiesta; dopo la nuova password si entra nella stessa area. */
+export async function sendPasswordResetLink(email: string, audience: Audience = "client"): Promise<DevLink> {
   const [user] = await db.select({ id: users.id, name: users.name }).from(users).where(eq(users.email, email)).limit(1);
   if (!user) return {};
   const token = await issue(user.id, "password_reset");
   if (!token) return {};
-  const link = `${appUrl()}/accedi/nuova-password?token=${token}`;
+  const link = `${appUrl()}/accedi/nuova-password?token=${token}${audience === "business" ? "&per=azienda" : ""}`;
   await sendEmail(
     email,
-    "Scegli una nuova password per geco",
-    `Ciao ${user.name},\n\nqualcuno (speriamo tu) ha chiesto di cambiare la password del tuo account geco.\n` +
+    "Scegli una nuova password per GecoItalia",
+    `Ciao ${user.name},\n\nqualcuno (speriamo tu) ha chiesto di cambiare la password del tuo account GecoItalia.\n` +
       `Apri questo link entro un'ora per sceglierne una nuova:\n\n${link}\n\n` +
       `Se non sei stato tu, ignora questa email: la password resta quella di prima.`,
   );
@@ -79,9 +81,9 @@ export async function sendEmailVerificationLink(user: { id: string; email: strin
   const link = `${appUrl()}/auth/verifica-email?token=${token}`;
   await sendEmail(
     user.email,
-    "Conferma la tua email su geco",
+    "Conferma la tua email su GecoItalia",
     `Ciao ${user.name},\n\nconferma che questo indirizzo è tuo aprendo il link (vale 24 ore):\n\n${link}\n\n` +
-      `Se non hai creato un account su geco, ignora questa email.`,
+      `Se non hai creato un account su GecoItalia, ignora questa email.`,
   );
   return showDevLinks() ? { devLink: link } : {};
 }

@@ -103,17 +103,17 @@ export async function logoutBusiness() {
 export type LinkResult = { ok: true; devLink?: string } | AuthResult;
 
 /** "Password dimenticata": stessa risposta che l'email sia iscritta o no. */
-export async function requestPasswordReset(rawEmail: string, turnstileToken?: string): Promise<LinkResult> {
+export async function requestPasswordReset(rawEmail: string, turnstileToken?: string, audience: Audience = "client"): Promise<LinkResult> {
   const email = parseEmail(rawEmail);
   if (!email) return { ok: false, error: "Controlla l'indirizzo email", field: "email" };
   if (await ipRateLimited("password_reset", 10, 60)) return { ok: false, error: "Troppe richieste da questo dispositivo. Riprova tra un'ora." };
   if (!(await turnstileOk(turnstileToken))) return { ok: false, error: TURNSTILE_ERROR };
-  const { devLink } = await sendPasswordResetLink(email);
+  const { devLink } = await sendPasswordResetLink(email, audience);
   return { ok: true, devLink };
 }
 
-/** Nuova password dal link: vale una volta sola, chiude le sessioni aperte altrove e fa entrare. */
-export async function resetPassword(token: string, password: string): Promise<AuthResult> {
+/** Nuova password dal link: vale una volta sola, chiude le sessioni aperte altrove e fa entrare nell'area da cui si è partiti. */
+export async function resetPassword(token: string, password: string, audience: Audience = "client"): Promise<AuthResult> {
   const problem = passwordProblem(password);
   if (problem) return { ok: false, error: problem, field: "password" };
   const passwordHash = await hashPassword(password);
@@ -127,8 +127,8 @@ export async function resetPassword(token: string, password: string): Promise<Au
     return id;
   });
   if (!userId) return { ok: false, error: "Il link non è più valido: chiedine uno nuovo." };
-  await createSession(userId);
-  redirect(await landingPathFor(userId));
+  await createSession(userId, audience);
+  redirect(await landingPathFor(userId, audience));
 }
 
 /** Rimanda il link di conferma dell'email a chi è dentro e non l'ha ancora confermata. */

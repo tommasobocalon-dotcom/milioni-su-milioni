@@ -1,24 +1,15 @@
 import { NextResponse, type NextRequest } from "next/server";
-import {
-  audienceFromParam,
-  finishOAuth,
-  isOAuthProvider,
-  loginPathFor,
-  OAUTH_AUDIENCE_COOKIE,
-  OAUTH_COOKIE,
-  OAuthError,
-  userForOAuthProfile,
-  type OAuthProvider,
-} from "@/lib/auth/oauth";
+import { CLIENT_LOGIN_PATH, finishOAuth, isOAuthProvider, OAUTH_COOKIE, OAuthError, userForOAuthProfile, type OAuthProvider } from "@/lib/auth/oauth";
 import { createSession, landingPathFor } from "@/lib/auth/session";
 
+/** Google e Apple aprono solo la sessione cliente: l'Area Partner resta con email e password. */
 async function complete(
   request: NextRequest,
   provider: string,
   input: { code: string | null; state: string | null; error: string | null; appleUser?: string | null },
 ) {
-  const audience = audienceFromParam(request.cookies.get(OAUTH_AUDIENCE_COOKIE)?.value);
-  const loginPath = loginPathFor(audience);
+  const audience = "client";
+  const loginPath = CLIENT_LOGIN_PATH;
   if (!isOAuthProvider(provider)) return NextResponse.redirect(new URL(loginPath, request.url), 303);
   let target: string;
   try {
@@ -36,7 +27,6 @@ async function complete(
   }
   const response = NextResponse.redirect(new URL(target, request.url), 303);
   response.cookies.delete({ name: OAUTH_COOKIE, path: "/auth" });
-  response.cookies.delete({ name: OAUTH_AUDIENCE_COOKIE, path: "/auth" });
   return response;
 }
 
