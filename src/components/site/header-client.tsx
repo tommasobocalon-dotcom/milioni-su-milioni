@@ -144,7 +144,7 @@ export function ExploreMenu({ sections, categories }: { sections: ExploreLink[];
         aria-expanded={open}
         aria-controls={panelId}
         onClick={() => setOpen((o) => !o)}
-        className="inline-flex h-11 items-center gap-1.5 rounded-full px-4 text-body text-ink-2 transition-colors hover:text-ink aria-expanded:text-ink"
+        className="inline-flex h-[42px] items-center gap-1.5 rounded-full px-4 text-body-s text-ink-2 transition-colors hover:text-ink aria-expanded:text-ink"
       >
         Esplora
         <ChevronDown className={cn("size-4 transition-transform duration-200", open && "rotate-180")} aria-hidden />

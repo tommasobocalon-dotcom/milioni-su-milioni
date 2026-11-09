@@ -11,14 +11,18 @@ import { cn } from "@/lib/utils";
 /**
  * Componente "Card partner" di Figma. Il piano si riconosce a colpo d'occhio (richiesta del cliente, 5/11/2026):
  * Premium = bordo e fascia oro "Partner Elite", Normal = bordo verde a sinistra e badge "Partner Pro", Base = scheda semplice.
+ * Con `lavender` (solo in Trova professionista, 9/11/2026) il lilla prende il posto dell'oro: Elite con bordo e fascia lilla,
+ * Partner Pro con lo sfondo lilla, "Sponsorizzato" lilla o bianco.
  * "Sponsorizzato" (boost) resta sempre scritto: è obbligatorio (PRD §7.3, Omnibus/P2B).
  */
 export function PartnerCard({
   p,
   headingLevel = 3,
+  lavender = false,
 }: {
   p: PartnerListItem;
   headingLevel?: 2 | 3;
+  lavender?: boolean;
 }) {
   const H = `h${headingLevel}` as "h2" | "h3";
   const premium = p.planCode === "premium";
@@ -26,16 +30,19 @@ export function PartnerCard({
   return (
     <article
       className={cn(
-        "flex flex-col overflow-hidden rounded-lg border bg-surface",
+        "flex flex-col overflow-hidden rounded-lg border",
+        normal && lavender ? "bg-tertiary" : "bg-surface",
         premium
-          ? "border-2 border-ambra-500"
+          ? lavender
+            ? "border-2 border-lavanda-300"
+            : "border-2 border-ambra-500"
           : normal
             ? "border-line border-l-4 border-l-primary"
             : "border-line",
       )}
     >
       {premium && (
-        <div className="flex items-center gap-2 bg-ambra-100 px-5 py-2">
+        <div className={cn("flex items-center gap-2 px-5 py-2", lavender ? "bg-tertiary" : "bg-ambra-100")}>
           <span className="caps-label inline-flex items-center gap-1.5 text-ink">
             <Star
               className="size-3.5 fill-ambra-500 text-ambra-500"
@@ -54,7 +61,10 @@ export function PartnerCard({
         </Link>
         <div className="flex min-w-0 flex-1 flex-col gap-2">
           {p.sponsored && !premium && (
-            <Badge kind="sponsored" className="self-start" />
+            <Badge
+              kind="sponsored"
+              className={cn("self-start", lavender && (normal ? "bg-surface" : "bg-tertiary"))}
+            />
           )}
           <div className="flex flex-wrap items-center gap-2">
             <H className="text-h4 font-semibold">

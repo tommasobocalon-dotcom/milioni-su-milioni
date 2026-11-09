@@ -8,7 +8,7 @@ export function BellLink({ unread }: { unread: number }) {
     <Link
       href="/area-partner/notifiche"
       aria-label={unread ? `Posta in arrivo, ${unread} da leggere` : "Posta in arrivo"}
-      className="relative inline-flex size-9 items-center justify-center rounded-md text-on-brand-muted hover:bg-bosco-800 hover:text-on-brand"
+      className="relative inline-flex size-9 items-center justify-center rounded-md text-on-brand-muted hover:bg-bosco-700 hover:text-on-brand"
     >
       <Bell className="size-5" aria-hidden />
       {unread > 0 && (

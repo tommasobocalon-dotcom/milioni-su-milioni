@@ -19,8 +19,8 @@ export async function SiteHeader() {
 
   return (
     <HeaderFrame>
-      <div className="container-page flex h-[72px] items-center gap-4 lg:gap-6">
-        <Wordmark />
+      <div className="flex h-[72px] items-center gap-4 px-4 lg:gap-6">
+        <Wordmark className="text-xl" />
         <HeaderSearch />
         <nav aria-label="Principale" className="ml-auto hidden items-center md:flex">
           <div className="flex items-center lg:hero-search-hidden:max-xl:hidden">
@@ -28,13 +28,13 @@ export async function SiteHeader() {
           </div>
           <Link
             href="/accedi"
-            className="inline-flex h-11 items-center rounded-full px-4 text-body font-semibold text-primary transition-colors hover:bg-subtle"
+            className="ml-2 inline-flex h-[42px] items-center rounded-full px-5 text-body-s font-bold text-ink transition-colors hover:bg-subtle"
           >
             Area clienti
           </Link>
           <Link
             href="/accedi/azienda"
-            className="ml-1 inline-flex h-11 items-center rounded-full bg-subtle px-5 text-body font-semibold text-primary transition-[background-color,transform] duration-150 hover:bg-brand-soft active:scale-[0.97]"
+            className="ml-4 inline-flex h-[42px] items-center rounded-full bg-subtle px-5 text-body-s font-bold text-primary transition-[background-color,transform] duration-150 hover:bg-brand-soft active:scale-[0.97]"
           >
             Area aziende
           </Link>

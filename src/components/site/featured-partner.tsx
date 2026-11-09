@@ -7,17 +7,22 @@ import { LogoPartner } from "@/components/ui/logo-partner";
 import { Rating } from "@/components/ui/stars";
 import type { PartnerListItem } from "@/lib/data/search";
 import { formatDistanceKm } from "@/lib/domain/format";
+import { cn } from "@/lib/utils";
 
 /**
  * Riquadro grande in cima ai risultati: un'azienda Premium (con boost "Sponsorizzato nella ricerca" se c'è), a rotazione tra i visitatori
  * (ranking.ts). È un posto a pagamento: l'etichetta "Sponsorizzato" c'è sempre.
+ * Con `lavender` (Trova professionista) è lilla invece che oro.
  */
-export function FeaturedPartner({ p }: { p: PartnerListItem }) {
+export function FeaturedPartner({ p, lavender = false }: { p: PartnerListItem; lavender?: boolean }) {
   const plan = publicPlanBadge(p.planCode);
   return (
     <article
       aria-label={`In evidenza: ${p.displayName}`}
-      className="grid overflow-hidden rounded-lg border border-ambra-500/40 bg-sponsor md:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]"
+      className={cn(
+        "grid overflow-hidden rounded-lg border md:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]",
+        lavender ? "border-lavanda-300 bg-tertiary" : "border-ambra-500/40 bg-sponsor",
+      )}
     >
       <Link
         href={p.href}
@@ -42,8 +47,8 @@ export function FeaturedPartner({ p }: { p: PartnerListItem }) {
       </Link>
       <div className="flex flex-col gap-3 p-6">
         <div className="flex flex-wrap items-center gap-2">
-          <Badge kind="sponsored" />
-          {plan && <Badge kind={plan} />}
+          <Badge kind="sponsored" className={cn(lavender && "bg-surface")} />
+          {plan && <Badge kind={plan} className={cn(lavender && plan === "premium" && "bg-lavanda-300 [&>svg]:text-ambra-500")} />}
         </div>
         <div className="flex items-center gap-3">
           {p.coverUrl && (

@@ -30,7 +30,7 @@ function NavList({ pathname }: { pathname: string | null }) {
           aria-current={active(href, also) ? "page" : undefined}
           className={cn(
             "flex shrink-0 items-center gap-3 rounded-md px-3 py-2 text-body-s font-medium",
-            active(href, also) ? "bg-primary text-on-brand" : "text-on-brand-muted hover:bg-bosco-800 hover:text-on-brand",
+            active(href, also) ? "bg-bosco-600 text-on-brand" : "text-on-brand-muted hover:bg-bosco-700 hover:text-on-brand",
           )}
         >
           <Icon className="size-[18px]" aria-hidden />
@@ -50,7 +50,7 @@ export function PartnerSidebar({ bell }: { bell: React.ReactNode }) {
   return (
     <aside className="flex shrink-0 flex-col bg-brand text-on-brand lg:sticky lg:top-0 lg:h-screen lg:w-64">
       <div className="flex items-center justify-between px-4 py-4 lg:px-5 lg:py-6">
-        <Wordmark inverted label="GecoItalia, sito pubblico" />
+        <Wordmark className="text-xl text-on-brand" label="GecoItalia, sito pubblico" />
         <div className="flex items-center gap-1">
           {bell}
           <form action={logoutBusiness} className="lg:hidden">
@@ -68,7 +68,7 @@ export function PartnerSidebar({ bell }: { bell: React.ReactNode }) {
       </nav>
       <div className="hidden p-4 lg:block">
         <form action={logoutBusiness}>
-          <button className="inline-flex w-full items-center gap-2 rounded-md px-3 py-2 text-body-s text-on-brand-muted hover:bg-bosco-800 hover:text-on-brand">
+          <button className="inline-flex w-full items-center gap-2 rounded-md px-3 py-2 text-body-s text-on-brand-muted hover:bg-bosco-700 hover:text-on-brand">
             <LogOut className="size-4" aria-hidden /> Esci
           </button>
         </form>

@@ -202,7 +202,7 @@ export async function Results({ mode, params }: { mode: "agency" | "pro"; params
             <p id="ordinamento" className="flex gap-2 rounded-md bg-subtle p-3 text-caption text-ink-2">
               <Info className="size-4 shrink-0" aria-hidden />
               <span>
-                Come ordiniamo: mostriamo solo chi lavora nella zona cercata, poi prima i piani più alti (Partner Elite con il bordo oro, Partner Pro con il bordo verde, poi gli altri)
+                Come ordiniamo: mostriamo solo chi lavora nella zona cercata, poi prima i piani più alti ({mode === "pro" ? "Partner Elite con il bordo lilla, Partner Pro con lo sfondo lilla" : "Partner Elite con il bordo oro, Partner Pro con il bordo verde"}, poi gli altri)
                 e chi ha un boost attivo, etichettato &quot;Sponsorizzato&quot;. Tra aziende dello stesso piano l&apos;ordine cambia a
                 ogni visita.{" "}
                 <Link href="/come-funziona#ordinamento" className="font-semibold text-primary underline">
@@ -221,9 +221,9 @@ export async function Results({ mode, params }: { mode: "agency" | "pro"; params
           >
             <SlidersHorizontal className="size-4" aria-hidden /> Filtri e ordinamento
           </a>
-          {featured && <FeaturedPartner p={featured} />}
+          {featured && <FeaturedPartner p={featured} lavender={mode === "pro"} />}
           {results.map((p) => (
-            <PartnerCard key={p.id} p={p} />
+            <PartnerCard key={p.id} p={p} lavender={mode === "pro"} />
           ))}
           {total === 0 && (
             <div className="flex flex-col items-center gap-4 rounded-lg border border-line bg-surface p-10 text-center">

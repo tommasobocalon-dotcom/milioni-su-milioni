@@ -56,7 +56,7 @@ export function ResultsMap({ points, className }: { points: MapPoint[]; classNam
       const popup = new Popup({ offset: 24, closeButton: false }).setHTML(
         `<a href="${esc(p.href)}" class="font-semibold text-primary underline">${esc(p.name)}</a>`,
       );
-      new Marker({ color: "#344e41" }).setLngLat([p.lng, p.lat]).setPopup(popup).addTo(map);
+      new Marker({ color: "#243e36" }).setLngLat([p.lng, p.lat]).setPopup(popup).addTo(map);
       bounds.extend([p.lng, p.lat]);
     }
     if (points.length > 1) map.fitBounds(bounds, { padding: 32, maxZoom: 14 });

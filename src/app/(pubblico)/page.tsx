@@ -14,11 +14,11 @@ export default function HomePage() {
     <>
       <Hero next="#da-dove-partire" />
       <EntryBlocks id="da-dove-partire" />
-      <Suspense fallback={<div className="h-[26rem] bg-surface" aria-hidden />}>
+      <Suspense fallback={<div className="h-[26rem] bg-page" aria-hidden />}>
         <SponsorStrip />
       </Suspense>
       <HowItWorks />
-      <section aria-labelledby="province" className="bg-surface py-28 md:py-36">
+      <section aria-labelledby="province" className="bg-page py-28 md:py-36">
         <div className="container-page">
           <div data-reveal className="grid grid-cols-1 items-end gap-4 lg:grid-cols-[1fr_minmax(0,26rem)] lg:gap-10">
             <h2 id="province" className="font-display text-[2.25rem] leading-[1.08] tracking-[-0.02em] text-balance md:text-display-l">

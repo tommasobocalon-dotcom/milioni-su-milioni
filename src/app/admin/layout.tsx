@@ -5,15 +5,15 @@ import type { Metadata, Viewport } from "next";
  * computer e telefono (manifest in public/gestionale).
  */
 export const metadata: Metadata = {
-  title: { default: "Gestionale", template: "%s · Gestionale geco" },
+  title: { default: "Gestionale", template: "%s · Gestionale GecoItalia" },
   robots: { index: false },
-  applicationName: "Gestionale geco",
+  applicationName: "Gestionale GecoItalia",
   manifest: "/gestionale/manifest.webmanifest",
   appleWebApp: { capable: true, title: "Gestionale", statusBarStyle: "default" },
   icons: { apple: "/gestionale/apple-touch-icon.png" },
 };
 
-export const viewport: Viewport = { themeColor: "#344e41" };
+export const viewport: Viewport = { themeColor: "#243e36" };
 
 export default function AdminRootLayout({ children }: LayoutProps<"/admin">) {
   return children;

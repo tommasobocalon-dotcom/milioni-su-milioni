@@ -21,7 +21,7 @@ export async function SponsorStrip() {
   return (
     <section
       aria-labelledby="in-evidenza"
-      className="bg-surface py-20 md:py-24"
+      className="bg-page py-20 md:py-24"
     >
       <div
         data-reveal
@@ -116,7 +116,7 @@ function SponsorRow({
             href={s.href}
             tabIndex={copy ? -1 : undefined}
             aria-label={`${s.displayName}, ${s.categoryName.toLowerCase()} a ${s.municipalityName} (sponsorizzato)`}
-            className="group/logo flex h-24 items-center gap-3.5 rounded-lg px-6 transition-colors hover:bg-page md:px-8"
+            className="group/logo flex h-24 items-center gap-3.5 rounded-lg px-6 transition-colors hover:bg-surface md:px-8"
           >
             <LogoPartner
               name={s.displayName}

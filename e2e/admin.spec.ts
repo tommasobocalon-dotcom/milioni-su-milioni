@@ -30,7 +30,7 @@ async function login(page: Page, email: string) {
 test("il gestionale è riservato agli amministratori", async ({ page }) => {
   await page.goto("/admin");
   await expect(page).toHaveURL(/\/admin\/accedi$/);
-  await expect(page.getByRole("heading", { level: 1, name: "Gestionale geco" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: "Gestionale GecoItalia" })).toBeVisible();
 
   await login(page, PARTNER);
   await expect(page).toHaveURL(/\/area-partner$/);

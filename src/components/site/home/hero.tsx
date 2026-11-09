@@ -8,28 +8,27 @@ import { HeroSearchForm } from "./hero-search-form";
 import { HeroSlides } from "./hero-slides";
 
 /**
- * Hero sul modello di Thumbtack: foto a tutto schermo, titolo grande, ricerca in una scheda bianca,
+ * Hero sul modello di Thumbtack: video a tutto schermo, titolo grande, ricerca in una scheda bianca,
  * riga di fiducia e numeri veri dal database. La ricerca porta a /cerca come prima (PRD §5.1).
  */
 export async function Hero({ next }: { next: string }) {
   const places = await getMunicipalities();
-  const slides = HERO_SLIDES.map((s) => ({ src: s.photo.src, label: s.label, caption: s.caption, href: s.href }));
 
   return (
     <section
       aria-labelledby="hero-titolo"
-      className="relative isolate flex min-h-[max(640px,min(calc(100svh-72px),880px))] flex-col overflow-hidden bg-neutro-900 text-on-brand"
+      className="relative isolate flex min-h-dvh md:min-h-[calc(100dvh-72px)] flex-col overflow-hidden bg-black text-on-brand"
     >
-      <HeroSlides slides={slides} next={next}>
-        <div className="container-page relative z-10 flex flex-1 flex-col justify-center pt-14 pb-10 md:pt-20 md:pb-6">
-          <div className="flex max-w-[37.5rem] flex-col">
+      <HeroSlides slides={HERO_SLIDES} next={next}>
+        <div className="relative z-10 mx-auto flex w-full max-w-[946px] flex-1 flex-col justify-center px-4 py-10 min-[482px]:px-8 md:py-0 min-[1011px]:px-0">
+          <div className="flex max-w-[600px] flex-col min-[482px]:max-w-[588px]">
             <h1
               id="hero-titolo"
-              className="hero-rise font-display text-[2.75rem] leading-[1.02] tracking-[-0.025em] text-balance sm:text-[3.5rem] lg:text-[4rem]"
+              className="hero-rise font-display text-[2.25rem] [font-variation-settings:'wght'_500] leading-[1.05] tracking-[-0.02em] text-balance min-[482px]:text-[3rem]"
             >
               Casa tua, in buone mani.
             </h1>
-            <p className="hero-rise mt-5 max-w-[31rem] text-body-l font-semibold [animation-delay:80ms]">
+            <p className="hero-rise mt-4 mb-6 max-w-[460px] text-body leading-[1.3] font-normal [animation-delay:80ms]">
               Agenzie, tecnici e artigiani verificati del Veneto, per lavori grandi e piccoli: tutto in un posto solo.
             </p>
 
@@ -41,8 +40,8 @@ export async function Hero({ next }: { next: string }) {
               </datalist>
             </HeroSearchForm>
 
-            <p className="hero-rise mt-5 flex items-center gap-2.5 text-body [animation-delay:240ms]">
-              <Lock className="size-5 shrink-0" aria-hidden />
+            <p className="hero-rise mt-[18px] flex items-center gap-2 text-body-s [animation-delay:240ms]">
+              <Lock className="size-[18px] shrink-0" aria-hidden />
               Nessuna chiamata finché non sei tu a chiederla.
             </p>
             <HeroStats />
@@ -62,7 +61,7 @@ async function HeroStats() {
     {
       value: (
         <>
-          {formatRating(s.average)} <Star className="mb-1 inline size-6 fill-star text-star" aria-hidden />
+          {formatRating(s.average)} <Star className="ml-1 inline size-5 fill-star text-star" aria-hidden />
         </>
       ),
       label: `su ${s.reviews.toLocaleString("it-IT")} recensioni verificate`,
@@ -72,11 +71,11 @@ async function HeroStats() {
     { value: s.categories.toLocaleString("it-IT"), label: "tipi di professionisti", sr: undefined },
   ];
   return (
-    <dl className="hero-rise mt-8 flex flex-wrap gap-x-10 gap-y-5 [animation-delay:320ms]">
+    <dl className="hero-rise mt-4 flex flex-wrap gap-6 [animation-delay:320ms]">
       {items.map((it) => (
         <div key={it.label} className="flex flex-col-reverse">
-          <dt className="text-body">{it.label}</dt>
-          <dd className="font-display text-[2.25rem] leading-tight tracking-[-0.02em]">
+          <dt className="mt-2 text-body-s">{it.label}</dt>
+          <dd className="font-display text-[1.75rem] leading-[1.1] tracking-[-0.02em]">
             {it.sr && <span className="sr-only">{it.sr}, </span>}
             <span aria-hidden={it.sr ? true : undefined}>{it.value}</span>
           </dd>

@@ -1,4 +1,3 @@
-import Image from "next/image";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
@@ -134,7 +133,7 @@ export function AuthShell({ audience = "client", children }: { audience?: Audien
         </p>
       </div>
       <aside className="hidden flex-col justify-center gap-10 bg-brand px-16 py-16 text-on-brand lg:flex">
-        <Image src="/logo/gecoitalia-chiaro.png" alt="" width={790} height={523} className="h-auto w-64" />
+        <p aria-hidden className="font-wordmark text-5xl font-extrabold tracking-[-0.01em]">GECOITALIA</p>
         <div className="flex max-w-md flex-col gap-6">
           <p className="font-display text-h2">{screen.claim}</p>
           <ul className="flex flex-col gap-3 text-body text-on-brand-muted">

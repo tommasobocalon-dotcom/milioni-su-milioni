@@ -13,9 +13,8 @@ export default function AdminLoginPage() {
     <main id="contenuto" className="flex min-h-screen items-center justify-center px-4 py-10">
       <div className="flex w-full max-w-sm flex-col gap-6">
         <div className="flex flex-col items-center gap-3 text-center">
-          <span className="inline-flex size-24 items-center justify-center overflow-hidden rounded-full bg-brand-soft">
-          </span>
-          <h1 className="font-display text-h2">Gestionale geco</h1>
+          <p aria-hidden className="font-wordmark text-3xl font-extrabold tracking-[-0.01em] text-brand">GECOITALIA</p>
+          <h1 className="font-display text-h2">Gestionale GecoItalia</h1>
           <p className="text-body-s text-ink-2">Riservato al team: assistenza, partner, segnalazioni e recensioni.</p>
         </div>
         <div className="rounded-lg border border-line bg-surface p-6">

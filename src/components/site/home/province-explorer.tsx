@@ -71,7 +71,7 @@ export function ProvinceExplorer() {
                 onBlur={() => setActive(null)}
                 className={cn(
                   "group/prov flex h-full flex-col gap-1 rounded-lg px-5 py-4 transition-colors duration-200",
-                  on ? "bg-brand text-on-brand" : "bg-page text-ink",
+                  on ? "bg-brand text-on-brand" : "bg-surface text-ink",
                 )}
               >
                 <span className="flex items-center justify-between gap-3">

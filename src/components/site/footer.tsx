@@ -50,7 +50,7 @@ export function SiteFooter() {
     <footer className="mt-auto bg-brand text-salvia-200">
       <div className="container-page grid gap-12 pt-16 pb-12 md:grid-cols-2 md:pt-20 lg:grid-cols-[1.3fr_repeat(3,1fr)]">
         <div className="flex flex-col gap-4">
-          <Wordmark inverted />
+          <Wordmark className="text-3xl text-on-brand" />
           <p className="max-w-xs text-body">Casa tua, in buone mani. Agenzie, tecnici e artigiani verificati del Veneto.</p>
         </div>
         {COLUMNS.map((c) => (
@@ -64,7 +64,7 @@ export function SiteFooter() {
           </nav>
         ))}
       </div>
-      <div className="bg-bosco-800">
+      <div className="bg-bosco-900">
         <div className="container-page flex flex-col gap-3 py-5 text-body-s md:flex-row md:items-start md:justify-between md:gap-8">
           <p>© 2026 GecoItalia · Veneto, Italia</p>
         </div>

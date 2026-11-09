@@ -14,6 +14,13 @@ const inter = localFont({
   weight: "100 900",
   display: "swap",
 });
+// Solo le lettere di "GECOITALIA" (sottoinsieme di Google Fonts, licenza OFL): serve al logo e basta.
+const logo = localFont({
+  variable: "--font-unbounded",
+  src: "./fonts/unbounded-logo.woff2",
+  weight: "800",
+  display: "block",
+});
 
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.APP_URL ?? "http://localhost:3000"),
@@ -23,12 +30,12 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#344e41",
+  themeColor: "#243e36",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="it" className={`${manrope.variable} ${inter.variable} h-full antialiased`}>
+    <html lang="it" className={`${manrope.variable} ${inter.variable} ${logo.variable} h-full antialiased`}>
       <body className="flex min-h-full flex-col">{children}</body>
     </html>
   );

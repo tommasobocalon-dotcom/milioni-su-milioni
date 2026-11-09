@@ -78,7 +78,7 @@ export default async function ForProfessionalsPage() {
               <ButtonLink href="/registrazione-partner" variant="light">
                 Registra la tua attività
               </ButtonLink>
-              <ButtonLink href="#piani" variant="ghost" className="text-on-brand hover:bg-bosco-800">
+              <ButtonLink href="#piani" variant="ghost" className="text-on-brand hover:bg-bosco-700">
                 Vedi i prezzi
               </ButtonLink>
             </div>

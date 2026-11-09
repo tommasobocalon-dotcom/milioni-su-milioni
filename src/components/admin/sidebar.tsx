@@ -28,7 +28,7 @@ function NavList({ pathname, badge }: { pathname: string | null; badge: React.Re
           aria-current={active(href) ? "page" : undefined}
           className={cn(
             "flex shrink-0 items-center gap-3 rounded-md px-3 py-2 text-body-s font-medium",
-            active(href) ? "bg-primary text-on-brand" : "text-on-brand-muted hover:bg-bosco-800 hover:text-on-brand",
+            active(href) ? "bg-bosco-600 text-on-brand" : "text-on-brand-muted hover:bg-bosco-700 hover:text-on-brand",
           )}
         >
           <Icon className="size-[18px]" aria-hidden />
@@ -49,9 +49,9 @@ export function AdminSidebar({ ticketBadge, siteHref }: { ticketBadge: React.Rea
   return (
     <aside className="flex shrink-0 flex-col bg-brand text-on-brand lg:sticky lg:top-0 lg:h-screen lg:w-64">
       <div className="flex items-center justify-between px-4 py-4 lg:px-5 lg:py-6">
-        <span className="flex flex-col gap-1">
-          <Wordmark inverted href="/admin" label="Gestionale GecoItalia, panoramica" />
-          <span className="text-caption text-on-brand-muted">Gestionale</span>
+        <span className="flex items-center gap-3">
+          <Wordmark className="text-xl text-on-brand" href="/admin" label="Gestionale GecoItalia, panoramica" />
+          <span className="text-body-s font-semibold text-on-brand-muted">Gestionale</span>
         </span>
         <form action={logoutAdmin} className="lg:hidden">
           <button className="inline-flex items-center gap-1.5 rounded-md px-2 py-1.5 text-body-s text-on-brand-muted hover:text-on-brand">
@@ -65,11 +65,11 @@ export function AdminSidebar({ ticketBadge, siteHref }: { ticketBadge: React.Rea
         </Suspense>
       </nav>
       <div className="hidden flex-col gap-1 p-4 lg:flex">
-        <a href={siteHref} className="inline-flex items-center gap-2 rounded-md px-3 py-2 text-body-s text-on-brand-muted hover:bg-bosco-800 hover:text-on-brand">
+        <a href={siteHref} className="inline-flex items-center gap-2 rounded-md px-3 py-2 text-body-s text-on-brand-muted hover:bg-bosco-700 hover:text-on-brand">
           <Globe className="size-4" aria-hidden /> Vai al sito
         </a>
         <form action={logoutAdmin}>
-          <button className="inline-flex w-full items-center gap-2 rounded-md px-3 py-2 text-body-s text-on-brand-muted hover:bg-bosco-800 hover:text-on-brand">
+          <button className="inline-flex w-full items-center gap-2 rounded-md px-3 py-2 text-body-s text-on-brand-muted hover:bg-bosco-700 hover:text-on-brand">
             <LogOut className="size-4" aria-hidden /> Esci
           </button>
         </form>
