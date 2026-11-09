@@ -15,6 +15,11 @@ const sql =
     max: process.env.NODE_ENV === "production" ? 5 : 3,
     // Il pooler di Supabase in modalità transaction non supporta i prepared statement.
     prepare: false,
+    // Su Vercel le funzioni inattive vengono congelate e il pooler chiude le connessioni: senza questi limiti una
+    // connessione già chiusa veniva riusata e la richiesta restava appesa fino al timeout di 300 s (9/11/2026).
+    idle_timeout: 5,
+    max_lifetime: 60 * 5,
+    connect_timeout: 10,
     onnotice: () => {},
   });
 
