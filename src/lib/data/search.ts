@@ -23,6 +23,7 @@ import { distanceKm, formatPriceRange, type PriceUnit } from "@/lib/domain/forma
 import { canBoost, RATING_PRIOR, rankListing, VISITOR_COOKIE } from "@/lib/domain/ranking";
 import { bayesianScore } from "@/lib/domain/rating";
 import type { Place } from "./catalog";
+import { pageItems } from "@/lib/domain/pagination";
 
 export type SortKey = "rilevanza" | "valutazione" | "recensioni" | "distanza" | "prezzo";
 
@@ -65,7 +66,11 @@ export async function searchPartners(input: {
   place?: Place | null;
   minRating?: number;
   sort?: SortKey;
-}): Promise<{ featured: PartnerListItem | null; results: PartnerListItem[] }> {
+  /** Con `page` i risultati sono tagliati a `pageSize` per pagina, `firstPageSize` nella prima (dove c'è anche il riquadro in evidenza). */
+  page?: number;
+  pageSize?: number;
+  firstPageSize?: number;
+}): Promise<{ featured: PartnerListItem | null; results: PartnerListItem[]; total: number; page: number; pages: number }> {
   await connection();
   // Ogni visitatore ha il suo ordine tra pari grado (cookie di sessione impostato in proxy.ts).
   const visitorSeed = (await cookies()).get(VISITOR_COOKIE)?.value ?? "";
@@ -136,7 +141,7 @@ export async function searchPartners(input: {
     .leftJoin(plans, eq(plans.id, subscriptions.planId))
     .where(and(...conditions));
 
-  if (rows.length === 0) return { featured: null, results: [] };
+  if (rows.length === 0) return { featured: null, results: [], total: 0, page: 1, pages: 1 };
   const ids = rows.map((r) => r.id);
 
   // Prezzo indicativo: quello del servizio cercato, altrimenti il primo del listino.
@@ -230,7 +235,11 @@ export async function searchPartners(input: {
     prezzo: (a, b) => (a.price?.fromCents ?? Infinity) - (b.price?.fromCents ?? Infinity),
   };
   const sort = input.sort ?? "rilevanza";
-  const results = sort === "rilevanza" ? ranked.results : [...ranked.results].sort(sorters[sort]);
+  const sorted = sort === "rilevanza" ? ranked.results : [...ranked.results].sort(sorters[sort]);
+  const total = sorted.length + (ranked.featured ? 1 : 0);
+  const paged = input.page ? pageItems(sorted, input.page, input.pageSize ?? 10, input.firstPageSize) : { items: sorted, page: 1, pages: 1 };
+  const featured = paged.page === 1 ? ranked.featured : null;
+  const results = paged.items;
 
   const strip = (i: (typeof items)[number]): PartnerListItem => {
     const out: Partial<typeof i> = { ...i };
@@ -239,13 +248,17 @@ export async function searchPartners(input: {
     delete out.bayes;
     return out as PartnerListItem;
   };
+  // Impressioni solo per le schede davvero mostrate in questa pagina.
   await recordProfileEvents(
-    items.map((i) => i.id),
+    [...(featured ? [featured] : []), ...results].map((i) => i.id),
     "impression",
   );
   return {
     // Il riquadro grande è un posto a pagamento: sempre etichettato "Sponsorizzato" (P2B, Omnibus).
-    featured: ranked.featured ? { ...strip(ranked.featured), sponsored: true } : null,
+    featured: featured ? { ...strip(featured), sponsored: true } : null,
     results: results.map(strip),
+    total,
+    page: paged.page,
+    pages: paged.pages,
   };
 }

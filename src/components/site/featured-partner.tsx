@@ -30,16 +30,17 @@ export function FeaturedPartner({ p, lavender = false }: { p: PartnerListItem; l
         aria-hidden
         className="relative block aspect-[16/10] bg-subtle md:aspect-auto md:min-h-72"
       >
-        {p.coverUrl ? (
+        {p.coverUrl || p.logoUrl ? (
+          // Senza foto dei lavori il logo riempie tutto il riquadro (richieste del cliente, 5/11 e 9/11/2026).
           <Image
-            src={p.coverUrl}
+            src={(p.coverUrl ?? p.logoUrl)!}
             alt=""
             fill
             sizes="(min-width: 768px) 40vw, 100vw"
             className="object-cover"
           />
         ) : (
-          // Senza foto dei lavori si vede il logo dell'azienda (recap del cliente, 5/11/2026).
+          // Né foto né logo: le iniziali al centro.
           <span className="absolute inset-0 flex items-center justify-center">
             <LogoPartner name={p.displayName} src={p.logoUrl} size={96} />
           </span>
@@ -71,13 +72,6 @@ export function FeaturedPartner({ p, lavender = false }: { p: PartnerListItem; l
             {p.distanceKm !== null && ` · ${formatDistanceKm(p.distanceKm)}`}
           </span>
         </p>
-        {p.price && (
-          <p className="self-start rounded-md bg-surface px-2.5 py-1 text-body-s">
-            {p.price.serviceName}{" "}
-            <strong className="font-semibold">{p.price.label}</strong>
-            <span title="Prezzo indicativo pubblicato dal partner"> *</span>
-          </p>
-        )}
         <div className="mt-auto flex flex-wrap items-center gap-3 pt-2">
           <ButtonLink href={`/richiesta/${p.slug}`}>
             Richiedi contatto

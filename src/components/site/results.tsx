@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ChevronRight, Info, SlidersHorizontal } from "lucide-react";
+import { Award, ChevronLeft, ChevronRight, Info, SlidersHorizontal, Sparkles, Star } from "lucide-react";
 import { PartnerCard } from "@/components/site/partner-card";
 import { Button } from "@/components/ui/button";
 import { ChipLink } from "@/components/ui/chip";
@@ -8,6 +8,15 @@ import { findPlace, getCategories, getCategoryBySlug, getMunicipalities, getServ
 import { FeaturedPartner } from "@/components/site/featured-partner";
 import { ResultsMap, type MapPoint } from "@/components/site/results-map";
 import { searchPartners, type SortKey } from "@/lib/data/search";
+import { pageNumbers, parsePage } from "@/lib/domain/pagination";
+import { cn } from "@/lib/utils";
+
+/**
+ * Schede per pagina nei risultati: 7 dalla seconda pagina in poi; la prima è più corta (5 + il riquadro grande in evidenza) così l'elenco supera
+ * di poco filtri e mappa a sinistra senza lasciare spazio vuoto ai lati (richiesta del cliente, 9/11/2026).
+ */
+const FIRST_PAGE_SIZE = 5;
+const PAGE_SIZE = 7;
 
 export type ResultsParams = {
   categoria?: string;
@@ -15,6 +24,7 @@ export type ResultsParams = {
   servizio?: string;
   voto?: string;
   ordina?: string;
+  pagina?: string;
 };
 
 const SORTS: { value: SortKey; label: string }[] = [
@@ -34,6 +44,7 @@ export function parseResultsParams(sp: Record<string, string | string[] | undefi
     servizio: first(sp.servizio),
     voto: first(sp.voto),
     ordina: first(sp.ordina),
+    pagina: first(sp.pagina),
   };
 }
 
@@ -48,18 +59,22 @@ export async function Results({ mode, params }: { mode: "agency" | "pro"; params
   const minRating = params.voto ? Number(params.voto.replace(",", ".")) : undefined;
   const sort = (SORTS.find((s) => s.value === params.ordina)?.value ?? "rilevanza") as SortKey;
 
-  const { featured, results } = await searchPartners({
+  const { featured, results, total, page, pages } = await searchPartners({
     partnerType: mode,
     categoryId: category?.id,
     serviceId: service?.id,
     place,
     minRating,
     sort,
+    page: parsePage(params.pagina),
+    pageSize: PAGE_SIZE,
+    firstPageSize: FIRST_PAGE_SIZE,
   });
   const places = await getMunicipalities();
 
   const href = (patch: Partial<ResultsParams>) => {
-    const next = { ...params, ...patch };
+    // Ogni cambio di filtro riparte dalla prima pagina; solo la paginazione passa `pagina`.
+    const next = { ...params, pagina: undefined, ...patch };
     const q = new URLSearchParams();
     for (const [k, v] of Object.entries(next)) if (v) q.set(k, v);
     const s = q.toString();
@@ -73,7 +88,6 @@ export async function Results({ mode, params }: { mode: "agency" | "pro"; params
 
   const what = mode === "agency" ? "Agenzie immobiliari" : category?.pluralName ?? "Professionisti e artigiani";
   const where = place ? `a ${place.name}` : "in Veneto";
-  const total = (featured ? 1 : 0) + results.length;
   const proCategories = allCategories.filter((c) => c.partnerType !== "agency");
 
   return (
@@ -106,7 +120,7 @@ export async function Results({ mode, params }: { mode: "agency" | "pro"; params
         </h1>
         <p className="text-body text-ink-2">
           {total} {total === 1 ? "risultato" : "risultati"}
-          {mode === "pro" && " · prezzi indicativi pubblicati dai partner"}
+          {mode === "pro" && " · prezzi indicativi nel profilo di ogni partner"}
           {mode === "agency" && " · valutazioni verificate e portfolio immobili"}
         </p>
       </div>
@@ -202,8 +216,8 @@ export async function Results({ mode, params }: { mode: "agency" | "pro"; params
             <p id="ordinamento" className="flex gap-2 rounded-md bg-subtle p-3 text-caption text-ink-2">
               <Info className="size-4 shrink-0" aria-hidden />
               <span>
-                Come ordiniamo: mostriamo solo chi lavora nella zona cercata, poi prima i piani più alti ({mode === "pro" ? "Partner Elite con il bordo lilla, Partner Pro con lo sfondo lilla" : "Partner Elite con il bordo oro, Partner Pro con il bordo verde"}, poi gli altri)
-                e chi ha un boost attivo, etichettato &quot;Sponsorizzato&quot;. Tra aziende dello stesso piano l&apos;ordine cambia a
+                Come ordiniamo: mostriamo solo chi lavora nella zona cercata, poi prima i piani più alti (Partner Elite, fascia {mode === "pro" ? "lilla" : "oro"}; Partner Pro, fascia verde; poi gli altri)
+                e chi ha comprato più visibilità: la sua fascia è più piena e porta l&apos;etichetta &quot;Sponsorizzato&quot;. Tra aziende dello stesso piano l&apos;ordine cambia a
                 ogni visita.{" "}
                 <Link href="/come-funziona#ordinamento" className="font-semibold text-primary underline">
                   Dettagli
@@ -221,10 +235,12 @@ export async function Results({ mode, params }: { mode: "agency" | "pro"; params
           >
             <SlidersHorizontal className="size-4" aria-hidden /> Filtri e ordinamento
           </a>
+          {total > 0 && <PlanLegend lavender={mode === "pro"} />}
           {featured && <FeaturedPartner p={featured} lavender={mode === "pro"} />}
           {results.map((p) => (
             <PartnerCard key={p.id} p={p} lavender={mode === "pro"} />
           ))}
+          {pages > 1 && <Pagination page={page} pages={pages} href={(n) => href({ pagina: n > 1 ? String(n) : undefined })} />}
           {total === 0 && (
             <div className="flex flex-col items-center gap-4 rounded-lg border border-line bg-surface p-10 text-center">
               <h2 className="text-h3 font-semibold">Nessun risultato con questi filtri</h2>
@@ -256,5 +272,90 @@ export function ResultsSkeleton() {
         </div>
       </div>
     </div>
+  );
+}
+
+/** Legenda sopra i risultati: come si riconoscono i piani e chi ha comprato visibilità (richiesta del cliente, 9/11/2026). */
+function PlanLegend({ lavender }: { lavender: boolean }) {
+  return (
+    <ul aria-label="Legenda delle schede" className="flex flex-wrap items-center gap-x-5 gap-y-2 text-body-s text-ink-2">
+      <li className="inline-flex items-center gap-2">
+        <span className={lavender ? "inline-flex h-6 items-center gap-1 rounded-full border border-lavanda-300 bg-tertiary px-2 text-caption font-semibold text-ink" : "inline-flex h-6 items-center gap-1 rounded-full border border-ambra-500 bg-ambra-100 px-2 text-caption font-semibold text-ink"}>
+          <Star className="size-3.5 fill-ambra-500 text-ambra-500" aria-hidden /> Partner Elite
+        </span>
+        piano più alto
+      </li>
+      <li className="inline-flex items-center gap-2">
+        <span className="inline-flex h-6 items-center gap-1 rounded-full bg-brand-soft/40 px-2 text-caption font-semibold text-ink">
+          <Award className="size-3.5 text-primary" aria-hidden /> Partner Pro
+        </span>
+        piano intermedio
+      </li>
+      <li className="inline-flex items-center gap-2">
+        <span className="inline-flex h-6 items-center gap-1 rounded-full border border-line bg-surface px-2 text-caption font-semibold text-ink">
+          <Sparkles className="size-3.5" aria-hidden /> Sponsorizzato
+        </span>
+        ha pagato per più visibilità
+      </li>
+    </ul>
+  );
+}
+
+/** Paginazione dei risultati: frecce e numeri di pagina, con "…" quando le pagine sono tante. Solo link, funziona senza JavaScript. */
+function Pagination({ page, pages, href }: { page: number; pages: number; href: (n: number) => string }) {
+  const arrow = "inline-flex size-11 items-center justify-center rounded-full border border-line bg-surface text-ink transition-colors hover:bg-subtle";
+  return (
+    <nav aria-label="Pagine dei risultati" className="flex flex-col items-center gap-3 pt-4">
+      <ul className="flex flex-wrap items-center justify-center gap-1.5">
+        <li>
+          {page > 1 ? (
+            <Link href={href(page - 1)} className={arrow} rel="prev">
+              <ChevronLeft className="size-5" aria-hidden />
+              <span className="sr-only">Pagina precedente</span>
+            </Link>
+          ) : (
+            <span className={cn(arrow, "pointer-events-none opacity-40")} aria-hidden>
+              <ChevronLeft className="size-5" />
+            </span>
+          )}
+        </li>
+        {pageNumbers(page, pages).map((n, i) => (
+          <li key={`${n}-${i}`}>
+            {n === "…" ? (
+              <span className="inline-flex size-11 items-center justify-center text-ink-2" aria-hidden>
+                …
+              </span>
+            ) : (
+              <Link
+                href={href(n)}
+                aria-current={n === page ? "page" : undefined}
+                aria-label={`Pagina ${n}`}
+                className={cn(
+                  "inline-flex size-11 items-center justify-center rounded-full text-body font-semibold transition-colors",
+                  n === page ? "bg-brand text-on-brand" : "text-ink hover:bg-subtle",
+                )}
+              >
+                {n}
+              </Link>
+            )}
+          </li>
+        ))}
+        <li>
+          {page < pages ? (
+            <Link href={href(page + 1)} className={arrow} rel="next">
+              <ChevronRight className="size-5" aria-hidden />
+              <span className="sr-only">Pagina successiva</span>
+            </Link>
+          ) : (
+            <span className={cn(arrow, "pointer-events-none opacity-40")} aria-hidden>
+              <ChevronRight className="size-5" />
+            </span>
+          )}
+        </li>
+      </ul>
+      <p className="text-body-s text-ink-2">
+        Pagina {page} di {pages}
+      </p>
+    </nav>
   );
 }
