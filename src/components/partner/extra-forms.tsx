@@ -1,8 +1,8 @@
 "use client";
 
 import { useId, useState, useTransition } from "react";
-import { MapPinPlus, Sparkles } from "lucide-react";
-import { activateAreaExtensionAction, activateShowcaseAction, type ActionState } from "@/app/area-partner/actions";
+import { Sparkles } from "lucide-react";
+import { activateShowcaseAction, type ActionState } from "@/app/area-partner/actions";
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/field";
 
@@ -25,44 +25,6 @@ function Feedback({ state }: { state: ActionState }) {
 }
 
 /** Provincia confinante per 30 giorni: un pulsante per provincia, con la scadenza se è già attiva. */
-export function AreaExtensionForm({
-  neighbours,
-  tokens,
-  days,
-  balance,
-}: {
-  neighbours: { id: number; name: string; activeUntil: Date | null }[];
-  tokens: number;
-  days: number;
-  balance: number;
-}) {
-  const [state, setState] = useState<ActionState>({});
-  const [pending, start] = useTransition();
-  return (
-    <div className="flex flex-col gap-3">
-      <ul className="flex flex-wrap gap-3">
-        {neighbours.map((n) => (
-          <li key={n.id} className="flex flex-col gap-1">
-            <Button
-              variant="secondary"
-              disabled={pending || balance < tokens}
-              onClick={() => {
-                if (!confirm(`Comparire anche in provincia di ${n.name} per ${days} giorni con ${tokens} crediti?`)) return;
-                start(async () => setState(await activateAreaExtensionAction(n.id)));
-              }}
-            >
-              <MapPinPlus aria-hidden /> {n.name}
-            </Button>
-            {n.activeUntil && <span className="text-caption text-ink-2">Attiva fino al {dateFmt.format(n.activeUntil)}</span>}
-          </li>
-        ))}
-      </ul>
-      <Feedback state={state} />
-    </div>
-  );
-}
-
-/** Un lavoro con foto in evidenza nella pagina Ispirazione: scelta del lavoro e della durata. */
 export function ShowcaseForm({
   items,
   options,

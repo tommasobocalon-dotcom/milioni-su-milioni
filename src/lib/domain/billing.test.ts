@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { accountStatusFrom, grantsRenewalTokens, periodFromItems, planFromLookupKey, planLookupKey, subscriptionStatusFromStripe, tokenMonthsDue, tokenPurchaseFromCheckout } from "./billing";
+import { accountStatusFrom, grantsRenewalTokens, periodFromItems, planFromLookupKey, planLookupKey, subscriptionStatusFromStripe, tokenMonthsDue, tokenPurchaseFromCheckout, homeSponsorFromCheckout, areaExtensionFromCheckout, searchBoostFromCheckout } from "./billing";
 
 describe("subscriptionStatusFromStripe", () => {
   it("attivo solo con pagamento in regola", () => {
@@ -118,5 +118,51 @@ describe("planLookupKey / planFromLookupKey", () => {
     expect(planFromLookupKey("altro_prezzo")).toBeNull();
     expect(planFromLookupKey("geco_normal_weekly")).toBeNull();
     expect(planFromLookupKey(null)).toBeNull();
+  });
+});
+
+describe("homeSponsorFromCheckout", () => {
+  const paid = { mode: "payment", payment_status: "paid", metadata: { kind: "home_sponsor", partnerId: "p1", packageCode: "home-30" } };
+
+  it("pacchetto pagato: partner e giorni di logo in Home", () => {
+    expect(homeSponsorFromCheckout(paid)).toEqual({ partnerId: "p1", days: 30 });
+  });
+
+  it("SEPA ancora in elaborazione o pacchetto sconosciuto: niente", () => {
+    expect(homeSponsorFromCheckout({ ...paid, payment_status: "unpaid" })).toBeNull();
+    expect(homeSponsorFromCheckout({ ...paid, metadata: { ...paid.metadata, packageCode: "home-365" } })).toBeNull();
+  });
+
+  it("acquisto di token o abbonamento: non è una sponsorizzazione", () => {
+    expect(homeSponsorFromCheckout({ ...paid, metadata: { kind: "tokens", partnerId: "p1", packageCode: "pro" } })).toBeNull();
+    expect(homeSponsorFromCheckout({ ...paid, mode: "subscription" })).toBeNull();
+  });
+});
+
+describe("areaExtensionFromCheckout", () => {
+  const paid = { mode: "payment", payment_status: "paid", metadata: { kind: "area_extension", partnerId: "p1", municipalityIds: "27042,28060" } };
+
+  it("estensione pagata: partner e comuni da aggiungere", () => {
+    expect(areaExtensionFromCheckout(paid)).toEqual({ partnerId: "p1", municipalityIds: [27042, 28060] });
+  });
+
+  it("non pagata, senza comuni o di un altro tipo: niente", () => {
+    expect(areaExtensionFromCheckout({ ...paid, payment_status: "unpaid" })).toBeNull();
+    expect(areaExtensionFromCheckout({ ...paid, metadata: { ...paid.metadata, municipalityIds: "" } })).toBeNull();
+    expect(areaExtensionFromCheckout({ ...paid, metadata: { kind: "home_sponsor", partnerId: "p1", packageCode: "home-7" } })).toBeNull();
+  });
+});
+
+describe("searchBoostFromCheckout", () => {
+  const paid = { mode: "payment", payment_status: "paid", metadata: { kind: "search_boost", partnerId: "p1", packageCode: "search-48" } };
+
+  it("boost pagato: partner e ore di sponsorizzazione nella ricerca", () => {
+    expect(searchBoostFromCheckout(paid)).toEqual({ partnerId: "p1", hours: 48 });
+  });
+
+  it("non pagato, pacchetto sconosciuto o logo in Home: niente", () => {
+    expect(searchBoostFromCheckout({ ...paid, payment_status: "unpaid" })).toBeNull();
+    expect(searchBoostFromCheckout({ ...paid, metadata: { ...paid.metadata, packageCode: "search-72" } })).toBeNull();
+    expect(searchBoostFromCheckout({ ...paid, metadata: { kind: "home_sponsor", partnerId: "p1", packageCode: "home-7" } })).toBeNull();
   });
 });

@@ -30,11 +30,65 @@ export function packageSaving(tokens: number, priceCents: number): number {
   return Math.round((1 - priceCents / tokens / base) * 100);
 }
 
-/** Espansione "spot" a una provincia vicina (solo Normal e Premium). */
-export const AREA_EXTENSION = { days: 30, tokens: 180 } as const;
-
 /** Lavoro in evidenza nella pagina "Ispirazione / Case study" (solo Normal e Premium). */
 export const SHOWCASE_OPTIONS = [
   { days: 7, tokens: 80 },
   { days: 30, tokens: 250 },
+] as const;
+
+/**
+ * Logo in evidenza in Home a pacchetti in euro, senza token (decisione dei soci, 10/11/2026). Prezzi IVA esclusa.
+ * Per i primi 6 mesi dal lancio del sito vale il prezzo promo.
+ */
+export const HOME_SPONSOR_PACKAGES = [
+  { code: "home-7", days: 7, priceCents: 7900, promoCents: 3900 },
+  { code: "home-30", days: 30, priceCents: 24900, promoCents: 9900 },
+] as const;
+export type HomeSponsorPackage = (typeof HOME_SPONSOR_PACKAGES)[number];
+
+export const PROMO_MONTHS = 6;
+
+/** Data di lancio del sito (variabile LANCIO_SITO, "AAAA-MM-GG"); null finché non è fissata. */
+export function launchDate(value = process.env.LANCIO_SITO): Date | null {
+  const d = value && /^\d{4}-\d{2}-\d{2}$/.test(value) ? new Date(`${value}T00:00:00Z`) : null;
+  return d && !Number.isNaN(d.getTime()) ? d : null;
+}
+
+/** Promo attiva nei primi 6 mesi dal lancio; prima del lancio (data non fissata) è attiva. */
+export function promoActive(now: Date, launch: Date | null): boolean {
+  if (!launch) return true;
+  const end = new Date(launch);
+  end.setUTCMonth(end.getUTCMonth() + PROMO_MONTHS);
+  return now.getTime() < end.getTime();
+}
+
+/** Prezzo da pagare adesso, con quello di listino per mostrarlo barrato durante la promo. */
+export function homeSponsorPrice(pkg: HomeSponsorPackage, now: Date, launch: Date | null) {
+  const promo = promoActive(now, launch);
+  return { cents: promo ? pkg.promoCents : pkg.priceCents, listCents: pkg.priceCents, promo };
+}
+
+/** Estensione territoriale: la scheda compare nelle ricerche di un altro comune del Veneto. Prezzo per comune, IVA esclusa. */
+export const AREA_EXTENSION_OFFER = { days: 30, priceCents: 4900 } as const;
+
+/** Comuni per pagamento: i codici viaggiano nei metadati di Stripe (massimo 500 caratteri). */
+export const MAX_EXTENSION_MUNICIPALITIES = 40;
+
+export const areaExtensionTotal = (count: number) => count * AREA_EXTENSION_OFFER.priceCents;
+
+/** Codici ISTAT scelti dall'azienda: interi positivi senza doppioni, da 1 a MAX_EXTENSION_MUNICIPALITIES; altrimenti null. */
+export function municipalityIdsFrom(values: unknown): number[] | null {
+  if (!Array.isArray(values)) return null;
+  const ids = [...new Set(values.map((v) => (typeof v === "number" || (typeof v === "string" && /^\d+$/.test(v)) ? Number(v) : NaN)))];
+  if (ids.length === 0 || ids.length > MAX_EXTENSION_MUNICIPALITIES) return null;
+  return ids.every((id) => Number.isInteger(id) && id > 0) ? ids : null;
+}
+
+/**
+ * Boost "Sponsorizzato nella ricerca" a pacchetti in euro, senza token (decisione dei soci, 10/11/2026). Prezzi IVA esclusa.
+ * Stessa classifica di prima (ranking.ts): Premium nel riquadro grande a rotazione, Normal tra i primi con la scheda verde.
+ */
+export const SEARCH_BOOST_PACKAGES = [
+  { code: "search-24", hours: 24, priceCents: 1500 },
+  { code: "search-48", hours: 48, priceCents: 2500 },
 ] as const;

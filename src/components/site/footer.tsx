@@ -10,6 +10,7 @@ const COLUMNS = [
       { href: "/trova-casa", label: "Trova un'agenzia" },
       { href: "/ispirazione", label: "Ispirazione" },
       { href: "/come-funziona", label: "Come funziona" },
+      { href: "/chi-siamo", label: "Chi siamo" },
       { href: "/come-funziona#recensioni", label: "Recensioni verificate" },
       { href: "/assistenza", label: "Assistenza" },
       { href: "/accedi?modo=registrati", label: "Crea un account" },

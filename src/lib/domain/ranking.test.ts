@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { canBoost, listingTier, rankListing } from "./ranking";
+import { canBoost, listingTier, rankListing, VISITOR_ROTATIONS, visitorRotation } from "./ranking";
 
 const BASE = 1;
 const NORMAL = 2;
@@ -67,5 +67,18 @@ describe("rankListing", () => {
     const { featured, results } = rankListing([item("normal-boost", NORMAL, true), item("base", BASE)], "v");
     expect(featured).toBeNull();
     expect(results.map((r) => r.id)).toEqual(["normal-boost", "base"]);
+  });
+});
+
+describe("visitorRotation", () => {
+  it("gives the same rotation to the same visitor", () => {
+    expect(visitorRotation("abc-123")).toBe(visitorRotation("abc-123"));
+  });
+
+  it("maps every visitor to one of the fixed rotations", () => {
+    const seen = new Set(Array.from({ length: 500 }, (_, i) => visitorRotation(`visitor-${i}`)));
+    for (const r of seen) expect(Number(r)).toBeLessThan(VISITOR_ROTATIONS);
+    // Visitors spread across (almost) all rotations, so the order still changes from one to another.
+    expect(seen.size).toBeGreaterThan(VISITOR_ROTATIONS - 3);
   });
 });

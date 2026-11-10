@@ -1,13 +1,13 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Coins, Eye, Inbox, Rocket, TrendingUp } from "lucide-react";
+import { Euro, Eye, Inbox, Rocket, TrendingUp } from "lucide-react";
 import { ButtonLink } from "@/components/ui/button";
 import { formatEuro } from "@/lib/domain/format";
-import { BOOST_OPTIONS as BOOSTS, boostLabel, TOKEN_PACKAGES } from "@/lib/domain/offers";
+import { boostLabel, SEARCH_BOOST_PACKAGES } from "@/lib/domain/offers";
 
 /** Il grafico ragiona a giorni: un boost di 24 ore = 1 giorno. */
-const BOOST_OPTIONS = BOOSTS.map((o) => ({ ...o, days: o.hours / 24 }));
+const BOOST_OPTIONS = SEARCH_BOOST_PACKAGES.map((o) => ({ ...o, days: o.hours / 24 }));
 import { DEFAULT_BOOST_UPLIFT, projectBoost } from "@/lib/domain/stats";
 import { cn } from "@/lib/utils";
 
@@ -15,9 +15,6 @@ const HORIZON = 30;
 const H = 260;
 const PAD = { top: 16, right: 16, bottom: 32, left: 44 };
 const nf = new Intl.NumberFormat("it-IT", { maximumFractionDigits: 0 });
-/** Costo indicativo di un token al prezzo del pacchetto medio. */
-const MID = TOKEN_PACKAGES[1];
-const tokenCents = (tokens: number) => Math.round((tokens * MID.priceCents) / MID.tokens);
 
 /** Larghezza del contenitore, per disegnare il grafico in pixel reali (testo non deformato). */
 function useWidth<T extends HTMLElement>() {
@@ -42,28 +39,25 @@ function niceTicks(max: number, count = 4): number[] {
 }
 
 /**
- * Stima di quante visite e richieste in più porta un boost a token nei prossimi 30 giorni.
+ * Stima di quante visite e richieste in più porta un boost nella ricerca (pacchetto in euro) nei prossimi 30 giorni.
  * `measuredUplift` arriva dallo storico del partner (boostUplift); se manca si usa il valore provvisorio.
  */
 export function BoostProjection({
   viewsPerDay,
   leadsPerView,
   measuredUplift,
-  tokenBalance,
 }: {
   viewsPerDay: number;
   leadsPerView: number;
   measuredUplift: number | null;
-  tokenBalance: number;
 }) {
-  const [days, setDays] = useState<number>(BOOST_OPTIONS[1].days);
+  const [days, setDays] = useState<number>(BOOST_OPTIONS[0].days);
   const [hover, setHover] = useState<number | null>(null);
   const [ref, width] = useWidth<HTMLDivElement>();
-  const option = BOOST_OPTIONS.find((o) => o.days === days) ?? BOOST_OPTIONS[1];
+  const option = BOOST_OPTIONS.find((o) => o.days === days) ?? BOOST_OPTIONS[0];
   const uplift = measuredUplift ?? DEFAULT_BOOST_UPLIFT;
   const p = useMemo(() => projectBoost({ viewsPerDay, uplift, boostDays: option.days, horizon: HORIZON }), [viewsPerDay, uplift, option.days]);
   const extraLeads = p.extraViews * leadsPerView;
-  const enough = tokenBalance >= option.tokens;
 
   const innerW = width - PAD.left - PAD.right;
   const innerH = H - PAD.top - PAD.bottom;
@@ -101,7 +95,7 @@ export function BoostProjection({
                 o.days === days ? "bg-primary text-on-brand" : "text-ink-2 hover:bg-subtle hover:text-ink",
               )}
             >
-              {boostLabel(o.hours)} · {o.tokens} crediti
+              {boostLabel(o.hours)} · {formatEuro(o.priceCents)}
             </button>
           ))}
         </div>
@@ -205,19 +199,15 @@ export function BoostProjection({
               </div>
               <div className="col-span-2 rounded-md border border-line p-4 xl:col-span-1">
                 <dt className="inline-flex items-center gap-1.5 text-caption text-ink-2">
-                  <Coins className="size-3.5" aria-hidden /> Costo
+                  <Euro className="size-3.5" aria-hidden /> Costo
                 </dt>
-                <dd className="flex items-baseline justify-between gap-2">
-                  <span className="font-display text-h3 tabular-nums">{option.tokens} crediti</span>
-                  <span className="text-caption text-ink-2">≈ {formatEuro(tokenCents(option.tokens))} + IVA</span>
-                </dd>
-                <dd className={cn("mt-1 text-caption", enough ? "text-success" : "text-ink-2")}>
-                  {enough ? `Hai ${tokenBalance} crediti: ti bastano` : `Hai ${tokenBalance} crediti: te ne servono altri ${option.tokens - tokenBalance}`}
+                <dd className="font-display text-h3 tabular-nums">
+                  {formatEuro(option.priceCents)} <span className="text-caption text-ink-2">+ IVA</span>
                 </dd>
               </div>
             </dl>
-            <ButtonLink href="/area-partner/token" className="w-full">
-              <Rocket aria-hidden /> {enough ? "Metti in evidenza" : "Compra crediti"}
+            <ButtonLink href="/area-partner/token#boost" className="w-full">
+              <Rocket aria-hidden /> Metti in evidenza
             </ButtonLink>
           </div>
         </div>

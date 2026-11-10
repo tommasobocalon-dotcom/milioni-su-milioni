@@ -3,6 +3,7 @@ import { and, asc, avg, count, desc, eq, gt, isNotNull, ne, sql } from "drizzle-
 import { db } from "@/lib/db/client";
 import {
   areaExtensions,
+  boosts,
   leadEvents,
   leads,
   municipalities,
@@ -17,7 +18,6 @@ import {
   subscriptions,
   tokenLedger,
 } from "@/lib/db/schema";
-import { neighbourProvinces } from "@/lib/domain/extras";
 import { tokenBalance } from "@/lib/domain/tokens";
 
 /**
@@ -228,22 +228,9 @@ export async function getPortfolio(partnerId: string) {
     .orderBy(asc(portfolioItems.sortOrder));
 }
 
-/** Per la pagina Crediti: province confinanti acquistabili e lavori con foto da mettere in Ispirazione, con le scadenze attive. */
+/** Lavori con foto da mettere in Ispirazione, con la scadenza se sono già in evidenza. */
 export async function getExtras(partnerId: string, now: Date) {
-  const [home] = await db
-    .select({ code: provinces.code })
-    .from(partners)
-    .innerJoin(municipalities, eq(municipalities.id, partners.municipalityId))
-    .innerJoin(provinces, eq(provinces.id, municipalities.provinceId))
-    .where(eq(partners.id, partnerId));
-  const codes = home ? neighbourProvinces(home.code) : [];
-  const [allProvinces, extensions, items, showcases] = await Promise.all([
-    db.select({ id: provinces.id, code: provinces.code, name: provinces.name }).from(provinces),
-    db
-      .select({ provinceId: areaExtensions.provinceId, endsAt: sql<Date>`max(${areaExtensions.endsAt})`.mapWith((v) => new Date(v)) })
-      .from(areaExtensions)
-      .where(and(eq(areaExtensions.partnerId, partnerId), gt(areaExtensions.endsAt, now)))
-      .groupBy(areaExtensions.provinceId),
+  const [items, showcases] = await Promise.all([
     db
       .select({ id: portfolioItems.id, title: portfolioItems.title })
       .from(portfolioItems)
@@ -255,14 +242,8 @@ export async function getExtras(partnerId: string, now: Date) {
       .where(and(eq(showcaseFeatures.partnerId, partnerId), gt(showcaseFeatures.endsAt, now)))
       .groupBy(showcaseFeatures.portfolioItemId),
   ]);
-  const extensionEnd = new Map(extensions.map((e) => [e.provinceId, e.endsAt]));
   const showcaseEnd = new Map(showcases.map((x) => [x.itemId, x.endsAt]));
-  return {
-    neighbours: allProvinces
-      .filter((p) => codes.includes(p.code))
-      .map((p) => ({ id: p.id, name: p.name, activeUntil: extensionEnd.get(p.id) ?? null })),
-    items: items.map((i) => ({ ...i, activeUntil: showcaseEnd.get(i.id) ?? null })),
-  };
+  return { items: items.map((i) => ({ ...i, activeUntil: showcaseEnd.get(i.id) ?? null })) };
 }
 
 /** La prova gratuita spetta solo a chi non ha mai avuto un abbonamento Stripe (vedi createSubscriptionCheckout). */
@@ -273,4 +254,30 @@ export async function hadStripeSubscription(partnerId: string): Promise<boolean>
     .where(and(eq(subscriptions.partnerId, partnerId), isNotNull(subscriptions.stripeSubscriptionId)))
     .limit(1);
   return !!row;
+}
+
+/** Fine del boost già pagato di quel tipo, logo in Home o ricerca (null se non ce n'è uno in corso o in coda). */
+export async function getBoostEnd(partnerId: string, placement: "home" | "search", now: Date): Promise<Date | null> {
+  const [row] = await db
+    .select({ endsAt: sql<Date | null>`max(${boosts.endsAt})`.mapWith((v) => (v ? new Date(v) : null)) })
+    .from(boosts)
+    .where(and(eq(boosts.partnerId, partnerId), eq(boosts.placement, placement), gt(boosts.endsAt, now)));
+  return row?.endsAt ?? null;
+}
+
+/** Comuni aggiunti con l'estensione territoriale ancora in corso (o in coda), con la data di fine. */
+export async function getMunicipalityExtensions(partnerId: string, now: Date) {
+  return db
+    .select({
+      id: municipalities.id,
+      name: municipalities.name,
+      provinceCode: provinces.code,
+      endsAt: sql<Date>`max(${areaExtensions.endsAt})`.mapWith((v) => new Date(v)),
+    })
+    .from(areaExtensions)
+    .innerJoin(municipalities, eq(municipalities.id, areaExtensions.municipalityId))
+    .innerJoin(provinces, eq(provinces.id, municipalities.provinceId))
+    .where(and(eq(areaExtensions.partnerId, partnerId), gt(areaExtensions.endsAt, now)))
+    .groupBy(municipalities.id, municipalities.name, provinces.code)
+    .orderBy(municipalities.name);
 }

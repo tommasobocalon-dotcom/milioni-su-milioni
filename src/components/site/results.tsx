@@ -1,3 +1,6 @@
+import { cacheLife, cacheTag } from "next/cache";
+import { cookies } from "next/headers";
+import { connection } from "next/server";
 import Link from "next/link";
 import { Award, ChevronLeft, ChevronRight, Info, SlidersHorizontal, Sparkles, Star } from "lucide-react";
 import { PartnerCard } from "@/components/site/partner-card";
@@ -7,7 +10,8 @@ import { Input, Select } from "@/components/ui/field";
 import { findPlace, getCategories, getCategoryBySlug, getMunicipalities, getServicesForCategory } from "@/lib/data/catalog";
 import { FeaturedPartner } from "@/components/site/featured-partner";
 import { ResultsMap, type MapPoint } from "@/components/site/results-map";
-import { searchPartners, type SortKey } from "@/lib/data/search";
+import { recordImpressions, searchPartners, type SortKey } from "@/lib/data/search";
+import { VISITOR_COOKIE, visitorRotation } from "@/lib/domain/ranking";
 import { pageNumbers, parsePage } from "@/lib/domain/pagination";
 import { cn } from "@/lib/utils";
 
@@ -48,9 +52,21 @@ export function parseResultsParams(sp: Record<string, string | string[] | undefi
   };
 }
 
-/** Pagina risultati condivisa da Trova Casa (agenzie) e Trova Professionista (PRD §5.2, §5.3). */
+/**
+ * Pagina risultati condivisa da Trova Casa (agenzie) e Trova Professionista (PRD §5.2, §5.3).
+ * Qui solo la parte che dipende dal visitatore: la sua rotazione dell'ordine (cookie) e le impressioni.
+ * L'elenco vero (ResultsBody) è in cache per filtri + rotazione, così non si ricostruisce a ogni richiesta.
+ */
 export async function Results({ mode, params }: { mode: "agency" | "pro"; params: ResultsParams }) {
-  const basePath = mode === "agency" ? "/trova-casa" : "/trova-professionista";
+  const seed = visitorRotation((await cookies()).get(VISITOR_COOKIE)?.value ?? "");
+  // Le impressioni si scrivono solo per le richieste vere, mai nel prerender.
+  await connection();
+  recordImpressions((await findResults(mode, params, seed)).found);
+  return <ResultsBody mode={mode} params={params} seed={seed} />;
+}
+
+/** Filtri letti dall'indirizzo e ricerca. Le funzioni chiamate sono in cache: chiamarla due volte non rifà le query. */
+async function findResults(mode: "agency" | "pro", params: ResultsParams, seed: string) {
   const [allCategories, place] = await Promise.all([getCategories(), findPlace(params.dove)]);
   const category =
     mode === "agency" ? allCategories.find((c) => c.partnerType === "agency") ?? null : params.categoria ? await getCategoryBySlug(params.categoria) : null;
@@ -59,7 +75,7 @@ export async function Results({ mode, params }: { mode: "agency" | "pro"; params
   const minRating = params.voto ? Number(params.voto.replace(",", ".")) : undefined;
   const sort = (SORTS.find((s) => s.value === params.ordina)?.value ?? "rilevanza") as SortKey;
 
-  const { featured, results, total, page, pages } = await searchPartners({
+  const found = await searchPartners({
     partnerType: mode,
     categoryId: category?.id,
     serviceId: service?.id,
@@ -69,7 +85,18 @@ export async function Results({ mode, params }: { mode: "agency" | "pro"; params
     page: parsePage(params.pagina),
     pageSize: PAGE_SIZE,
     firstPageSize: FIRST_PAGE_SIZE,
+    visitorSeed: seed,
   });
+  return { allCategories, place, category, categoryServices, service, sort, found };
+}
+
+async function ResultsBody({ mode, params, seed }: { mode: "agency" | "pro"; params: ResultsParams; seed: string }) {
+  "use cache";
+  cacheLife("minutes");
+  cacheTag("catalog", "boosts");
+  const basePath = mode === "agency" ? "/trova-casa" : "/trova-professionista";
+  const { allCategories, place, category, categoryServices, service, sort, found } = await findResults(mode, params, seed);
+  const { featured, results, total, page, pages } = found;
   const places = await getMunicipalities();
 
   const href = (patch: Partial<ResultsParams>) => {

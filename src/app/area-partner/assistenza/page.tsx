@@ -111,9 +111,9 @@ async function Support() {
                 .
               </li>
               <li>
-                Crediti, scheda in evidenza e richieste extra: trovi tutto in{" "}
+                Logo in Home e altre sponsorizzazioni: trovi tutto in{" "}
                 <Link href="/area-partner/token" className="font-semibold text-primary underline">
-                  Crediti
+                  Boost e sponsorizzazioni
                 </Link>
                 .
               </li>

@@ -64,8 +64,8 @@ export default function HowItWorksPage() {
         <p className="text-body">
           Il riquadro grande in cima e le aziende con un boost attivo sono posti a pagamento: li riconosci dalla scritta
           &quot;Sponsorizzato&quot;. Il boost nella ricerca vale per la categoria e la provincia dell&apos;azienda e dura da 24 a 72 ore.
-          Con un boost a parte l&apos;azienda mette il suo logo nella fascia &quot;Aziende in evidenza&quot; della Home, dove i loghi
-          scorrono in un ordine che cambia a ogni visita. Un&apos;azienda
+          Con un pacchetto a pagamento di 7 o 30 giorni l&apos;azienda mette il suo logo nella fascia &quot;Aziende in evidenza&quot; della
+          Home, dove i loghi scorrono in un ordine che cambia a ogni visita. Un&apos;azienda
           può anche pagare per comparire per 30 giorni in una provincia vicina alla sua, e per mettere un lavoro in evidenza nella
           pagina Ispirazione, anche lì con la scritta &quot;Sponsorizzato&quot;.
         </p>

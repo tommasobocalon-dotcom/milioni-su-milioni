@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { BellLink, UnreadBell } from "@/components/partner/bell";
+import { BoostLock } from "@/components/partner/boost-lock";
 import { PartnerSidebar } from "@/components/partner/sidebar";
 import { PartnerTabs } from "@/components/partner/tabs";
 import { EmailVerifyBanner } from "@/components/site/email-verify-banner";
@@ -14,6 +15,11 @@ export default function PartnerLayout({ children }: LayoutProps<"/area-partner">
         bell={
           <Suspense fallback={<BellLink unread={0} />}>
             <UnreadBell />
+          </Suspense>
+        }
+        boostLock={
+          <Suspense fallback={null}>
+            <BoostLock />
           </Suspense>
         }
       />

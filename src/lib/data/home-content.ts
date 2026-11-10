@@ -9,6 +9,8 @@ export type HeroSlide = { video: string; poster: string };
 /** Video che scorrono dietro la hero, uno dopo l'altro; con uno solo va in loop. */
 export const HERO_SLIDES: HeroSlide[] = [
   { video: "/hero/giardino.mp4", poster: "/hero/giardino.jpg" },
+  { video: "/hero/soggiorno.mp4", poster: "/hero/soggiorno.jpg" },
+  { video: "/hero/cucina.mp4", poster: "/hero/cucina.jpg" },
 ];
 
 /** Le sette province con uno slogan breve e il capoluogo da cercare. Chiave: sigla. */

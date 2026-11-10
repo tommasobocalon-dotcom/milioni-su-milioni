@@ -12,7 +12,7 @@ import { googlePlacesEnabled, searchGooglePlaces } from "@/lib/google/places";
 import type { GooglePlaceMatch } from "@/lib/domain/google-reviews";
 import { ipRateLimited } from "@/lib/security/ip-limit";
 import { putImage } from "@/lib/storage";
-import { BillingError, createPortalSession, createSubscriptionCheckout, createTokenCheckout, stripeConfigured } from "@/lib/billing/stripe";
+import { BillingError, createAreaExtensionCheckout, createHomeSponsorCheckout, createSearchBoostCheckout, createPortalSession, createSubscriptionCheckout, createTokenCheckout, stripeConfigured } from "@/lib/billing/stripe";
 import { db } from "@/lib/db/client";
 import { auditLogs, leadEvents, leads, partners, partnerServices, plans, portfolioItems, priceUnit, subscriptions, tokenLedger, users } from "@/lib/db/schema";
 import { getListableServices, getPriceList, getSubscription } from "@/lib/data/partner-area";
@@ -20,9 +20,9 @@ import { demoMode } from "@/lib/demo-mode";
 import { parseAmount } from "@/lib/domain/format";
 import { parseOpeningHours, parseSpecialties } from "@/lib/domain/profile-fields";
 import { canReportLead, REPORT_REASONS } from "@/lib/domain/lead-rules";
-import { BOOST_PLACEMENTS, isBoostPlacement, TOKEN_PACKAGES } from "@/lib/domain/offers";
+import { AREA_EXTENSION_OFFER, BOOST_PLACEMENTS, HOME_SPONSOR_PACKAGES, isBoostPlacement, municipalityIdsFrom, SEARCH_BOOST_PACKAGES, TOKEN_PACKAGES } from "@/lib/domain/offers";
 import { tokenExpiryFrom } from "@/lib/domain/tokens";
-import { activateAreaExtension, activateBoost, activateShowcase, ExtraNotActivatableError } from "@/lib/leads/service";
+import { activateBoost, activateShowcase, ExtraNotActivatableError, grantAreaExtensions, grantHomeSponsor, grantSearchBoost } from "@/lib/leads/service";
 import { LEAD_STATUSES, statusInfo } from "@/lib/leads/status";
 import { MESSAGE_MAX, TICKET_TOPICS } from "@/lib/domain/support";
 import { openTicket, replyFromPartner } from "@/lib/support/service";
@@ -122,6 +122,8 @@ export async function activateBoostAction(placement: string, hours: number): Pro
   if (!isBoostPlacement(placement)) return { error: "Tipo di boost non valido" };
   try {
     const { endsAt } = await activateBoost(partner.id, placement, hours);
+    // La fascia loghi della Home è in cache: il nuovo boost deve comparire subito.
+    updateTag("boosts");
     await db.insert(auditLogs).values({ actor: user.email, action: "boost.activated", entity: "partner", entityId: partner.id, data: { placement, hours } });
     revalidatePath("/area-partner", "layout");
     const until = endsAt.toLocaleString("it-IT", { day: "numeric", month: "long", hour: "2-digit", minute: "2-digit", timeZone: "Europe/Rome" });
@@ -133,21 +135,6 @@ export async function activateBoostAction(placement: string, hours: number): Pro
 }
 
 const dayFmt = (d: Date) => d.toLocaleDateString("it-IT", { day: "numeric", month: "long", timeZone: "Europe/Rome" });
-
-export async function activateAreaExtensionAction(provinceId: number): Promise<ActionState> {
-  const { user, partner } = await requirePartner();
-  if (!Number.isInteger(provinceId)) return { error: "Provincia non valida" };
-  try {
-    const { endsAt, provinceName } = await activateAreaExtension(partner.id, provinceId);
-    await db.insert(auditLogs).values({ actor: user.email, action: "area_extension.activated", entity: "partner", entityId: partner.id, data: { provinceId } });
-    updateTag("catalog");
-    revalidatePath("/area-partner", "layout");
-    return { ok: `Compari anche in provincia di ${provinceName} fino al ${dayFmt(endsAt)}` };
-  } catch (e) {
-    if (e instanceof ExtraNotActivatableError) return { error: e.message };
-    throw e;
-  }
-}
 
 export async function activateShowcaseAction(portfolioItemId: string, days: number): Promise<ActionState> {
   const { user, partner } = await requirePartner();
@@ -463,6 +450,73 @@ export async function startTokenCheckout(code: string): Promise<CheckoutState> {
   const { partner } = await requirePartner();
   if (!(await canBuyTokens(partner.id))) return { error: "I crediti sono inclusi nei piani Normal e Premium" };
   return billingAction((payer) => createTokenCheckout(payer, code), "billing.token_checkout");
+}
+
+/** Logo in evidenza in Home, pagato in euro: come gli extra, solo Normal e Premium. */
+export async function startHomeSponsorCheckout(code: string): Promise<CheckoutState> {
+  const { partner } = await requirePartner();
+  if (!(await canBuyTokens(partner.id))) return { error: "Il logo in Home è per i piani Normal e Premium" };
+  return billingAction((payer) => createHomeSponsorCheckout(payer, code), "billing.home_sponsor_checkout");
+}
+
+/** Solo in sviluppo e sul sito di prova senza Stripe: attiva il logo in Home senza pagamento. */
+export async function simulateHomeSponsor(code: string) {
+  if (!demoMode() || stripeConfigured()) return;
+  const { user, partner } = await requirePartner();
+  const pkg = HOME_SPONSOR_PACKAGES.find((p) => p.code === code);
+  if (!pkg || !(await canBuyTokens(partner.id))) return;
+  await db.transaction(async (tx) => {
+    await grantHomeSponsor(tx, partner.id, pkg.days);
+    await tx.insert(auditLogs).values({ actor: user.email, action: "billing.simulated_home_sponsor", entity: "partner", entityId: partner.id, data: { code } });
+  });
+  updateTag("boosts");
+  revalidatePath("/area-partner", "layout");
+}
+
+/** Boost nella ricerca, pagato in euro: solo Normal e Premium (il Base non ha boost). */
+export async function startSearchBoostCheckout(code: string): Promise<CheckoutState> {
+  const { partner } = await requirePartner();
+  if (!(await canBuyTokens(partner.id))) return { error: "Il boost è per i piani Normal e Premium" };
+  return billingAction((payer) => createSearchBoostCheckout(payer, code), "billing.search_boost_checkout");
+}
+
+/** Solo in sviluppo e sul sito di prova senza Stripe: attiva il boost nella ricerca senza pagamento. */
+export async function simulateSearchBoost(code: string) {
+  if (!demoMode() || stripeConfigured()) return;
+  const { user, partner } = await requirePartner();
+  const pkg = SEARCH_BOOST_PACKAGES.find((p) => p.code === code);
+  if (!pkg || !(await canBuyTokens(partner.id))) return;
+  await db.transaction(async (tx) => {
+    await grantSearchBoost(tx, partner.id, pkg.hours);
+    await tx.insert(auditLogs).values({ actor: user.email, action: "billing.simulated_search_boost", entity: "partner", entityId: partner.id, data: { code } });
+  });
+  updateTag("boosts");
+  revalidatePath("/area-partner", "layout");
+}
+
+/** Estensione territoriale ai comuni scelti, pagata in euro: solo Normal e Premium. */
+export async function startAreaExtensionCheckout(ids: number[]): Promise<CheckoutState> {
+  const { partner } = await requirePartner();
+  if (!(await canBuyTokens(partner.id))) return { error: "L'estensione territoriale è per i piani Normal e Premium" };
+  const valid = municipalityIdsFrom(ids);
+  if (!valid) return { error: "Scegli da 1 a 40 comuni" };
+  return billingAction((payer) => createAreaExtensionCheckout(payer, valid), "billing.area_extension_checkout");
+}
+
+/** Solo in sviluppo e sul sito di prova senza Stripe: attiva l'estensione senza pagamento. */
+export async function simulateAreaExtension(ids: number[]): Promise<ActionState> {
+  if (!demoMode() || stripeConfigured()) return { error: "Non disponibile" };
+  const { user, partner } = await requirePartner();
+  const valid = municipalityIdsFrom(ids);
+  if (!valid || !(await canBuyTokens(partner.id))) return { error: "Scegli da 1 a 40 comuni" };
+  const added = await db.transaction(async (tx) => {
+    const n = await grantAreaExtensions(tx, partner.id, valid, AREA_EXTENSION_OFFER.days);
+    await tx.insert(auditLogs).values({ actor: user.email, action: "billing.simulated_area_extension", entity: "partner", entityId: partner.id, data: { ids: valid } });
+    return n;
+  });
+  updateTag("boosts");
+  revalidatePath("/area-partner", "layout");
+  return { ok: `Compari in ${added} ${added === 1 ? "comune" : "comuni"} in più per ${AREA_EXTENSION_OFFER.days} giorni` };
 }
 
 export async function startSubscriptionCheckout(planCode: string, period: "monthly" | "yearly"): Promise<CheckoutState> {

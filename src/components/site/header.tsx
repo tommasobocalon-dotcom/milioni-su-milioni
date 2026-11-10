@@ -11,7 +11,7 @@ const SECTIONS = [
   { href: "/come-funziona", label: "Come funziona", note: "Ordinamento, recensioni e contenuti sponsorizzati" },
 ];
 
-/** Navbar sul modello di Thumbtack: marchio a sinistra, Esplora, Area clienti e Area aziende a destra. */
+/** Navbar sul modello di Thumbtack: marchio a sinistra, Esplora, Chi siamo, Area clienti e Area aziende a destra. */
 export async function SiteHeader() {
   const categories = (await getCategories())
     .filter((c) => c.partnerType !== "agency")
@@ -25,6 +25,12 @@ export async function SiteHeader() {
         <nav aria-label="Principale" className="ml-auto hidden items-center md:flex">
           <div className="flex items-center lg:hero-search-hidden:max-xl:hidden">
             <ExploreMenu sections={SECTIONS} categories={categories} />
+            <Link
+              href="/chi-siamo"
+              className="inline-flex h-[42px] items-center rounded-full px-4 text-body-s text-ink-2 transition-colors hover:text-ink"
+            >
+              Chi siamo
+            </Link>
           </div>
           <Link
             href="/accedi"
@@ -52,6 +58,9 @@ export async function SiteHeader() {
                 {s.label}
               </Link>
             ))}
+            <Link href="/chi-siamo" className="rounded-md px-3 py-2.5 text-body font-semibold hover:bg-subtle">
+              Chi siamo
+            </Link>
             <div className="mt-1 grid grid-cols-2 gap-2">
               <Link href="/accedi" className="inline-flex h-11 items-center justify-center rounded-full text-body font-semibold text-primary hover:bg-subtle">
                 Area clienti

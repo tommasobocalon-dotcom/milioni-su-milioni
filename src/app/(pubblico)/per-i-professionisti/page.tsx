@@ -3,11 +3,11 @@ import Image from "next/image";
 import { BadgeCheck, Check, Inbox, PhoneCall, Search } from "lucide-react";
 import { PlanPicker, type PlanCard } from "@/components/site/pro/plan-picker";
 import { ButtonLink } from "@/components/ui/button";
-import { CATEGORY_PHOTOS } from "@/lib/data/category-photos";
 import { getPlans } from "@/lib/data/plans";
 import { formatEuro } from "@/lib/domain/format";
 import { REPORT_WINDOW_HOURS } from "@/lib/domain/lead-rules";
-import { AREA_EXTENSION, BOOST_OPTIONS, boostLabel, SHOWCASE_OPTIONS, TOKEN_PACKAGES } from "@/lib/domain/offers";
+import { AREA_EXTENSION_OFFER, boostLabel, SEARCH_BOOST_PACKAGES, HOME_SPONSOR_PACKAGES, homeSponsorPrice, launchDate, SHOWCASE_OPTIONS, TOKEN_PACKAGES } from "@/lib/domain/offers";
+import { cacheLife } from "next/cache";
 import { planFeatures } from "@/lib/domain/plan-features";
 
 export const metadata: Metadata = {
@@ -46,7 +46,16 @@ const FAQ = [
   },
 ];
 
+/** Prezzi del logo in Home: la promo finisce 6 mesi dopo il lancio, quindi si ricalcolano ogni ora. */
+async function getHomeSponsorPrices() {
+  "use cache";
+  cacheLife("hours");
+  const now = new Date();
+  return HOME_SPONSOR_PACKAGES.map((p) => ({ days: p.days, ...homeSponsorPrice(p, now, launchDate()) }));
+}
+
 export default async function ForProfessionalsPage() {
+  const homePrices = await getHomeSponsorPrices();
   const plans: PlanCard[] = (await getPlans()).map((p) => ({
     code: p.code,
     name: p.name,
@@ -54,7 +63,6 @@ export default async function ForProfessionalsPage() {
     yearlyPriceCents: p.yearlyPriceCents,
     lines: planFeatures(p.code),
   }));
-  const photo = CATEGORY_PHOTOS.ristrutturazioni;
 
   return (
     <>
@@ -84,7 +92,14 @@ export default async function ForProfessionalsPage() {
             </div>
           </div>
           <div className="relative aspect-[4/3] overflow-hidden rounded-lg">
-            <Image src={photo.src} alt={photo.alt} fill priority sizes="(min-width: 1024px) 40vw, 100vw" className="object-cover" />
+            <Image
+              src="/foto/per-i-professionisti-3.jpg"
+              alt="Professionista che esamina un progetto con una coppia attorno a un tavolo"
+              fill
+              priority
+              sizes="(min-width: 1024px) 40vw, 100vw"
+              className="object-cover"
+            />
           </div>
         </div>
       </section>
@@ -120,10 +135,15 @@ export default async function ForProfessionalsPage() {
             <div className="flex flex-col gap-2">
               <h3 className="text-h3 font-semibold">Vuoi più visibilità? Usa i crediti</h3>
               <p className="text-body-s text-ink-2">
-                Con i piani Normal e Premium (il Base non usa crediti): boost in cima alla ricerca oppure con il tuo logo nella fascia della Home, per {BOOST_OPTIONS.map((o) => `${boostLabel(o.hours)} (${o.tokens} crediti)`).join(", ")};
-                una provincia vicina per {AREA_EXTENSION.days} giorni ({AREA_EXTENSION.tokens} crediti); un tuo lavoro in evidenza nella pagina
+                Con i piani Normal e Premium (il Base non usa crediti): boost in cima alla ricerca a {SEARCH_BOOST_PACKAGES.map((o) => `${formatEuro(o.priceCents)} per ${boostLabel(o.hours)}`).join(" o ")} + IVA;
+                un tuo lavoro in evidenza nella pagina
                 Ispirazione per {SHOWCASE_OPTIONS.map((o) => `${o.days} giorni (${o.tokens} crediti)`).join(" o ")}. Normal include 80 crediti al mese,
-                Premium 200. Se ne servono altri:
+                Premium 200. Il logo nella fascia della Home si paga invece in euro:{" "}
+                {homePrices
+                  .map((p) => `${p.days} giorni a ${formatEuro(p.cents)}${p.promo ? ` (invece di ${formatEuro(p.listCents)}, promo lancio)` : ""}`)
+                  .join(" o ")}{" "}
+                + IVA; per comparire anche in altri comuni del Veneto, {formatEuro(AREA_EXTENSION_OFFER.priceCents)} + IVA per comune ogni{" "}
+                {AREA_EXTENSION_OFFER.days} giorni. Se ti servono altri crediti:
               </p>
             </div>
             <ul className="grid grid-cols-3 gap-3">

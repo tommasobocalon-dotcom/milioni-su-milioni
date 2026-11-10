@@ -34,9 +34,7 @@ async function Request({ slug, service }: { slug: string; service?: string }) {
   if (!ctx || ctx.partner.accountStatus !== "active") notFound();
   return (
     <div className="flex flex-col gap-6">
-      <Suspense>
-        <TrackEvent partnerId={ctx.partner.id} type="contact_click" />
-      </Suspense>
+      <TrackEvent partnerId={ctx.partner.id} type="contact_click" />
       <Link href={ctx.partner.href} className="inline-flex items-center gap-1 self-start text-body-s font-semibold text-primary hover:underline">
         <ArrowLeft className="size-4" aria-hidden /> Torna al profilo
       </Link>

@@ -9,7 +9,7 @@ import { TrendChart } from "@/components/partner/trend-chart";
 import { ButtonLink } from "@/components/ui/button";
 import { ChipLink } from "@/components/ui/chip";
 import { requirePartner } from "@/lib/auth/session";
-import { getSubscription, getTokenBalance } from "@/lib/data/partner-area";
+import { getSubscription } from "@/lib/data/partner-area";
 import { canBoost } from "@/lib/domain/ranking";
 import { getPartnerStats, type PartnerStats } from "@/lib/data/stats";
 import { BOOST_PLACEMENTS } from "@/lib/domain/offers";
@@ -52,7 +52,7 @@ async function Stats({ days }: { days: StatsPeriod }) {
       </div>
     );
   }
-  const [s, tokenBalance] = await Promise.all([getPartnerStats(partner.id, now, days), getTokenBalance(partner.id, now)]);
+  const s = await getPartnerStats(partner.id, now, days);
   const t = s.totals;
   const prev = s.previousTotals;
   // Il grafico misura la ricerca: contano solo i boost "Sponsorizzato nella ricerca", non quelli della Home.
@@ -134,7 +134,6 @@ async function Stats({ days }: { days: StatsPeriod }) {
                 <tr>
                   <th className="py-2 font-medium">Periodo</th>
                   <th className="py-2 font-medium">Tipo</th>
-                  <th className="py-2 text-right font-medium">Crediti usati</th>
                   <th className="py-2 text-right font-medium">Stato</th>
                 </tr>
               </thead>
@@ -145,7 +144,6 @@ async function Stats({ days }: { days: StatsPeriod }) {
                       {dateFmt.format(b.startsAt)} – {dateFmt.format(b.endsAt)}
                     </td>
                     <td className="py-2">{BOOST_PLACEMENTS[b.placement]}</td>
-                    <td className="py-2 text-right">{b.tokensSpent}</td>
                     <td className="py-2 text-right">{b.active ? "Attivo" : b.upcoming ? "Programmato" : "Concluso"}</td>
                   </tr>
                 ))}
@@ -159,7 +157,6 @@ async function Stats({ days }: { days: StatsPeriod }) {
         viewsPerDay={t.views / days}
         leadsPerView={t.views ? t.leads / t.views : 0}
         measuredUplift={measuredUplift}
-        tokenBalance={tokenBalance}
       />
 
       <StatsTip s={s} />

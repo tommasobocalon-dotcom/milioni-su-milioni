@@ -569,15 +569,16 @@ export const areaExtensions = pgTable(
     partnerId: uuid("partner_id")
       .notNull()
       .references(() => partners.id, { onDelete: "cascade" }),
-    provinceId: smallint("province_id")
+    /** Comune in cui la scheda compare in più, pagato in euro (49 € per 30 giorni, decisione dei soci 10/11/2026). */
+    municipalityId: integer("municipality_id")
       .notNull()
-      .references(() => provinces.id),
+      .references(() => municipalities.id),
     startsAt: timestamp("starts_at", { withTimezone: true }).notNull(),
     endsAt: timestamp("ends_at", { withTimezone: true }).notNull(),
     tokensSpent: integer("tokens_spent").notNull(),
     createdAt: createdAt(),
   },
-  (t) => [index("area_extensions_lookup_idx").on(t.provinceId, t.endsAt)],
+  (t) => [index("area_extensions_municipality_idx").on(t.municipalityId, t.endsAt)],
 );
 
 /** Lavoro del portfolio messo in evidenza nella pagina "Ispirazione", pagato a token (7 o 30 giorni). */

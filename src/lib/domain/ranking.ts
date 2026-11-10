@@ -33,6 +33,17 @@ function hash(text: string): number {
   return h >>> 0;
 }
 
+/**
+ * Rotazioni possibili dell'ordine tra pari grado. Ogni visitatore ne riceve una fissa (dal suo cookie): con un numero
+ * limitato di ordini i risultati si possono tenere in cache invece di ricalcolarli a ogni richiesta, e l'ordine
+ * cambia comunque da un visitatore all'altro.
+ */
+export const VISITOR_ROTATIONS = 24;
+
+export function visitorRotation(visitorId: string): string {
+  return String(hash(visitorId) % VISITOR_ROTATIONS);
+}
+
 export function rankListing<T extends { id: string; planWeight: number; boosted: boolean }>(
   items: T[],
   visitorSeed: string,

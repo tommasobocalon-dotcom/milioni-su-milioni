@@ -7,7 +7,7 @@ import { PartnerPageHeader } from "@/components/partner/page-header";
 import { PartnerSkeleton } from "@/components/partner/skeleton";
 import { ButtonLink } from "@/components/ui/button";
 import { requirePartner } from "@/lib/auth/session";
-import { getOverview } from "@/lib/data/partner-area";
+import { getBoostEnd, getOverview } from "@/lib/data/partner-area";
 
 export const metadata = { title: "Home" };
 
@@ -49,7 +49,7 @@ async function Dashboard() {
   const { user, partner } = await requirePartner();
   await connection();
   const now = new Date();
-  const o = await getOverview(partner.id, now);
+  const [o, homeEnd] = await Promise.all([getOverview(partner.id, now), getBoostEnd(partner.id, "home", now)]);
   const hour = Number(new Intl.DateTimeFormat("it-IT", { hour: "numeric", hour12: false, timeZone: "Europe/Rome" }).format(now));
   const greeting = hour < 13 ? "Buongiorno" : hour < 18 ? "Buon pomeriggio" : "Buonasera";
   const step = nextStep(o.counts.new ?? 0, o.completeness);
@@ -80,10 +80,11 @@ async function Dashboard() {
           {o.sub && <p className="text-caption text-ink-2">Si rinnova il {dateFmt.format(o.sub.currentPeriodEnd)} · richieste illimitate</p>}
         </div>
         <div className="flex flex-col gap-1 rounded-lg border border-line bg-surface p-5">
-          <p className="text-body-s text-ink-2">Crediti</p>
-          <p className="font-display text-h1">{o.balance}</p>
+          <p className="text-body-s text-ink-2">Logo in Home</p>
+          <p className="font-display text-h1">{homeEnd ? "Attivo" : "Non attivo"}</p>
+          {homeEnd && <p className="text-caption text-ink-2">Fino al {dateFmt.format(homeEnd)}</p>}
           <Link href="/area-partner/token" className="text-body-s font-semibold text-primary hover:underline">
-            A cosa servono e come comprarli
+            Vedi i pacchetti
           </Link>
         </div>
       </section>

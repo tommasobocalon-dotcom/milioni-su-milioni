@@ -34,9 +34,7 @@ async function Profile({ provincia, slug }: { provincia: string; slug: string })
   return (
     <>
       <ProfileView p={p} />
-      <Suspense>
-        <TrackEvent partnerId={p.id} type="view" />
-      </Suspense>
+      <TrackEvent partnerId={p.id} type="view" />
     </>
   );
 }

@@ -3,9 +3,10 @@ import { revalidateTag } from "next/cache";
 import { and, eq, inArray, isNotNull, isNull, or } from "drizzle-orm";
 import Stripe from "stripe";
 import { db } from "@/lib/db/client";
-import { partners, plans, stripeProcessed, subscriptions, tokenLedger } from "@/lib/db/schema";
-import { accountStatusFrom, grantsRenewalTokens, periodFromItems, planFromLookupKey, planLookupKey, subscriptionStatusFromStripe, tokenMonthsDue, tokenPurchaseFromCheckout, TRIAL_DAYS } from "@/lib/domain/billing";
-import { TOKEN_PACKAGES } from "@/lib/domain/offers";
+import { municipalities, partners, plans, stripeProcessed, subscriptions, tokenLedger } from "@/lib/db/schema";
+import { accountStatusFrom, areaExtensionFromCheckout, grantsRenewalTokens, homeSponsorFromCheckout, searchBoostFromCheckout, periodFromItems, planFromLookupKey, planLookupKey, subscriptionStatusFromStripe, tokenMonthsDue, tokenPurchaseFromCheckout, TRIAL_DAYS } from "@/lib/domain/billing";
+import { AREA_EXTENSION_OFFER, HOME_SPONSOR_PACKAGES, homeSponsorPrice, launchDate, municipalityIdsFrom, SEARCH_BOOST_PACKAGES, TOKEN_PACKAGES } from "@/lib/domain/offers";
+import { grantAreaExtensions, grantHomeSponsor, grantSearchBoost } from "@/lib/leads/service";
 import { tokenExpiryFrom } from "@/lib/domain/tokens";
 
 /**
@@ -97,6 +98,76 @@ export async function createTokenCheckout(payer: Payer, packageCode: string): Pr
     invoice_creation: { enabled: true, invoice_data: { metadata } },
     success_url: `${appUrl()}/api/stripe/ritorno?session_id={CHECKOUT_SESSION_ID}`,
     cancel_url: `${appUrl()}/area-partner/token`,
+  });
+  if (!session.url) throw new Error("Stripe non ha restituito l'indirizzo del Checkout");
+  return session.url;
+}
+
+/** Pacchetto a pagamento unico (logo in Home, boost nella ricerca): una riga con IVA, ricevuta e fattura per email. */
+async function packageCheckout(payer: Payer, p: { kind: string; code: string; name: string; cents: number; back: string }): Promise<string> {
+  const metadata = { kind: p.kind, partnerId: payer.partnerId, packageCode: p.code };
+  const session = await stripe().checkout.sessions.create({
+    mode: "payment",
+    customer: await customerFor(payer),
+    locale: "it",
+    allowed_payment_method_types: PAYMENT_METHODS,
+    line_items: [{ quantity: 1, tax_rates: await taxRates(), price_data: { currency: "eur", unit_amount: p.cents, product_data: { name: p.name } } }],
+    metadata,
+    payment_intent_data: { metadata },
+    invoice_creation: { enabled: true, invoice_data: { metadata } },
+    success_url: `${appUrl()}/api/stripe/ritorno?session_id={CHECKOUT_SESSION_ID}`,
+    cancel_url: `${appUrl()}/area-partner/token#${p.back}`,
+  });
+  if (!session.url) throw new Error("Stripe non ha restituito l'indirizzo del Checkout");
+  return session.url;
+}
+
+/** Logo in evidenza in Home per 7 o 30 giorni, pagato in euro (prezzo promo nei primi 6 mesi dal lancio). */
+export async function createHomeSponsorCheckout(payer: Payer, packageCode: string): Promise<string> {
+  const pkg = HOME_SPONSOR_PACKAGES.find((p) => p.code === packageCode);
+  if (!pkg) throw new BillingError("Pacchetto non valido");
+  const price = homeSponsorPrice(pkg, new Date(), launchDate());
+  const name = `Logo in evidenza in Home · ${pkg.days} giorni${price.promo ? " (promo lancio)" : ""}`;
+  return packageCheckout(payer, { kind: "home_sponsor", code: pkg.code, name, cents: price.cents, back: "home" });
+}
+
+/** Boost "Sponsorizzato nella ricerca" per 24 o 48 ore, pagato in euro. */
+export async function createSearchBoostCheckout(payer: Payer, packageCode: string): Promise<string> {
+  const pkg = SEARCH_BOOST_PACKAGES.find((p) => p.code === packageCode);
+  if (!pkg) throw new BillingError("Pacchetto non valido");
+  return packageCheckout(payer, { kind: "search_boost", code: pkg.code, name: `Sponsorizzato nella ricerca · ${pkg.hours} ore`, cents: pkg.priceCents, back: "boost" });
+}
+
+/** Estensione territoriale: 49 € + IVA per ogni comune scelto, per 30 giorni. */
+export async function createAreaExtensionCheckout(payer: Payer, ids: number[]): Promise<string> {
+  const valid = municipalityIdsFrom(ids);
+  const chosen = valid ? await db.select({ id: municipalities.id, name: municipalities.name }).from(municipalities).where(inArray(municipalities.id, valid)) : [];
+  if (chosen.length === 0) throw new BillingError("Scegli almeno un comune");
+  const metadata = { kind: "area_extension", partnerId: payer.partnerId, municipalityIds: chosen.map((m) => m.id).join(",") };
+  const session = await stripe().checkout.sessions.create({
+    mode: "payment",
+    customer: await customerFor(payer),
+    locale: "it",
+    allowed_payment_method_types: PAYMENT_METHODS,
+    line_items: [
+      {
+        quantity: chosen.length,
+        tax_rates: await taxRates(),
+        price_data: {
+          currency: "eur",
+          unit_amount: AREA_EXTENSION_OFFER.priceCents,
+          product_data: {
+            name: `Estensione territoriale · ${AREA_EXTENSION_OFFER.days} giorni per comune`,
+            description: chosen.map((m) => m.name).join(", ").slice(0, 500),
+          },
+        },
+      },
+    ],
+    metadata,
+    payment_intent_data: { metadata },
+    invoice_creation: { enabled: true, invoice_data: { metadata } },
+    success_url: `${appUrl()}/api/stripe/ritorno?session_id={CHECKOUT_SESSION_ID}`,
+    cancel_url: `${appUrl()}/area-partner/token#estensione`,
   });
   if (!session.url) throw new Error("Stripe non ha restituito l'indirizzo del Checkout");
   return session.url;
@@ -228,10 +299,39 @@ async function syncSubscription(subscriptionId: string): Promise<{ id: string; p
 
 const idOf = (v: string | { id: string } | null | undefined) => (typeof v === "string" ? v : (v?.id ?? null));
 
-/** Checkout concluso: abbonamento allineato e, per i pacchetti pagati, crediti nel registro (una volta sola). */
+/** Checkout concluso: abbonamento allineato, crediti nel registro o logo in Home per i pacchetti pagati (una volta sola). */
 async function applyCheckoutSession(session: Stripe.Checkout.Session): Promise<void> {
   const subscriptionId = idOf(session.subscription);
   if (subscriptionId) await syncSubscription(subscriptionId);
+  const boost = searchBoostFromCheckout(session);
+  if (boost) {
+    await db.transaction(async (tx) => {
+      if (!(await firstTime(tx, `checkout:${session.id}`))) return;
+      await grantSearchBoost(tx, boost.partnerId, boost.hours);
+    });
+    revalidateTag("boosts", { expire: 0 });
+    return;
+  }
+  const extension = areaExtensionFromCheckout(session);
+  if (extension) {
+    await db.transaction(async (tx) => {
+      if (!(await firstTime(tx, `checkout:${session.id}`))) return;
+      await grantAreaExtensions(tx, extension.partnerId, extension.municipalityIds, AREA_EXTENSION_OFFER.days);
+    });
+    // I risultati della ricerca sono in cache: l'azienda compare subito nei nuovi comuni.
+    revalidateTag("boosts", { expire: 0 });
+    return;
+  }
+  const sponsor = homeSponsorFromCheckout(session);
+  if (sponsor) {
+    await db.transaction(async (tx) => {
+      if (!(await firstTime(tx, `checkout:${session.id}`))) return;
+      await grantHomeSponsor(tx, sponsor.partnerId, sponsor.days);
+    });
+    // La fascia loghi della Home è in cache: il logo compare subito.
+    revalidateTag("boosts", { expire: 0 });
+    return;
+  }
   const purchase = tokenPurchaseFromCheckout(session);
   if (!purchase) return;
   const now = new Date();
@@ -283,10 +383,10 @@ async function grantInvoiceTokens(invoice: Stripe.Invoice): Promise<void> {
 export async function confirmCheckoutReturn(
   sessionId: string,
   partnerId: string,
-): Promise<{ kind: "tokens" | "subscription"; confirmed: boolean } | null> {
+): Promise<{ kind: "tokens" | "subscription" | "home_sponsor" | "area_extension" | "search_boost"; confirmed: boolean } | null> {
   const session = await stripe().checkout.sessions.retrieve(sessionId);
   const kind = session.metadata?.kind;
-  if (session.metadata?.partnerId !== partnerId || (kind !== "tokens" && kind !== "subscription")) return null;
+  if (session.metadata?.partnerId !== partnerId || (kind !== "tokens" && kind !== "subscription" && kind !== "home_sponsor" && kind !== "area_extension" && kind !== "search_boost")) return null;
   // Con l'addebito SEPA la sessione è completa ma l'incasso arriva giorni dopo (webhook async_payment_succeeded).
   const confirmed = session.status === "complete" && session.payment_status !== "unpaid";
   if (!confirmed) return { kind, confirmed };

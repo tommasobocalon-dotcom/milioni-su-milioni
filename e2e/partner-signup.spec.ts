@@ -40,12 +40,13 @@ test("un'azienda si registra, la scheda resta nascosta fino all'attivazione del 
   const profile = "/professionisti/treviso/idraulico/idraulica-verdi-treviso";
   expect(await (await request.get(profile)).text()).not.toContain("Idraulica Verdi");
 
-  // Attivazione di prova (senza Stripe, solo in sviluppo): piano attivo, crediti del piano, scheda pubblica.
+  // Attivazione di prova (senza Stripe, solo in sviluppo): piano attivo, sponsorizzazioni sbloccate, scheda pubblica.
   await page.getByRole("button", { name: "Scegli Normal (prova senza pagare)" }).click();
   await expect(page.getByRole("heading", { level: 1, name: "Il tuo abbonamento" })).toBeVisible();
   await expect(page.getByText("48,99 € al mese + IVA")).toBeVisible();
   await page.goto("/area-partner/token");
-  await expect(page.getByText("Crediti del piano Normal (attivazione di prova)")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Logo in Home" })).toBeVisible();
+  await expect(page.getByText("Disponibile con i piani Normal e Premium")).toHaveCount(0);
   await page.goto(profile);
   await expect(page.getByRole("heading", { level: 1, name: "Idraulica Verdi" })).toBeVisible();
 

@@ -1,7 +1,6 @@
 import "server-only";
 import { and, asc, desc, eq, gt, lte, sql } from "drizzle-orm";
 import { cacheLife, cacheTag } from "next/cache";
-import { connection } from "next/server";
 import { db } from "@/lib/db/client";
 import { boosts, categories, municipalities, partners, provinces } from "@/lib/db/schema";
 import { profileHref } from "./search";
@@ -35,11 +34,14 @@ export type HomeSponsor = {
 
 /**
  * Aziende "in evidenza" nella fascia loghi della Home: i partner attivi con un boost "home" pagato a token
- * in corso adesso (PRD §7.3). Nessun limite: ci stanno tutti, e l'ordine cambia a ogni visita, così nessuno
- * sta sempre primo e scorrendo esce anche il tuo.
+ * in corso adesso (PRD §7.3). Nessun limite: ci stanno tutti. L'ordine lo mescola il browser a ogni visita
+ * (SponsorMarquee), così nessuno sta sempre primo.
  */
 export async function getHomeSponsors(): Promise<HomeSponsor[]> {
-  await connection();
+  "use cache";
+  // Un boost che scade sparisce entro qualche minuto; uno nuovo compare subito (updateTag("boosts") in activateBoostAction).
+  cacheLife("minutes");
+  cacheTag("boosts", "catalog");
   const now = new Date();
   const rows = await db
     .selectDistinctOn([partners.id], {
@@ -61,7 +63,7 @@ export async function getHomeSponsors(): Promise<HomeSponsor[]> {
     .where(and(eq(boosts.placement, "home"), lte(boosts.startsAt, now), gt(boosts.endsAt, now), eq(partners.accountStatus, "active")))
     .orderBy(asc(partners.id), desc(boosts.endsAt));
 
-  return shuffle(rows).map((r) => ({
+  return rows.map((r) => ({
       id: r.id,
       displayName: r.displayName,
       logoUrl: r.logoUrl,
@@ -69,13 +71,4 @@ export async function getHomeSponsors(): Promise<HomeSponsor[]> {
       municipalityName: r.municipalityName,
       href: profileHref(r),
     }));
-}
-
-function shuffle<T>(items: T[]): T[] {
-  const a = [...items];
-  for (let i = a.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [a[i], a[j]] = [a[j], a[i]];
-  }
-  return a;
 }

@@ -1,14 +1,13 @@
 import "server-only";
-import { and, desc, eq, gt, isNotNull, ne } from "drizzle-orm";
+import { and, desc, eq, gt, inArray, isNotNull, ne } from "drizzle-orm";
 import { db } from "@/lib/db/client";
-import { areaExtensions, boosts, leadEvents, leads, municipalities, partners, plans, portfolioItems, provinces, showcaseFeatures, subscriptions, tokenLedger, type LeadAnswer } from "@/lib/db/schema";
-import { neighbourProvinces } from "@/lib/domain/extras";
-import { AREA_EXTENSION, BOOST_OPTIONS, BOOST_PLACEMENTS, type BoostPlacement, SHOWCASE_OPTIONS } from "@/lib/domain/offers";
+import { areaExtensions, boosts, leadEvents, leads, municipalities, partners, plans, portfolioItems, showcaseFeatures, subscriptions, tokenLedger, type LeadAnswer } from "@/lib/db/schema";
+import { BOOST_OPTIONS, BOOST_PLACEMENTS, type BoostPlacement, SHOWCASE_OPTIONS } from "@/lib/domain/offers";
 import { decideLeadCharge, isDuplicateLead, DUPLICATE_WINDOW_DAYS } from "@/lib/domain/lead-rules";
 import { canBoost } from "@/lib/domain/ranking";
 import { InsufficientTokensError, planConsumption, type LedgerEntry } from "@/lib/domain/tokens";
 
-type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
+export type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
 export type NewLead = {
   partnerId: string;
@@ -113,6 +112,18 @@ export class ExtraNotActivatableError extends Error {}
  * acquisti insieme non si sovrappongono, e controlla che il piano attivo li consenta (Normal e Premium).
  */
 async function lockPartnerForExtra(tx: Tx, partnerId: string) {
+  const p = await lockPartner(tx, partnerId);
+  const [plan] = await tx
+    .select({ weight: plans.visibilityWeight })
+    .from(subscriptions)
+    .innerJoin(plans, eq(plans.id, subscriptions.planId))
+    .where(and(eq(subscriptions.partnerId, partnerId), eq(subscriptions.status, "active")));
+  if (!plan || !canBoost(plan.weight)) throw new ExtraNotActivatableError("Gli extra con i crediti sono inclusi nei piani Normal e Premium");
+  return p;
+}
+
+/** Riga del partner bloccata fino alla fine della transazione, con categoria e provincia per i boost. */
+async function lockPartner(tx: Tx, partnerId: string) {
   const [p] = await tx
     .select({ categoryId: partners.categoryId, provinceId: municipalities.provinceId })
     .from(partners)
@@ -120,12 +131,6 @@ async function lockPartnerForExtra(tx: Tx, partnerId: string) {
     .where(eq(partners.id, partnerId))
     .for("update", { of: partners });
   if (!p) throw new ExtraNotActivatableError("Partner non trovato");
-  const [plan] = await tx
-    .select({ weight: plans.visibilityWeight })
-    .from(subscriptions)
-    .innerJoin(plans, eq(plans.id, subscriptions.planId))
-    .where(and(eq(subscriptions.partnerId, partnerId), eq(subscriptions.status, "active")));
-  if (!plan || !canBoost(plan.weight)) throw new ExtraNotActivatableError("Gli extra con i crediti sono inclusi nei piani Normal e Premium");
   return p;
 }
 
@@ -139,50 +144,77 @@ async function payExtra(tx: Tx, partnerId: string, tokens: number, reference: st
 }
 
 /**
- * Boost della scheda pagato a token (solo Normal e Premium), per la categoria e la provincia del partner.
- * Due tipi separati: "search" (Sponsorizzato nella ricerca) e "home" (logo nella fascia della Home).
- * Se un boost dello stesso tipo è già attivo, il nuovo parte alla sua scadenza (si allunga, non si sovrappone).
+ * Boost "Sponsorizzato nella ricerca" pagato a token (solo Normal e Premium), per la categoria e la provincia del partner.
+ * Il logo in Home non si paga più a token: pacchetti in euro con Stripe (grantHomeSponsor).
  */
 export async function activateBoost(partnerId: string, placement: BoostPlacement, hours: number, now = new Date()) {
+  if (placement === "home") throw new ExtraNotActivatableError("Il logo in Home si acquista con un pacchetto in euro");
   const option = BOOST_OPTIONS.find((o) => o.hours === hours);
   if (!option) throw new ExtraNotActivatableError("Durata non valida");
   return db.transaction(async (tx) => {
     const p = await lockPartnerForExtra(tx, partnerId);
-    const [last] = await tx
-      .select({ endsAt: boosts.endsAt })
-      .from(boosts)
-      .where(and(eq(boosts.partnerId, partnerId), eq(boosts.placement, placement), gt(boosts.endsAt, now)))
-      .orderBy(desc(boosts.endsAt))
-      .limit(1);
-    const startsAt = last?.endsAt ?? now;
-    const endsAt = new Date(startsAt.getTime() + option.hours * 3_600_000);
     await payExtra(tx, partnerId, option.tokens, `${BOOST_PLACEMENTS[placement]} ${option.hours} ore`, now);
-    await tx.insert(boosts).values({ partnerId, placement, categoryId: p.categoryId, provinceId: p.provinceId, startsAt, endsAt, tokensSpent: option.tokens, createdAt: now });
-    return { startsAt, endsAt };
+    return insertBoost(tx, partnerId, p, placement, option.hours * 3_600_000, option.tokens, now);
   });
 }
 
-/** La scheda compare per 30 giorni anche in una provincia confinante; se è già attiva lì, si allunga. */
-export async function activateAreaExtension(partnerId: string, provinceId: number, now = new Date()) {
-  return db.transaction(async (tx) => {
-    const p = await lockPartnerForExtra(tx, partnerId);
-    const [home] = await tx.select({ code: provinces.code }).from(provinces).where(eq(provinces.id, p.provinceId));
-    const [target] = await tx.select({ code: provinces.code, name: provinces.name }).from(provinces).where(eq(provinces.id, provinceId));
-    if (!home || !target || !neighbourProvinces(home.code).includes(target.code)) {
-      throw new ExtraNotActivatableError("Puoi aggiungere solo una provincia confinante con la tua");
-    }
+/**
+ * Logo in evidenza in Home per `days` giorni, già pagato con Stripe: va chiamata dentro la transazione che segna
+ * il pagamento come elaborato, così non si aggiunge due volte. Nessun controllo sul piano: il pagamento è avvenuto.
+ */
+export async function grantHomeSponsor(tx: Tx, partnerId: string, days: number, now = new Date()) {
+  const p = await lockPartner(tx, partnerId);
+  return insertBoost(tx, partnerId, p, "home", days * 86_400_000, 0, now);
+}
+
+/** Boost "Sponsorizzato nella ricerca" per `hours` ore, già pagato con Stripe: stesse regole di grantHomeSponsor. */
+export async function grantSearchBoost(tx: Tx, partnerId: string, hours: number, now = new Date()) {
+  const p = await lockPartner(tx, partnerId);
+  return insertBoost(tx, partnerId, p, "search", hours * 3_600_000, 0, now);
+}
+
+/** Se un boost dello stesso tipo è già attivo, il nuovo parte alla sua scadenza (si allunga, non si sovrappone). */
+async function insertBoost(
+  tx: Tx,
+  partnerId: string,
+  p: { categoryId: string; provinceId: number },
+  placement: BoostPlacement,
+  durationMs: number,
+  tokensSpent: number,
+  now: Date,
+) {
+  const [last] = await tx
+    .select({ endsAt: boosts.endsAt })
+    .from(boosts)
+    .where(and(eq(boosts.partnerId, partnerId), eq(boosts.placement, placement), gt(boosts.endsAt, now)))
+    .orderBy(desc(boosts.endsAt))
+    .limit(1);
+  const startsAt = last?.endsAt ?? now;
+  const endsAt = new Date(startsAt.getTime() + durationMs);
+  await tx.insert(boosts).values({ partnerId, placement, categoryId: p.categoryId, provinceId: p.provinceId, startsAt, endsAt, tokensSpent, createdAt: now });
+  return { startsAt, endsAt };
+}
+
+/**
+ * Estensione territoriale già pagata con Stripe: per ogni comune la scheda compare nelle sue ricerche per `days` giorni;
+ * se in quel comune c'è già un'estensione in corso, il nuovo periodo parte alla sua scadenza. Va chiamata dentro la
+ * transazione che segna il pagamento come elaborato. I codici che non sono comuni del database vengono ignorati.
+ */
+export async function grantAreaExtensions(tx: Tx, partnerId: string, municipalityIds: number[], days: number, now = new Date()) {
+  await lockPartner(tx, partnerId);
+  const known = await tx.select({ id: municipalities.id }).from(municipalities).where(inArray(municipalities.id, municipalityIds));
+  for (const { id } of known) {
     const [last] = await tx
       .select({ endsAt: areaExtensions.endsAt })
       .from(areaExtensions)
-      .where(and(eq(areaExtensions.partnerId, partnerId), eq(areaExtensions.provinceId, provinceId), gt(areaExtensions.endsAt, now)))
+      .where(and(eq(areaExtensions.partnerId, partnerId), eq(areaExtensions.municipalityId, id), gt(areaExtensions.endsAt, now)))
       .orderBy(desc(areaExtensions.endsAt))
       .limit(1);
     const startsAt = last?.endsAt ?? now;
-    const endsAt = new Date(startsAt.getTime() + AREA_EXTENSION.days * 86_400_000);
-    await payExtra(tx, partnerId, AREA_EXTENSION.tokens, `Provincia di ${target.name} per ${AREA_EXTENSION.days} giorni`, now);
-    await tx.insert(areaExtensions).values({ partnerId, provinceId, startsAt, endsAt, tokensSpent: AREA_EXTENSION.tokens, createdAt: now });
-    return { endsAt, provinceName: target.name };
-  });
+    const endsAt = new Date(startsAt.getTime() + days * 86_400_000);
+    await tx.insert(areaExtensions).values({ partnerId, municipalityId: id, startsAt, endsAt, tokensSpent: 0, createdAt: now });
+  }
+  return known.length;
 }
 
 /** Un lavoro del portfolio (con foto) in evidenza nella pagina Ispirazione per 7 o 30 giorni. */

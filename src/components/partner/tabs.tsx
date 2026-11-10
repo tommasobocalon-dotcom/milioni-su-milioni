@@ -4,15 +4,11 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 
-/** Schede delle voci di menu che raccolgono più pagine ("La mia attività", "Crediti e piano"). */
+/** Schede delle voci di menu che raccolgono più pagine ("La mia attività"). */
 const GROUPS = [
   [
     { href: "/area-partner/scheda", label: "Scheda pubblica" },
     { href: "/area-partner/listino", label: "Prezzi" },
-  ],
-  [
-    { href: "/area-partner/abbonamento", label: "Abbonamento" },
-    { href: "/area-partner/token", label: "Crediti" },
   ],
 ];
 

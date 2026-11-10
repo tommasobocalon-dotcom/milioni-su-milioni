@@ -20,5 +20,7 @@ export async function GET(request: NextRequest) {
   }
   const page = result?.kind === "subscription" ? "/area-partner/abbonamento" : "/area-partner/token";
   // "ricevuto": già applicato; "ok": avviato, la conferma arriva dal webhook (SEPA o errore temporaneo).
-  return NextResponse.redirect(new URL(`${page}?pagamento=${result?.confirmed ? "ricevuto" : "ok"}`, request.url), 303);
+  const anchors: Record<string, string> = { home_sponsor: "#home", search_boost: "#boost", area_extension: "#estensione" };
+  const what = anchors[result?.kind ?? ""] ?? "";
+  return NextResponse.redirect(new URL(`${page}?pagamento=${result?.confirmed ? "ricevuto" : "ok"}${what}`, request.url), 303);
 }

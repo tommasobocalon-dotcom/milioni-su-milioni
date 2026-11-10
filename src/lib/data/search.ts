@@ -1,9 +1,8 @@
 import "server-only";
 import { and, eq, gt, inArray, lte, or, sql } from "drizzle-orm";
-import { cookies } from "next/headers";
-import { connection } from "next/server";
+import { cacheLife, cacheTag } from "next/cache";
+import { after } from "next/server";
 import { db } from "@/lib/db/client";
-import { recordProfileEvents } from "./stats";
 import {
   areaExtensions,
   boosts,
@@ -20,9 +19,10 @@ import {
   subscriptions,
 } from "@/lib/db/schema";
 import { distanceKm, formatPriceRange, type PriceUnit } from "@/lib/domain/format";
-import { canBoost, RATING_PRIOR, rankListing, VISITOR_COOKIE } from "@/lib/domain/ranking";
+import { canBoost, RATING_PRIOR, rankListing } from "@/lib/domain/ranking";
 import { bayesianScore } from "@/lib/domain/rating";
 import type { Place } from "./catalog";
+import { recordProfileEvents } from "./stats";
 import { pageItems } from "@/lib/domain/pagination";
 
 export type SortKey = "rilevanza" | "valutazione" | "recensioni" | "distanza" | "prezzo";
@@ -70,10 +70,14 @@ export async function searchPartners(input: {
   page?: number;
   pageSize?: number;
   firstPageSize?: number;
+  /** Rotazione dell'ordine tra pari grado del visitatore (visitorRotation in ranking.ts). */
+  visitorSeed?: string;
 }): Promise<{ featured: PartnerListItem | null; results: PartnerListItem[]; total: number; page: number; pages: number }> {
-  await connection();
-  // Ogni visitatore ha il suo ordine tra pari grado (cookie di sessione impostato in proxy.ts).
-  const visitorSeed = (await cookies()).get(VISITOR_COOKIE)?.value ?? "";
+  "use cache";
+  // In cache per filtri + rotazione: un boost nuovo compare subito (updateTag("boosts")), il resto entro un minuto circa.
+  cacheLife("minutes");
+  cacheTag("catalog", "boosts");
+  const visitorSeed = input.visitorSeed ?? "";
   const now = new Date();
 
   const ratingAgg = db
@@ -92,12 +96,13 @@ export async function searchPartners(input: {
   if (input.partnerType === "agency") conditions.push(eq(partners.type, "agency"));
   if (input.partnerType === "pro") conditions.push(sql`${partners.type} <> 'agency'`);
   if (input.place) {
-    // Il partner serve il comune cercato o tutta la sua provincia, oppure ha comprato quella provincia per 30 giorni.
+    // Il partner serve il comune cercato o tutta la sua provincia, oppure ha comprato l'estensione territoriale a quel comune.
     conditions.push(
       sql`(exists (select 1 from ${serviceAreas} sa where sa.partner_id = ${partners.id}
         and (sa.municipality_id = ${input.place.id} or sa.province_id = ${input.place.provinceId}))
         or exists (select 1 from ${areaExtensions} ae where ae.partner_id = ${partners.id}
-        and ae.province_id = ${input.place.provinceId} and ae.starts_at <= ${now.toISOString()}::timestamptz and ae.ends_at > ${now.toISOString()}::timestamptz))`,
+        and ae.municipality_id = ${input.place.id}
+        and ae.starts_at <= ${now.toISOString()}::timestamptz and ae.ends_at > ${now.toISOString()}::timestamptz))`,
     );
   }
   if (input.serviceId) {
@@ -248,11 +253,6 @@ export async function searchPartners(input: {
     delete out.bayes;
     return out as PartnerListItem;
   };
-  // Impressioni solo per le schede davvero mostrate in questa pagina.
-  await recordProfileEvents(
-    [...(featured ? [featured] : []), ...results].map((i) => i.id),
-    "impression",
-  );
   return {
     // Il riquadro grande è un posto a pagamento: sempre etichettato "Sponsorizzato" (P2B, Omnibus).
     featured: featured ? { ...strip(featured), sponsored: true } : null,
@@ -261,4 +261,10 @@ export async function searchPartners(input: {
     page: paged.page,
     pages: paged.pages,
   };
+}
+
+/** Impressioni delle schede mostrate in questa pagina, scritte dopo aver mandato la risposta (non rallentano la pagina). */
+export function recordImpressions(r: { featured: PartnerListItem | null; results: PartnerListItem[] }) {
+  const ids = [...(r.featured ? [r.featured] : []), ...r.results].map((i) => i.id);
+  after(() => recordProfileEvents(ids, "impression"));
 }

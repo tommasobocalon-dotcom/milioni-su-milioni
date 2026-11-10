@@ -3,10 +3,6 @@ import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { ButtonLink } from "@/components/ui/button";
 import { getCategories } from "@/lib/data/catalog";
-import {
-  CATEGORY_PHOTOS,
-  type CategoryPhoto,
-} from "@/lib/data/category-photos";
 import { cn } from "@/lib/utils";
 
 type Shortcut = { label: string; href: string };
@@ -20,7 +16,7 @@ const HOME_SHORTCUTS: Shortcut[] = [
 
 /**
  * I due grandi accessi della Home (PRD §5.1): professionisti a sinistra, agenzie a destra.
- * Ogni blocco ha una foto del mestiere (crediti nel footer), titolo, descrizione, scorciatoie e il bottone della ricerca.
+ * Ogni blocco ha una foto del mestiere (fornita dal cliente, in `public/foto/home/`), titolo, descrizione, scorciatoie e il bottone della ricerca.
  */
 export async function EntryBlocks({ id }: { id: string }) {
   const categories = await getCategories();
@@ -56,10 +52,13 @@ export async function EntryBlocks({ id }: { id: string }) {
             lavora davvero nella tua zona.
           </p>
         </div>
-        <div className="mx-auto grid max-w-4xl grid-cols-1 gap-6 sm:grid-cols-2">
+        <div className="mx-auto grid max-w-4xl grid-cols-1 gap-6 sm:grid-cols-2 md:gap-20">
           <Block
             tone="sage"
-            photo={CATEGORY_PHOTOS.imbianchino}
+            photo={{
+              src: "/foto/home/professionisti-card-v2.jpg",
+              alt: "Artigiano che monta una finestra in una stanza in ristrutturazione",
+            }}
             label="Tecnici e artigiani"
             title="Cerca professionisti"
             text="Geometri, tecnici e artigiani della tua zona, con prezzi indicativi e recensioni solo da clienti verificati."
@@ -69,7 +68,11 @@ export async function EntryBlocks({ id }: { id: string }) {
           />
           <Block
             tone="sage"
-            photo={CATEGORY_PHOTOS["agenzia-immobiliare"]}
+            photo={{
+              src: "/foto/home/agenzia-card.jpg",
+              alt: "Agente immobiliare sorridente con il portatile sotto il braccio",
+              position: "object-[50%_15%]",
+            }}
             label="Agenzie immobiliari"
             title="Cerca agenzie"
             text="Comprare, vendere o affittare casa con le agenzie immobiliari che conoscono la zona."
@@ -85,7 +88,8 @@ export async function EntryBlocks({ id }: { id: string }) {
 
 function Block(props: {
   tone: "white" | "sage";
-  photo: CategoryPhoto;
+  /** `position`: classe object-position per scegliere quale parte della foto resta nel riquadro 4:3. */
+  photo: { src: string; alt: string; position?: string };
   label: string;
   title: string;
   text: string;
@@ -108,7 +112,10 @@ function Block(props: {
           alt={props.photo.alt}
           fill
           sizes="(min-width: 896px) 430px, (min-width: 640px) 50vw, 100vw"
-          className="object-cover transition-transform duration-700 ease-out motion-safe:group-hover/block:scale-[1.04]"
+          className={cn(
+            "object-cover transition-transform duration-700 ease-out motion-safe:group-hover/block:scale-[1.04]",
+            props.photo.position,
+          )}
         />
       </div>
       <div className="flex flex-1 flex-col gap-3 px-3 pt-6 pb-3 md:px-5 md:pt-7 md:pb-5">
