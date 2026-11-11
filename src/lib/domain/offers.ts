@@ -94,8 +94,8 @@ export const SEARCH_BOOST_PACKAGES = [
 ] as const;
 
 /**
- * Promo dei piani (soci, 11/11/2026). Prezzi IVA esclusa; listino nella tabella plans (Normal 69 €/mese o 828 €/anno,
- * Premium 159 €/mese o 1908 €/anno). Il primo mese del mensile costa sempre 39 € o 79 €; l'annuale costa 599 € o
+ * Promo dei piani (soci, 11/11/2026). Prezzi IVA esclusa; listino nella tabella plans (Normal 89 €/mese o 828 €/anno,
+ * Premium 199 €/mese o 1908 €/anno). Il primo mese del mensile costa sempre 39 € o 79 €; l'annuale costa 599 € o
  * 1490 € (Premium con 30 giorni di logo in Home in regalo) solo per chi si abbona nei primi 6 mesi dal lancio.
  * Lo sconto vale per il primo pagamento: dal secondo mese, o al rinnovo dell'annuale, si paga il listino.
  */
@@ -120,4 +120,12 @@ export function planPromo(
   if (period === "yearly" && !promoActive(now, launch)) return null;
   if (payNowCents >= listCents) return null;
   return { payNowCents, listCents, giftHomeDays: period === "yearly" ? promo.yearlyGiftHomeDays : 0 };
+}
+
+/**
+ * Promo per chi cambia piano (soci, 11/11/2026): la stessa del primo abbonamento, ma solo salendo (listino più alto
+ * di quello che si paga adesso) e una volta per azienda, altrimenti si potrebbe scendere e risalire per riaverla.
+ */
+export function changePromo(currentListCents: number, targetListCents: number, promo: PlanPromo | null, alreadyUsed: boolean): PlanPromo | null {
+  return !alreadyUsed && targetListCents > currentListCents ? promo : null;
 }

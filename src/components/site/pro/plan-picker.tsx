@@ -3,7 +3,8 @@
 import { useState } from "react";
 import { Check } from "lucide-react";
 import { ButtonLink } from "@/components/ui/button";
-import { PlanPrice, type PlanPromos } from "@/components/site/pro/plan-price";
+import { bestYearlySaving, PlanPrice, PromoBanner, type PlanPromos } from "@/components/site/pro/plan-price";
+import { formatEuro } from "@/lib/domain/format";
 import { cn } from "@/lib/utils";
 
 export type PlanCard = {
@@ -18,9 +19,11 @@ export type PlanCard = {
 /** I tre piani affiancati, con la scelta mensile/annuale. Il piano Normal è quello consigliato. */
 export function PlanPicker({ plans }: { plans: PlanCard[] }) {
   const [yearly, setYearly] = useState(false);
+  const yearlySaving = bestYearlySaving(plans);
 
   return (
     <div className="flex flex-col items-center gap-8">
+      <PromoBanner plans={plans} />
       <div role="radiogroup" aria-label="Come paghi" className="inline-flex rounded-full bg-surface p-1 ring-1 ring-line">
         {[
           { value: false, label: "Mensile" },
@@ -38,6 +41,9 @@ export function PlanPicker({ plans }: { plans: PlanCard[] }) {
             )}
           >
             {o.label}
+            {o.value && yearlySaving && (
+              <span className="ml-2 rounded-full bg-rosso-600 px-2 py-0.5 text-caption font-bold text-on-brand">-{formatEuro(yearlySaving)}</span>
+            )}
           </button>
         ))}
       </div>
@@ -67,9 +73,15 @@ export function PlanPicker({ plans }: { plans: PlanCard[] }) {
                   </li>
                 ))}
               </ul>
-              <ButtonLink href="/registrazione-partner" variant={featured ? "primary" : "secondary"} className="mt-auto w-full">
-                Scegli {p.name}
-              </ButtonLink>
+              <div className="mt-auto flex flex-col gap-2">
+                <ButtonLink href="/registrazione-partner" variant={featured ? "primary" : "secondary"} className="w-full">
+                  Scegli {p.name}
+                </ButtonLink>
+                <p className="text-center text-caption text-ink-2">
+                  7 giorni gratis, poi {formatEuro((yearly ? p.promo.yearly : p.promo.monthly)?.payNowCents ?? (yearly ? p.yearlyPriceCents : p.monthlyPriceCents))}
+                  {yearly ? " per l'anno" : (p.promo.monthly ? " il primo mese" : " al mese")}
+                </p>
+              </div>
             </li>
           );
         })}

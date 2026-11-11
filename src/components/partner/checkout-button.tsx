@@ -5,7 +5,12 @@ import type { CheckoutState } from "@/app/area-partner/actions";
 import { Button } from "@/components/ui/button";
 
 /** Crea la sessione Stripe sul server e porta il partner alla pagina di pagamento o al portale. */
-export function CheckoutButton({ action, children, ...props }: { action: () => Promise<CheckoutState> } & Omit<ComponentProps<typeof Button>, "onClick">) {
+export function CheckoutButton({
+  action,
+  confirm,
+  children,
+  ...props
+}: { action: () => Promise<CheckoutState>; confirm?: string } & Omit<ComponentProps<typeof Button>, "onClick">) {
   const [error, setError] = useState<string>();
   const [pending, start] = useTransition();
   return (
@@ -14,6 +19,8 @@ export function CheckoutButton({ action, children, ...props }: { action: () => P
         {...props}
         disabled={pending || props.disabled}
         onClick={() =>
+          // Conferma solo dove si paga subito senza passare da una pagina di Stripe (cambio piano in promo).
+          (!confirm || window.confirm(confirm)) &&
           start(async () => {
             const res = await action();
             if (res.url) window.location.assign(res.url);

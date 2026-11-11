@@ -1,11 +1,11 @@
 import "server-only";
 import { revalidateTag } from "next/cache";
-import { and, eq, inArray, isNotNull, isNull, or } from "drizzle-orm";
+import { and, eq, inArray, isNotNull, isNull, or, sql } from "drizzle-orm";
 import Stripe from "stripe";
 import { db } from "@/lib/db/client";
 import { municipalities, partners, plans, stripeProcessed, subscriptions, tokenLedger } from "@/lib/db/schema";
 import { accountStatusFrom, areaExtensionFromCheckout, grantsRenewalTokens, homeSponsorFromCheckout, searchBoostFromCheckout, periodFromItems, planFromLookupKey, planLookupKey, subscriptionStatusFromStripe, tokenMonthsDue, tokenPurchaseFromCheckout, TRIAL_DAYS } from "@/lib/domain/billing";
-import { AREA_EXTENSION_OFFER, HOME_SPONSOR_PACKAGES, homeSponsorPrice, launchDate, municipalityIdsFrom, planPromo, SEARCH_BOOST_PACKAGES, TOKEN_PACKAGES } from "@/lib/domain/offers";
+import { AREA_EXTENSION_OFFER, changePromo, HOME_SPONSOR_PACKAGES, homeSponsorPrice, launchDate, municipalityIdsFrom, planPromo, type PlanPromo, SEARCH_BOOST_PACKAGES, TOKEN_PACKAGES } from "@/lib/domain/offers";
 import { grantAreaExtensions, grantHomeSponsor, grantSearchBoost } from "@/lib/leads/service";
 import { tokenExpiryFrom } from "@/lib/domain/tokens";
 
@@ -178,15 +178,15 @@ export async function createAreaExtensionCheckout(payer: Payer, ids: number[]): 
  * dopo i 7 giorni di prova, mentre con "once" lo consumerebbe la fattura a 0 € della prova. L'id contiene l'importo,
  * così se cambia la promo nasce un coupon nuovo.
  */
-async function promoCoupon(planCode: string, period: "monthly" | "yearly", amountOffCents: number): Promise<string> {
-  const id = `geco-promo-${planCode}-${period}-${amountOffCents}`;
+async function promoCoupon(planCode: string, period: "monthly" | "yearly", amountOffCents: number, duration: "repeating" | "once" = "repeating"): Promise<string> {
+  const id = `geco-promo-${planCode}-${period}-${amountOffCents}${duration === "once" ? "-once" : ""}`;
   try {
     return (await stripe().coupons.retrieve(id)).id;
   } catch (err) {
     if (!(err instanceof Stripe.errors.StripeInvalidRequestError && err.code === "resource_missing")) throw err;
   }
   const coupon = await stripe().coupons.create(
-    { id, amount_off: amountOffCents, currency: "eur", duration: "repeating", duration_in_months: 1, name: period === "yearly" ? "Promo lancio annuale" : "Promo primo mese" },
+    { id, amount_off: amountOffCents, currency: "eur", ...(duration === "once" ? { duration } : { duration, duration_in_months: 1 }), name: period === "yearly" ? "Promo lancio annuale" : "Promo primo mese" },
     { idempotencyKey: `coupon:${id}` },
   );
   return coupon.id;
@@ -264,9 +264,14 @@ async function portalConfiguration(): Promise<{ configuration?: string }> {
  */
 export async function createPlanChangeSession(partnerId: string, planCode: string, period: "monthly" | "yearly"): Promise<string> {
   const [row] = await db
-    .select({ customer: partners.stripeCustomerId, subscriptionId: subscriptions.stripeSubscriptionId })
+    .select({
+      customer: partners.stripeCustomerId,
+      subscriptionId: subscriptions.stripeSubscriptionId,
+      currentListCents: sql<number>`case when ${subscriptions.period} = 'yearly' then ${plans.yearlyPriceCents} else ${plans.monthlyPriceCents} end`,
+    })
     .from(subscriptions)
     .innerJoin(partners, eq(partners.id, subscriptions.partnerId))
+    .innerJoin(plans, eq(plans.id, subscriptions.planId))
     .where(and(eq(subscriptions.partnerId, partnerId), eq(subscriptions.status, "active"), isNotNull(subscriptions.stripeSubscriptionId)));
   if (!row?.customer || !row.subscriptionId) throw new BillingError("Nessun abbonamento attivo da cambiare");
   const [plan] = await db.select().from(plans).where(eq(plans.code, planCode));
@@ -276,6 +281,12 @@ export async function createPlanChangeSession(partnerId: string, planCode: strin
   const item = (await stripe().subscriptions.retrieve(row.subscriptionId)).items.data[0];
   if (!item) throw new Error(`Abbonamento Stripe ${row.subscriptionId} senza voci`);
   if (item.price.id === price) throw new BillingError("È già il tuo piano");
+  const targetListCents = period === "yearly" ? plan.yearlyPriceCents : plan.monthlyPriceCents;
+  const promo = changePromo(row.currentListCents, targetListCents, planPromo(plan, period, new Date(), launchDate()), await changePromoUsed(partnerId));
+  if (promo) {
+    await changePlanWithPromo(partnerId, row.subscriptionId, item.id, price, plan.code, period, promo);
+    return `${appUrl()}/area-partner/abbonamento?pagamento=cambio`;
+  }
   const session = await stripe().billingPortal.sessions.create({
     customer: row.customer,
     locale: "it",
@@ -288,6 +299,52 @@ export async function createPlanChangeSession(partnerId: string, planCode: strin
     },
   });
   return session.url;
+}
+
+const changePromoKey = (partnerId: string) => `change-promo:${partnerId}`;
+
+/** L'azienda ha già avuto la promo in un cambio piano. */
+export async function changePromoUsed(partnerId: string): Promise<boolean> {
+  const [row] = await db.select({ key: stripeProcessed.key }).from(stripeProcessed).where(eq(stripeProcessed.key, changePromoKey(partnerId)));
+  return Boolean(row);
+}
+
+/**
+ * Cambio piano con la promo, senza passare dal portale (che non sa applicare lo sconto come sulle schede).
+ * In prova: cambia il prezzo e lo sconto vale sul primo pagamento, come per un abbonamento nuovo. Già pagante: il nuovo
+ * periodo parte oggi, si paga subito il prezzo promo meno i giorni non usati del piano di prima; se la carta non passa
+ * Stripe rifiuta il cambio e resta tutto com'era.
+ */
+async function changePlanWithPromo(
+  partnerId: string,
+  subscriptionId: string,
+  itemId: string,
+  price: string,
+  planCode: string,
+  period: "monthly" | "yearly",
+  promo: PlanPromo,
+): Promise<void> {
+  const sub = await stripe().subscriptions.retrieve(subscriptionId);
+  const trialing = sub.status === "trialing";
+  const metadata = promo.giftHomeDays ? { ...sub.metadata, giftHomeDays: String(promo.giftHomeDays) } : sub.metadata;
+  const params: Stripe.SubscriptionUpdateParams = {
+    items: [{ id: itemId, price, quantity: 1 }],
+    metadata,
+    discounts: [{ coupon: await promoCoupon(planCode, period, promo.listCents - promo.payNowCents, trialing ? "repeating" : "once") }],
+    proration_behavior: trialing ? "none" : "create_prorations",
+    expand: ["latest_invoice"],
+  };
+  if (!trialing) Object.assign(params, { billing_cycle_anchor: { type: "now" }, payment_behavior: "error_if_incomplete" });
+  const updated = await stripe()
+    .subscriptions.update(subscriptionId, params)
+    .catch((err) => {
+      if (err instanceof Stripe.errors.StripeCardError) throw new BillingError("Pagamento non riuscito: controlla la carta in Gestisci pagamenti e riprova");
+      throw err;
+    });
+  await db.insert(stripeProcessed).values({ key: changePromoKey(partnerId) }).onConflictDoNothing();
+  // Effetti subito, senza aspettare il webhook (che li ripete senza doppioni).
+  await syncSubscription(subscriptionId);
+  if (!trialing && updated.latest_invoice && typeof updated.latest_invoice !== "string") await grantInvoiceTokens(updated.latest_invoice);
 }
 
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
@@ -415,7 +472,9 @@ async function applyCheckoutSession(session: Stripe.Checkout.Session): Promise<v
 async function grantInvoiceTokens(invoice: Stripe.Invoice): Promise<void> {
   const subscriptionId = idOf(invoice.parent?.subscription_details?.subscription);
   // La fattura a 0 € della prova gratuita non porta crediti: arrivano col primo pagamento vero.
-  if (invoice.status !== "paid" || !subscriptionId || !grantsRenewalTokens(invoice.billing_reason) || invoice.amount_paid <= 0) return;
+  // Il cambio piano in promo (fattura "subscription_update") porta solo il regalo, non i crediti del rinnovo.
+  const renewal = grantsRenewalTokens(invoice.billing_reason);
+  if (invoice.status !== "paid" || !subscriptionId || !(renewal || invoice.billing_reason === "subscription_update") || invoice.amount_paid <= 0) return;
   const synced = await syncSubscription(subscriptionId);
   if (!synced) return;
   const now = new Date();
@@ -424,6 +483,7 @@ async function grantInvoiceTokens(invoice: Stripe.Invoice): Promise<void> {
     if (!(await firstTime(tx, `invoice:${invoice.id}`))) return;
     // Annuale Premium in promo: logo in Home in regalo col primo incasso, una volta sola per abbonamento.
     if (giftDays > 0 && (await firstTime(tx, `gift:${subscriptionId}`))) await grantHomeSponsor(tx, synced.partnerId, giftDays, now);
+    if (!renewal) return;
     const [plan] = await tx
       .select({ name: plans.name, tokens: plans.renewalTokens })
       .from(subscriptions)

@@ -5,7 +5,8 @@ import { Check } from "lucide-react";
 import { simulateSubscription, startPlanChange, startSubscriptionCheckout } from "@/app/area-partner/actions";
 import { CheckoutButton } from "@/components/partner/checkout-button";
 import { Button } from "@/components/ui/button";
-import { PlanPrice, type PlanPromos } from "@/components/site/pro/plan-price";
+import { bestYearlySaving, PlanPrice, PromoBanner, type PlanPromos } from "@/components/site/pro/plan-price";
+import { formatEuro } from "@/lib/domain/format";
 import { cn } from "@/lib/utils";
 
 export type ChooserPlan = { code: string; name: string; monthlyPriceCents: number; yearlyPriceCents: number; promo: PlanPromos; features: string[] };
@@ -31,9 +32,11 @@ export function PlanChooser({
   const [yearly, setYearly] = useState(current?.period === "yearly");
   const [pending, start] = useTransition();
   const period = yearly ? "yearly" : "monthly";
+  const yearlySaving = bestYearlySaving(plans);
 
   return (
     <div className="flex flex-col gap-6">
+      <PromoBanner plans={plans} />
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div role="radiogroup" aria-label="Come paghi" className="inline-flex rounded-full bg-surface p-1 ring-1 ring-line">
           {[
@@ -52,6 +55,9 @@ export function PlanChooser({
               )}
             >
               {o.label}
+              {o.value && yearlySaving && (
+                <span className="ml-2 rounded-full bg-rosso-600 px-2 py-0.5 text-caption font-bold text-on-brand">-{formatEuro(yearlySaving)}</span>
+              )}
             </button>
           ))}
         </div>
@@ -64,6 +70,7 @@ export function PlanChooser({
           // Nel cambio piano la scheda in evidenza è quella attuale; altrimenti il Normal consigliato.
           const featured = current ? current.code === p.code : p.code === "normal";
           const label = isCurrent ? "Il tuo piano attuale" : current ? `Passa a ${p.name}` : `Scegli ${p.name}`;
+          const promo = yearly ? p.promo.yearly : p.promo.monthly;
           return (
             <li
               key={p.code}
@@ -95,6 +102,7 @@ export function PlanChooser({
                 ) : (
                   <CheckoutButton
                     action={() => (current ? startPlanChange(p.code, period) : startSubscriptionCheckout(p.code, period))}
+                    confirm={current && promo ? `Passi a ${p.name} ${yearly ? "annuale" : "mensile"} in promo: ${formatEuro(promo.payNowCents)} + IVA per il primo periodo, meno i giorni non usati del piano attuale. Se stai già pagando, l'addebito è immediato e il nuovo periodo parte oggi; se sei in prova, paghi alla fine della prova. Confermi?` : undefined}
                     className="w-full"
                     variant={featured && !current ? "primary" : "secondary"}
                     disabled={!owner || isCurrent}
