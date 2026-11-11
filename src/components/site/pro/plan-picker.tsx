@@ -42,7 +42,7 @@ export function PlanPicker({ plans }: { plans: PlanCard[] }) {
           >
             {o.label}
             {o.value && yearlySaving && (
-              <span className="ml-2 rounded-full bg-rosso-600 px-2 py-0.5 text-caption font-bold text-on-brand">-{formatEuro(yearlySaving)}</span>
+              <span className="ml-2 rounded-full bg-promo px-2 py-0.5 text-caption font-bold text-ink">-{formatEuro(yearlySaving)}</span>
             )}
           </button>
         ))}

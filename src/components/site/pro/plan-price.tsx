@@ -29,7 +29,7 @@ export function PromoBanner({ plans }: { plans: PromoPlan[] }) {
   if (!firstMonth && !yearly) return null;
   return (
     <div className="flex w-full flex-col items-start gap-3 rounded-lg bg-primary p-5 text-on-brand sm:flex-row sm:items-center sm:gap-4 md:px-6">
-      <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-rosso-600 px-3 py-1 text-caption font-bold tracking-wide text-on-brand uppercase">
+      <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-promo px-3 py-1 text-caption font-bold tracking-wide text-ink uppercase">
         <BadgePercent className="size-4" aria-hidden /> Promo di lancio
       </span>
       <p className="text-body font-semibold">
@@ -53,7 +53,7 @@ export function PlanPrice({ plan, yearly }: { plan: PromoPlan; yearly: boolean }
   return (
     <div>
       {promo && (
-        <p className="mb-2 inline-flex items-center gap-1.5 rounded-full bg-rosso-600 px-3 py-1 text-caption font-bold text-on-brand">
+        <p className="mb-2 inline-flex items-center gap-1.5 rounded-full bg-promo px-3 py-1 text-caption font-bold text-ink">
           <BadgePercent className="size-4" aria-hidden />
           Promo · risparmi {formatEuro(saving(promo))}
         </p>
@@ -69,8 +69,8 @@ export function PlanPrice({ plan, yearly }: { plan: PromoPlan; yearly: boolean }
         {!promo && (yearly ? `Pari a ${formatEuro(Math.round(list / 12))} al mese` : monthlyNote(plan))}
       </p>
       {promo && promo.giftHomeDays > 0 && (
-        <p className="mt-3 flex items-center gap-2 rounded-md border border-rosso-600/30 bg-rosso-100 px-3 py-2.5 text-body font-bold text-ink">
-          <Gift className="size-5 shrink-0 text-rosso-600" aria-hidden />+ {promo.giftHomeDays} giorni di logo in Home in regalo
+        <p className="mt-3 flex items-center gap-2 rounded-md border border-promo bg-promo-soft px-3 py-2.5 text-body font-bold text-ink">
+          <Gift className="size-5 shrink-0 text-promo-ink" aria-hidden />+ {promo.giftHomeDays} giorni di logo in Home in regalo
         </p>
       )}
     </div>

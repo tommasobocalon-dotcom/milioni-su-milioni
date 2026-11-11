@@ -107,6 +107,11 @@ async function Sponsorships({ payment }: { payment: "received" | "started" | nul
                     title={`${p.days} giorni`}
                     price={
                       <>
+                        {price.promo && (
+                          <span className="mr-1 rounded-full bg-promo px-2 py-0.5 text-caption font-bold text-ink">
+                            Promo · risparmi {formatEuro(price.listCents - price.cents)}
+                          </span>
+                        )}{" "}
                         {price.promo && <s className="text-ink-2">{formatEuro(price.listCents)}</s>} <strong>{formatEuro(price.cents)}</strong> + IVA
                       </>
                     }
@@ -116,7 +121,7 @@ async function Sponsorships({ payment }: { payment: "received" | "started" | nul
                 );
               })}
             </ul>
-            {promoActive(now, launch) && <p className="text-caption text-ink-2">Prezzi promo per i primi {PROMO_MONTHS} mesi dal lancio.</p>}
+            {promoActive(now, launch) && <p className="text-caption font-semibold text-promo-ink">Prezzi promo per i primi {PROMO_MONTHS} mesi dal lancio.</p>}
           </Panel>
 
           <Panel id="boost" title="Boost nella ricerca" meta={searchEnd ? `Attivo fino al ${dateFmt.format(searchEnd)}` : "Primi posti in Trova professionista"}>

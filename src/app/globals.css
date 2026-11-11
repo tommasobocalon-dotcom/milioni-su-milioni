@@ -36,6 +36,11 @@
   --color-ambra-100: #fbefd6;
   --color-rosso-600: #b3443a;
   --color-rosso-100: #f7e1de;
+  /* Colore delle promo: lime (soci, 11/11/2026, scartati oro, lilla, rosso, arancione e pesca). Si cambia solo qui.
+     Su `promo` il testo è inchiostro (10,8:1), mai bianco. */
+  --color-promo: #c6e15b;
+  --color-promo-soft: #f3f9dc;
+  --color-promo-ink: #4a6410;
   --color-blu-600: #2f6690;
   --color-blu-100: #e0ecf4;
 
