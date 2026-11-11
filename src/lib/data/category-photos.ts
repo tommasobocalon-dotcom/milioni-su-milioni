@@ -45,3 +45,10 @@ export const CATEGORY_PHOTOS: Record<string, CategoryPhoto> = {
     credit: { title: "Bricklayer J5", author: "Jamain", license: "CC BY-SA 3.0", licenseUrl: "https://creativecommons.org/licenses/by-sa/3.0/", page: "https://commons.wikimedia.org/w/index.php?curid=30586926" },
   },
 };
+
+/** Foto del Veneto in apertura della pagina Chi siamo (fonte in public/foto/chi-siamo/credits.json), creditata nel footer. */
+export const ABOUT_HERO_PHOTO: CategoryPhoto = {
+  src: "/foto/chi-siamo/colli-euganei.jpg",
+  alt: "Vigneti e colline boscose dei Colli Euganei, con la pianura veneta sullo sfondo",
+  credit: { title: "Parco Regionale dei Colli Euganei 2", author: "kallerna", license: "CC BY-SA 4.0", licenseUrl: "https://creativecommons.org/licenses/by-sa/4.0/", page: "https://commons.wikimedia.org/wiki/File:Parco_Regionale_dei_Colli_Euganei_2.jpg" },
+};

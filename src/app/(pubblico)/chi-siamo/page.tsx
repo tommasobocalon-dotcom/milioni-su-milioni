@@ -1,70 +1,219 @@
 import type { Metadata } from "next";
+import Image from "next/image";
+import Link from "next/link";
+import type { ReactNode } from "react";
+import { Lock, MapPin, Scale, ShieldCheck, type LucideIcon } from "lucide-react";
 import { ButtonLink } from "@/components/ui/button";
+import { ABOUT_HERO_PHOTO } from "@/lib/data/category-photos";
 
 export const metadata: Metadata = {
   title: "Chi siamo",
   description:
-    "GecoItalia mette in contatto privati e famiglie con agenzie immobiliari, studi tecnici e artigiani del Veneto. Servizio gratuito per chi cerca, richieste verificate con un SMS.",
+    "GecoItalia è il servizio online, nato in Veneto, che aiuta privati e famiglie a trovare agenzie immobiliari, studi tecnici e imprese artigiane della propria zona e a mettersi in contatto con loro.",
 };
 
-/** Pagina "Chi siamo": tono formale, su richiesta del cliente (10/11/2026). */
+const WHAT_WE_DO = [
+  {
+    title: "Raccogliamo le imprese del territorio",
+    text: "Agenzie immobiliari, geometri, architetti, idraulici, elettricisti, imbianchini e imprese di ristrutturazione del Veneto, riuniti in un unico luogo e suddivisi per attività e per zona.",
+    image: { src: "/foto/categorie/agenzie-immobiliari.jpg", alt: "Case affacciate su un canale a Treviso" },
+  },
+  {
+    title: "Presentiamo ogni impresa in modo completo",
+    text: "Ciascuna impresa dispone di una scheda con la descrizione dell'attività, i servizi offerti, i comuni in cui opera, gli orari e i lavori già realizzati, così da poterla conoscere prima di contattarla.",
+    image: { src: "/foto/categorie/architetti.jpg", alt: "Tavole di progetto di un edificio stese su un tavolo" },
+  },
+  {
+    title: "Facilitiamo il primo contatto",
+    text: "Una richiesta guidata, compilata in pochi passaggi, consente di spiegare all'impresa di che cosa si ha bisogno e di essere richiamati nella fascia oraria preferita.",
+    image: { src: "/foto/per-i-professionisti-3.jpg", alt: "Professionista che esamina un progetto insieme a una coppia" },
+  },
+];
+
+const STEPS = [
+  { title: "Descrivere l'esigenza", text: "Indicare il lavoro o il servizio di cui si ha bisogno e il comune o la provincia in cui si trova l'immobile." },
+  { title: "Scegliere l'impresa", text: "Consultare le schede delle imprese che operano in quella zona e individuare quella più adatta." },
+  { title: "Inviare la richiesta", text: "Compilare la richiesta di contatto e confermare il proprio numero di telefono con un codice ricevuto via SMS." },
+  { title: "Essere ricontattati", text: "L'impresa richiama il cliente nella fascia oraria indicata nella richiesta." },
+];
+
+const COMMITMENTS: { icon: LucideIcon; title: string; body: ReactNode }[] = [
+  {
+    icon: ShieldCheck,
+    title: "Richieste autentiche",
+    body: "Ogni richiesta di contatto è confermata tramite SMS, affinché le imprese ricevano soltanto richieste reali e possano rispondere con la dovuta attenzione.",
+  },
+  {
+    icon: Scale,
+    title: "Trasparenza",
+    body: (
+      <>
+        I criteri con cui ordiniamo i risultati sono pubblici e i contenuti promozionali sono sempre contrassegnati dalla dicitura
+        &quot;Sponsorizzato&quot;.{" "}
+        <Link href="/come-funziona#ordinamento" className="font-semibold text-primary underline">
+          Come ordiniamo i risultati
+        </Link>
+      </>
+    ),
+  },
+  {
+    icon: Lock,
+    title: "Riservatezza",
+    body: (
+      <>
+        I dati inseriti nella richiesta servono a mettere in contatto il cliente con l&apos;impresa scelta e sono trattati nel
+        rispetto della normativa sulla protezione dei dati personali.{" "}
+        <Link href="/privacy" className="font-semibold text-primary underline">
+          Informativa privacy
+        </Link>
+      </>
+    ),
+  },
+  {
+    icon: MapPin,
+    title: "Legame con il territorio",
+    body: "Operiamo a partire dal Veneto, provincia per provincia, insieme a imprese che conoscono a fondo i luoghi in cui lavorano.",
+  },
+];
+
+/** Pagina "Chi siamo": tono formale, senza abbonamenti né costi, con foto (soci, 11/11/2026). */
 export default function AboutPage() {
   return (
-    <div className="container-page flex max-w-4xl flex-col gap-12 py-12">
-      <header className="flex flex-col gap-3">
-        <h1 className="font-display text-h1">Chi siamo</h1>
-        <p className="text-body-l text-ink-2">
-          GecoItalia è una piattaforma nata in Veneto con l&apos;obiettivo di mettere in contatto privati e famiglie con le
-          agenzie immobiliari, gli studi tecnici e le imprese artigiane che operano sul territorio.
-        </p>
-      </header>
-
-      <section className="flex flex-col gap-3">
-        <h2 className="font-display text-h2">La nostra missione</h2>
-        <p className="text-body">
-          L&apos;acquisto, la vendita o la ristrutturazione di un immobile richiedono scelte importanti. Confrontare gli
-          operatori della propria zona, conoscere i costi indicativi di un intervento e individuare un professionista
-          affidabile non è sempre agevole. Al tempo stesso, numerose imprese sostengono costi elevati per portali generalisti e
-          contatti a consumo di scarsa qualità.
-        </p>
-        <p className="text-body">
-          GecoItalia si propone di offrire uno strumento chiaro e affidabile: consentire a chi cerca di individuare in breve
-          tempo il professionista più adatto e garantire alle imprese esclusivamente richieste autentiche.
-        </p>
+    <>
+      {/* Apertura: testo a sinistra, il Veneto a destra (sul telefono la foto va sotto). */}
+      <section className="bg-brand text-on-brand">
+        <div className="container-page grid items-center gap-10 py-12 md:py-16 lg:grid-cols-2">
+          <div className="flex flex-col gap-6">
+            <h1 className="font-display text-h1 md:text-display-xl">Chi siamo</h1>
+            <p className="text-body-l text-on-brand-muted">
+              GecoItalia è un servizio online nato in Veneto che aiuta privati e famiglie a individuare, nella propria zona, le
+              agenzie immobiliari, gli studi tecnici e le imprese artigiane a cui affidarsi per la casa, e a mettersi in contatto
+              con loro in modo semplice e sicuro.
+            </p>
+          </div>
+          <figure className="flex flex-col gap-2">
+            <div className="relative aspect-[4/3] overflow-hidden rounded-lg">
+              <Image src={ABOUT_HERO_PHOTO.src} alt={ABOUT_HERO_PHOTO.alt} fill priority sizes="(min-width: 1024px) 45vw, 100vw" className="object-cover" />
+            </div>
+            <figcaption className="text-caption text-on-brand-muted">
+              Colli Euganei, provincia di Padova · foto di {ABOUT_HERO_PHOTO.credit.author}, {ABOUT_HERO_PHOTO.credit.license}
+            </figcaption>
+          </figure>
+        </div>
       </section>
 
-      <section className="flex flex-col gap-4">
-        <h2 className="font-display text-h2">I nostri principi</h2>
-        <ul className="flex list-disc flex-col gap-3 pl-6 text-body">
-          <li>
-            <strong>Gratuità per l&apos;utente.</strong> La ricerca, il confronto e l&apos;invio di una richiesta di contatto
-            sono gratuiti. Il servizio è sostenuto dagli abbonamenti delle imprese aderenti.
-          </li>
-          <li>
-            <strong>Trasparenza.</strong> I criteri di ordinamento dei risultati sono pubblici e ogni contenuto a pagamento è
-            contrassegnato dalla dicitura &quot;Sponsorizzato&quot;.
-          </li>
-          <li>
-            <strong>Radicamento territoriale.</strong> Operiamo a partire dal Veneto, provincia per provincia, con imprese che
-            conoscono a fondo il territorio in cui lavorano.
-          </li>
-        </ul>
+      <section aria-labelledby="perche" className="container-page grid items-center gap-10 py-16 md:py-20 lg:grid-cols-[5fr_7fr]">
+        <div className="relative aspect-[4/3] overflow-hidden rounded-lg">
+          <Image
+            src="/foto/home/professionisti-card-v2.jpg"
+            alt="Artigiano al lavoro sulla finestra di un appartamento in ristrutturazione"
+            fill
+            sizes="(min-width: 1024px) 40vw, 100vw"
+            className="object-cover"
+          />
+        </div>
+        <div className="flex flex-col gap-4">
+          <h2 id="perche" className="font-display text-h2 md:text-h1">
+            Perché esistiamo
+          </h2>
+          <p className="text-body-l">
+            Comprare, vendere o affittare un immobile, ristrutturare un bagno, sostituire un impianto o ottenere una pratica
+            tecnica sono decisioni importanti. Spesso, però, non è facile sapere a chi rivolgersi: le informazioni sono sparse, le
+            imprese della zona non sempre sono visibili e il passaparola non basta.
+          </p>
+          <p className="text-body-l text-ink-2">
+            GecoItalia nasce per rispondere a questa esigenza: offrire un punto di riferimento unico in cui trovare le imprese che
+            lavorano vicino a casa, conoscerle prima di contattarle e parlare direttamente con chi può svolgere il lavoro.
+          </p>
+        </div>
       </section>
 
-      <section className="flex flex-col gap-3">
-        <h2 className="font-display text-h2">Per le imprese</h2>
-        <p className="text-body">
-          Agenzie immobiliari, studi tecnici e imprese artigiane possono attivare una scheda aziendale, pubblicare il proprio
-          listino e i lavori realizzati e ricevere richieste di contatto da clienti della propria zona.
-        </p>
+      <section aria-labelledby="cosa-facciamo" className="bg-surface">
+        <div className="container-page flex flex-col gap-8 py-16 md:py-20">
+          <h2 id="cosa-facciamo" className="font-display text-h2 md:text-h1">
+            Che cosa facciamo
+          </h2>
+          <ul className="grid gap-6 md:grid-cols-3">
+            {WHAT_WE_DO.map((item) => (
+              <li key={item.title} className="flex flex-col overflow-hidden rounded-lg border border-line bg-page">
+                <div className="relative aspect-[3/2]">
+                  <Image src={item.image.src} alt={item.image.alt} fill sizes="(min-width: 768px) 30vw, 100vw" className="object-cover" />
+                </div>
+                <div className="flex flex-col gap-2 p-6">
+                  <h3 className="text-h4 font-semibold">{item.title}</h3>
+                  <p className="text-body-s text-ink-2">{item.text}</p>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </div>
       </section>
 
-      <div className="flex flex-wrap gap-3">
-        <ButtonLink href="/trova-professionista">Avvia una ricerca</ButtonLink>
-        <ButtonLink href="/per-i-professionisti" variant="secondary">
-          Diventa partner
-        </ButtonLink>
-      </div>
-    </div>
+      <section aria-labelledby="come-si-utilizza" className="container-page flex flex-col gap-8 py-16 md:py-20">
+        <h2 id="come-si-utilizza" className="font-display text-h2 md:text-h1">
+          Come si utilizza
+        </h2>
+        <ol className="grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
+          {STEPS.map((step, i) => (
+            <li key={step.title} className="flex flex-col gap-3 border-t-2 border-primary pt-5">
+              <span className="inline-flex size-9 items-center justify-center rounded-full bg-primary text-body-s font-semibold text-on-brand" aria-hidden>
+                {i + 1}
+              </span>
+              <h3 className="text-h4 font-semibold">{step.title}</h3>
+              <p className="text-body-s text-ink-2">{step.text}</p>
+            </li>
+          ))}
+        </ol>
+      </section>
+
+      <section aria-labelledby="impegni" className="bg-subtle">
+        <div className="container-page flex flex-col gap-8 py-16 md:py-20">
+          <h2 id="impegni" className="font-display text-h2 md:text-h1">
+            I nostri impegni
+          </h2>
+          <ul className="grid gap-6 md:grid-cols-2">
+            {COMMITMENTS.map(({ icon: Icon, title, body }) => (
+              <li key={title} className="flex gap-4 rounded-lg bg-surface p-6">
+                <span className="inline-flex size-11 shrink-0 items-center justify-center rounded-md bg-brand-soft text-brand">
+                  <Icon className="size-5" aria-hidden />
+                </span>
+                <div className="flex flex-col gap-1.5">
+                  <h3 className="text-h4 font-semibold">{title}</h3>
+                  <p className="text-body-s text-ink-2">{body}</p>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </section>
+
+      <section aria-labelledby="imprese" className="container-page grid items-center gap-10 py-16 md:py-20 lg:grid-cols-[7fr_5fr]">
+        <div className="flex flex-col gap-5">
+          <h2 id="imprese" className="font-display text-h2 md:text-h1">
+            Per le imprese
+          </h2>
+          <p className="text-body-l text-ink-2">
+            Agenzie immobiliari, studi tecnici e imprese artigiane del Veneto possono presentare la propria attività su
+            GecoItalia con una scheda dedicata, mostrare i lavori realizzati e ricevere richieste di contatto da clienti della
+            propria zona.
+          </p>
+          <div className="flex flex-wrap gap-3">
+            <ButtonLink href="/trova-professionista">Avvia una ricerca</ButtonLink>
+            <ButtonLink href="/per-i-professionisti" variant="secondary">
+              Sei un&apos;impresa?
+            </ButtonLink>
+          </div>
+        </div>
+        <div className="relative mx-auto aspect-square w-full max-w-sm overflow-hidden rounded-lg lg:max-w-none">
+          <Image
+            src="/foto/home/agenzia-card.jpg"
+            alt="Professionista sorridente con un computer portatile sotto il braccio"
+            fill
+            sizes="(min-width: 1024px) 35vw, 100vw"
+            className="object-cover object-top"
+          />
+        </div>
+      </section>
+    </>
   );
 }
