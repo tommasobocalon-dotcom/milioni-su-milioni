@@ -225,7 +225,7 @@ async function ResultsBody({ mode, params, seed }: { mode: "agency" | "pro"; par
             <p id="ordinamento" className="flex gap-2 rounded-md bg-subtle p-3 text-caption text-ink-2">
               <Info className="size-4 shrink-0" aria-hidden />
               <span>
-                Come ordiniamo: mostriamo solo chi lavora nella zona cercata, poi prima i piani più alti (Partner Elite, fascia {mode === "pro" ? "lilla" : "oro"}; Partner Pro, fascia verde; poi gli altri)
+                Come ordiniamo: mostriamo solo chi lavora nella zona cercata, poi prima i piani più alti (Partner Elite, fascia lilla; Partner Pro, fascia verde; poi gli altri)
                 e chi ha comprato più visibilità: la sua fascia è più piena e porta l&apos;etichetta &quot;Sponsorizzato&quot;. Tra aziende dello stesso piano l&apos;ordine cambia a
                 ogni visita.{" "}
                 <Link href="/come-funziona#ordinamento" className="font-semibold text-primary underline">
@@ -244,10 +244,10 @@ async function ResultsBody({ mode, params, seed }: { mode: "agency" | "pro"; par
           >
             <SlidersHorizontal className="size-4" aria-hidden /> Filtri e ordinamento
           </a>
-          {total > 0 && <PlanLegend lavender={mode === "pro"} />}
-          {featured && <FeaturedPartner p={featured} lavender={mode === "pro"} />}
+          {total > 0 && <PlanLegend />}
+          {featured && <FeaturedPartner p={featured} />}
           {results.map((p) => (
-            <PartnerCard key={p.id} p={p} lavender={mode === "pro"} />
+            <PartnerCard key={p.id} p={p} />
           ))}
           {pages > 1 && <Pagination page={page} pages={pages} href={(n) => href({ pagina: n > 1 ? String(n) : undefined })} />}
           {total === 0 && (
@@ -285,11 +285,11 @@ export function ResultsSkeleton() {
 }
 
 /** Legenda sopra i risultati: come si riconoscono i piani e chi ha comprato visibilità (richiesta del cliente, 9/11/2026). */
-function PlanLegend({ lavender }: { lavender: boolean }) {
+function PlanLegend() {
   return (
     <ul aria-label="Legenda delle schede" className="flex flex-wrap items-center gap-x-5 gap-y-2 text-body-s text-ink-2">
       <li className="inline-flex items-center gap-2">
-        <span className={lavender ? "inline-flex h-6 items-center gap-1 rounded-full border border-lavanda-300 bg-tertiary px-2 text-caption font-semibold text-ink" : "inline-flex h-6 items-center gap-1 rounded-full border border-ambra-500 bg-ambra-100 px-2 text-caption font-semibold text-ink"}>
+        <span className="inline-flex h-6 items-center gap-1 rounded-full border border-lavanda-300 bg-tertiary px-2 text-caption font-semibold text-ink">
           <Star className="size-3.5 fill-ambra-500 text-ambra-500" aria-hidden /> Partner Elite
         </span>
         piano più alto

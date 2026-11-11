@@ -20,7 +20,7 @@ export const PLAN_FEATURES: Record<string, string[]> = {
   ],
   premium: [
     "Richieste dei clienti illimitate e gratis",
-    "Badge \"Partner Elite\" e scheda con il bordo oro",
+    "Badge \"Partner Elite\" e scheda con il bordo lilla",
     "Posizione prioritaria nelle ricerche",
     "Portfolio illimitato con foto HD e video",
     "Copertura nazionale",

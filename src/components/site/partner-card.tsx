@@ -11,31 +11,25 @@ import { cn } from "@/lib/utils";
  * Componente "Card partner" di Figma. Piano e boost si riconoscono a colpo d'occhio (richieste del cliente, 5/11 e 9/11/2026):
  * ogni scheda Elite o Pro ha in alto una fascia col nome del piano; se l'azienda ha anche un boost attivo, la fascia è più
  * piena e a destra c'è "Sponsorizzato" (obbligatorio, PRD §7.3, Omnibus/P2B). Base = scheda semplice, senza fascia.
- * Premium = bordo e fascia oro; con `lavender` (solo in Trova professionista) lilla. Normal = bordo e fascia verdi su scheda
+ * Premium = bordo e fascia lilla, in Trova professionista e in Trova casa (cliente, 11/11/2026). Normal = bordo e fascia verdi su scheda
  * bianca; con il boost tutta la scheda prende la velatura salvia delle card della Home (sage-wash).
  * Niente badge "Verificato" né prezzo nelle schede (cliente, 9/11/2026): si vedono nel profilo.
  */
 export function PartnerCard({
   p,
   headingLevel = 3,
-  lavender = false,
 }: {
   p: PartnerListItem;
   headingLevel?: 2 | 3;
-  lavender?: boolean;
 }) {
   const H = `h${headingLevel}` as "h2" | "h3";
   const premium = p.planCode === "premium";
   const normal = p.planCode === "normal";
   const boosted = p.sponsored;
   const band = premium
-    ? lavender
-      ? boosted
-        ? "bg-lavanda-300"
-        : "bg-tertiary"
-      : boosted
-        ? "bg-ambra-500/35"
-        : "bg-ambra-100"
+    ? boosted
+      ? "bg-lavanda-300"
+      : "bg-tertiary"
     : normal
       ? boosted
         ? "bg-brand-soft/60"
@@ -47,9 +41,7 @@ export function PartnerCard({
         "flex flex-col overflow-hidden rounded-lg border",
         normal && boosted ? "sage-wash" : "bg-surface",
         premium
-          ? lavender
-            ? "border-2 border-lavanda-300"
-            : "border-2 border-ambra-500"
+          ? "border-2 border-lavanda-300"
           : normal
             ? "border-2 border-brand-soft/60"
             : "border-line",

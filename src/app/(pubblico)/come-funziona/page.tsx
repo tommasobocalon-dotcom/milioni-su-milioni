@@ -37,7 +37,7 @@ export default function HowItWorksPage() {
           abbonamento che l&apos;azienda paga e dal boost a pagamento:
         </p>
         <ol className="flex list-decimal flex-col gap-1.5 pl-6 text-body">
-          <li>piano Premium (&quot;Partner Elite&quot;, scheda con il bordo oro) con boost attivo;</li>
+          <li>piano Premium (&quot;Partner Elite&quot;, scheda con il bordo lilla) con boost attivo;</li>
           <li>piano Premium;</li>
           <li>piano Normal (&quot;Partner Pro&quot;, scheda con il bordo verde) con boost attivo;</li>
           <li>piano Normal;</li>
