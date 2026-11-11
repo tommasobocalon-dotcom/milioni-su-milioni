@@ -4,7 +4,6 @@ import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
-import { Landmark } from "lucide-react";
 import { PartnerCard } from "@/components/site/partner-card";
 import { ButtonLink } from "@/components/ui/button";
 import { findPlace } from "@/lib/data/catalog";
@@ -109,19 +108,6 @@ async function Sent({ id }: { id: string }) {
               </li>
             ))}
           </ol>
-        </section>
-      )}
-
-      {lead.partnerType === "agency" && (
-        <section className="flex flex-col items-start gap-3 rounded-lg border border-line bg-surface p-6 md:flex-row md:items-center">
-          <Landmark className="size-8 text-primary" aria-hidden />
-          <div className="flex-1">
-            <h2 className="text-h4 font-semibold">Ti serve anche un mutuo?</h2>
-            <p className="text-body-s text-ink-2">Confronta i consulenti mutui della tua zona: il primo incontro è spesso gratuito.</p>
-          </div>
-          <ButtonLink href={`/trova-professionista?categoria=consulente-mutui&dove=${encodeURIComponent(lead.municipality)}`} variant="secondary" size="s">
-            Vedi i consulenti mutui
-          </ButtonLink>
         </section>
       )}
 

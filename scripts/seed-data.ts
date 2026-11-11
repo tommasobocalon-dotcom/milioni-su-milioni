@@ -139,14 +139,6 @@ export const CATEGORIES: {
       ["cartongesso", "Posa cartongesso", "sqm"],
     ],
   },
-  {
-    slug: "consulente-mutui",
-    partnerType: "b2b",
-    name: "Consulente mutui",
-    pluralName: "Consulenti mutui",
-    icon: "landmark",
-    services: [["consulenza-mutuo", "Consulenza mutuo", "flat"]],
-  },
 ];
 
 /** Domande dinamiche del modulo di richiesta, per categoria (PRD §5.5). */
@@ -171,9 +163,6 @@ export const QUESTIONS: Record<
   ],
   geometra: [
     { key: "pratica", label: "Hai già documenti dell'immobile?", type: "select", options: ["Sì, planimetria e visura", "Solo alcuni", "No"] },
-  ],
-  "consulente-mutui": [
-    { key: "importo", label: "Importo del mutuo", type: "select", options: ["Fino a 100.000 €", "100.000 – 200.000 €", "200.000 – 300.000 €", "Oltre 300.000 €"], required: true },
   ],
 };
 
@@ -597,23 +586,6 @@ export const PARTNERS: PartnerSeed[] = [
     portfolio: [{ title: "Attico in centro storico", municipality: 26086, contract: "sale", priceCents: 46000000, sqm: 130, rooms: 4 }],
     hours: H_AG,
     boosted: true,
-  },
-  {
-    slug: "mutui-veneto",
-    category: "consulente-mutui",
-    businessName: "Mutui Veneto Consulting S.r.l.",
-    displayName: "Mutui Veneto Consulting",
-    municipality: 28060,
-    tagline: "Confronto mutui di più banche",
-    description: "Mediatori creditizi iscritti OAM: confrontiamo le offerte di più banche e ti seguiamo fino alla firma del mutuo.",
-    specialties: ["Mutuo prima casa", "Surroga", "Giovani under 36"],
-    foundedYear: 2015,
-    responseMinutes: 90,
-    plan: "normal",
-    areas: { provinces: ["PD", "VE", "TV"] },
-    prices: [["consulenza-mutuo", 0, 0, "Primo incontro gratuito"]],
-    portfolio: [],
-    hours: H_STUDIO,
   },
 ];
 

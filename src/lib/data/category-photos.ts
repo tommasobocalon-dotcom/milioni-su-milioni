@@ -44,9 +44,4 @@ export const CATEGORY_PHOTOS: Record<string, CategoryPhoto> = {
     alt: "Muratore che posa mattoni con la cazzuola",
     credit: { title: "Bricklayer J5", author: "Jamain", license: "CC BY-SA 3.0", licenseUrl: "https://creativecommons.org/licenses/by-sa/3.0/", page: "https://commons.wikimedia.org/w/index.php?curid=30586926" },
   },
-  "consulente-mutui": {
-    src: "/foto/categorie/consulenti-mutui.jpg",
-    alt: "Chiave di casa in ottone",
-    credit: { title: "House key", license: "CC BY-SA 3.0", licenseUrl: "https://creativecommons.org/licenses/by-sa/3.0/", page: "https://commons.wikimedia.org/w/index.php?curid=691559" },
-  },
 };

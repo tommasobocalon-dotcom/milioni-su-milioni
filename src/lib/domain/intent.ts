@@ -7,7 +7,6 @@
 export type Intent = { mode: "agency" | "pro"; category?: string; service?: string };
 
 const RULES: [RegExp, Intent][] = [
-  [/\bmutu/, { mode: "pro", category: "consulente-mutui" }],
   [/\bape\b|certificat\w* energetic/, { mode: "pro", category: "geometra", service: "ape" }],
   [/catast/, { mode: "pro", category: "geometra", service: "pratiche-catastali" }],
   [/successi/, { mode: "pro", category: "geometra", service: "successioni" }],

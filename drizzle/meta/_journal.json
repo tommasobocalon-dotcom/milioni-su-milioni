@@ -134,6 +134,13 @@
       "when": 1794515442749,
       "tag": "0018_comuni_veneto",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1794519042749,
+      "tag": "0019_via_consulenti_mutui",
+      "breakpoints": true
     }
   ]
 }

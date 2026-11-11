@@ -10,7 +10,6 @@ describe("interpretQuery", () => {
     ["caldaia rotta", { mode: "pro", category: "idraulico", service: "caldaia" }],
     ["elettricista", { mode: "pro", category: "elettricista" }],
     ["ristrutturare casa", { mode: "pro", category: "ristrutturazioni" }],
-    ["mutuo prima casa", { mode: "pro", category: "consulente-mutui" }],
     ["vendere casa", { mode: "agency", service: "valutazione" }],
     ["Valutazione casa", { mode: "agency", service: "valutazione" }],
     ["comprare un appartamento", { mode: "agency", service: "compravendita" }],
