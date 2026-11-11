@@ -3,14 +3,17 @@
 /** Id della ricerca nella hero: quando esce dallo schermo, la versione compatta entra nella navbar. */
 export const HERO_SEARCH_ID = "ricerca-hero";
 
-/** Video della hero (in `public/hero/`, senza audio) con la prima immagine come poster. */
+/**
+ * Video della hero (in `public/hero/`, 720p senza audio, ~1-2 MB) con la prima immagine come poster.
+ * Sono in cache nel browser per un anno (next.config.ts): un video nuovo va salvato con un nome nuovo.
+ */
 export type HeroSlide = { video: string; poster: string };
 
 /** Video che scorrono dietro la hero, uno dopo l'altro; con uno solo va in loop. */
 export const HERO_SLIDES: HeroSlide[] = [
-  { video: "/hero/giardino.mp4", poster: "/hero/giardino.jpg" },
-  { video: "/hero/soggiorno.mp4", poster: "/hero/soggiorno.jpg" },
-  { video: "/hero/cucina.mp4", poster: "/hero/cucina.jpg" },
+  { video: "/hero/giardino-720.mp4", poster: "/hero/giardino-720.jpg" },
+  { video: "/hero/soggiorno-720.mp4", poster: "/hero/soggiorno-720.jpg" },
+  { video: "/hero/cucina-720.mp4", poster: "/hero/cucina-720.jpg" },
 ];
 
 /** Le sette province con uno slogan breve e il capoluogo da cercare. Chiave: sigla. */

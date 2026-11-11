@@ -41,3 +41,8 @@ export function proxy(request: NextRequest) {
   response.cookies.set(VISITOR_COOKIE, visitor, { httpOnly: true, sameSite: "lax", secure: process.env.NODE_ENV === "production", path: "/" });
   return response;
 }
+
+// Solo pagine e API: JS, CSS, immagini, video e font arrivano direttamente dalla CDN, senza passare di qui.
+export const config = {
+  matcher: ["/((?!_next/static|_next/image|.*\\.(?:mp4|webm|jpg|jpeg|png|webp|avif|gif|svg|ico|woff2?)$).*)"],
+};

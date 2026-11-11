@@ -40,7 +40,8 @@ export function HeroSlides({ slides, next, children }: { slides: HeroSlide[]; ne
             muted
             playsInline
             loop={slides.length === 1}
-            preload={i === 0 ? "auto" : "metadata"}
+            // Scarica solo il video in corso e il prossimo: parte subito al cambio, senza scaricare gli altri insieme.
+            preload={i === index || i === (index + 1) % slides.length ? "auto" : "none"}
             onEnded={() => setIndex((n) => (n + 1) % slides.length)}
             className={cn(
               "absolute inset-0 size-full object-cover transition-opacity duration-[1400ms] ease-[cubic-bezier(0.33,1,0.68,1)]",
