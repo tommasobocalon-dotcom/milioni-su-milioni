@@ -12,7 +12,7 @@ import { googlePlacesEnabled, searchGooglePlaces } from "@/lib/google/places";
 import type { GooglePlaceMatch } from "@/lib/domain/google-reviews";
 import { ipRateLimited } from "@/lib/security/ip-limit";
 import { putImage } from "@/lib/storage";
-import { BillingError, createAreaExtensionCheckout, createHomeSponsorCheckout, createSearchBoostCheckout, createPortalSession, createSubscriptionCheckout, createTokenCheckout, stripeConfigured } from "@/lib/billing/stripe";
+import { BillingError, createAreaExtensionCheckout, createHomeSponsorCheckout, createSearchBoostCheckout, createPlanChangeSession, createPortalSession, createSubscriptionCheckout, createTokenCheckout, stripeConfigured } from "@/lib/billing/stripe";
 import { db } from "@/lib/db/client";
 import { auditLogs, leadEvents, leads, partners, partnerServices, plans, portfolioItems, priceUnit, subscriptions, tokenLedger, users } from "@/lib/db/schema";
 import { getListableServices, getPriceList, getSubscription } from "@/lib/data/partner-area";
@@ -526,6 +526,12 @@ export async function startSubscriptionCheckout(planCode: string, period: "month
 
 export async function openBillingPortal(): Promise<CheckoutState> {
   return billingAction((payer) => createPortalSession(payer.partnerId), "billing.portal");
+}
+
+/** Cambio di piano o di periodo durante l'abbonamento: conferma e pagamento della differenza nel portale Stripe. */
+export async function startPlanChange(planCode: string, period: "monthly" | "yearly"): Promise<CheckoutState> {
+  if (period !== "monthly" && period !== "yearly") return { error: "Periodo non valido" };
+  return billingAction((payer) => createPlanChangeSession(payer.partnerId, planCode, period), "billing.plan_change");
 }
 
 /**

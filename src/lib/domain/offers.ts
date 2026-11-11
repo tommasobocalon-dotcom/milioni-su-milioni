@@ -92,3 +92,32 @@ export const SEARCH_BOOST_PACKAGES = [
   { code: "search-24", hours: 24, priceCents: 1500 },
   { code: "search-48", hours: 48, priceCents: 2500 },
 ] as const;
+
+/**
+ * Promo dei piani (soci, 11/11/2026). Prezzi IVA esclusa; listino nella tabella plans (Normal 69 €/mese o 828 €/anno,
+ * Premium 159 €/mese o 1908 €/anno). Il primo mese del mensile costa sempre 39 € o 79 €; l'annuale costa 599 € o
+ * 1490 € (Premium con 30 giorni di logo in Home in regalo) solo per chi si abbona nei primi 6 mesi dal lancio.
+ * Lo sconto vale per il primo pagamento: dal secondo mese, o al rinnovo dell'annuale, si paga il listino.
+ */
+const PLAN_PROMOS: Record<string, { firstMonthCents: number; yearlyCents: number; yearlyGiftHomeDays: number }> = {
+  normal: { firstMonthCents: 3900, yearlyCents: 59900, yearlyGiftHomeDays: 0 },
+  premium: { firstMonthCents: 7900, yearlyCents: 149000, yearlyGiftHomeDays: 30 },
+};
+
+export type PlanPromo = { payNowCents: number; listCents: number; giftHomeDays: number };
+
+/** Promo sul primo pagamento del piano, o null se si paga il listino. */
+export function planPromo(
+  plan: { code: string; monthlyPriceCents: number; yearlyPriceCents: number },
+  period: "monthly" | "yearly",
+  now: Date,
+  launch: Date | null,
+): PlanPromo | null {
+  const promo = Object.hasOwn(PLAN_PROMOS, plan.code) ? PLAN_PROMOS[plan.code] : null;
+  if (!promo) return null;
+  const listCents = period === "yearly" ? plan.yearlyPriceCents : plan.monthlyPriceCents;
+  const payNowCents = period === "yearly" ? promo.yearlyCents : promo.firstMonthCents;
+  if (period === "yearly" && !promoActive(now, launch)) return null;
+  if (payNowCents >= listCents) return null;
+  return { payNowCents, listCents, giftHomeDays: period === "yearly" ? promo.yearlyGiftHomeDays : 0 };
+}

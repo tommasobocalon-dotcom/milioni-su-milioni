@@ -43,7 +43,7 @@ test("un'azienda si registra, la scheda resta nascosta fino all'attivazione del 
   // Attivazione di prova (senza Stripe, solo in sviluppo): piano attivo, sponsorizzazioni sbloccate, scheda pubblica.
   await page.getByRole("button", { name: "Scegli Normal (prova senza pagare)" }).click();
   await expect(page.getByRole("heading", { level: 1, name: "Il tuo abbonamento" })).toBeVisible();
-  await expect(page.getByText("48,99 € al mese + IVA")).toBeVisible();
+  await expect(page.getByText("69 € al mese + IVA")).toBeVisible();
   await page.goto("/area-partner/token");
   await expect(page.getByRole("heading", { name: "Logo in Home" })).toBeVisible();
   await expect(page.getByText("Disponibile con i piani Normal e Premium")).toHaveCount(0);

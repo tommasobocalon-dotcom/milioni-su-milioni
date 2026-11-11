@@ -180,8 +180,8 @@ export const QUESTIONS: Record<
 /** Annuale = 10 mensilità (2 mesi di sconto, PRD §7.1). Prezzi come nel prototipo Figma, da confermare. */
 export const PLANS = [
   { code: "base", name: "Base", monthlyPriceCents: 1299, yearlyPriceCents: 10788, leadsIncluded: 0, visibilityWeight: 1, maxProvinces: 1, maxServices: 5, maxPortfolioItems: 5, maxUsers: 1, renewalTokens: 0, featuredSlots: false },
-  { code: "normal", name: "Normal", monthlyPriceCents: 4899, yearlyPriceCents: 46788, leadsIncluded: 0, visibilityWeight: 2, maxProvinces: 7, maxServices: 15, maxPortfolioItems: 25, maxUsers: 2, renewalTokens: 80, featuredSlots: true },
-  { code: "premium", name: "Premium", monthlyPriceCents: 11899, yearlyPriceCents: 118788, leadsIncluded: 0, visibilityWeight: 3, maxProvinces: 99, maxServices: null, maxPortfolioItems: null, maxUsers: 5, renewalTokens: 200, featuredSlots: true },
+  { code: "normal", name: "Normal", monthlyPriceCents: 6900, yearlyPriceCents: 82800, leadsIncluded: 0, visibilityWeight: 2, maxProvinces: 7, maxServices: 15, maxPortfolioItems: 25, maxUsers: 2, renewalTokens: 80, featuredSlots: true },
+  { code: "premium", name: "Premium", monthlyPriceCents: 15900, yearlyPriceCents: 190800, leadsIncluded: 0, visibilityWeight: 3, maxProvinces: 99, maxServices: null, maxPortfolioItems: null, maxUsers: 5, renewalTokens: 200, featuredSlots: true },
 ];
 
 /** Prezzo in token di un lead oltre quota (PRD §7.4, da confermare in §20). */

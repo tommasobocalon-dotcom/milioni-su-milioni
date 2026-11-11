@@ -67,11 +67,16 @@ async function main() {
       invoice_history: { enabled: true },
       customer_update: { enabled: true, allowed_updates: ["email", "address", "tax_id"] as ("email" | "address" | "tax_id")[] },
       subscription_cancel: { enabled: true, mode: "at_period_end" as const },
+      // Salendo di piano si paga subito la differenza per i giorni che restano; scendendo (piano più economico
+      // o da annuale a mensile) il cambio vale dal prossimo rinnovo, così non si perde ciò che è già pagato.
       subscription_update: {
         enabled: true,
         default_allowed_updates: ["price"] as "price"[],
-        proration_behavior: "create_prorations" as const,
+        proration_behavior: "always_invoice" as const,
         products: portalProducts,
+        schedule_at_period_end: {
+          conditions: [{ type: "decreasing_item_amount" as const }, { type: "shortening_interval" as const }],
+        },
       },
     },
     metadata: { geco: "portale" },

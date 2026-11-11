@@ -16,8 +16,7 @@ export const PLAN_FEATURES: Record<string, string[]> = {
     "Fino a 25 progetti con dettagli tecnici",
     "Copertura provinciale o regionale",
     "Statistiche complete",
-    "80 crediti inclusi ogni mese",
-    "Boost e messa in evidenza con i crediti",
+    "Logo in Home e boost nella ricerca a pacchetti",
   ],
   premium: [
     "Richieste dei clienti illimitate e gratis",
@@ -26,8 +25,7 @@ export const PLAN_FEATURES: Record<string, string[]> = {
     "Portfolio illimitato con foto HD e video",
     "Copertura nazionale",
     "Statistiche avanzate e assistenza dedicata",
-    "200 crediti inclusi ogni mese",
-    "Boost e messa in evidenza con i crediti",
+    "Logo in Home e boost nella ricerca a pacchetti",
   ],
 };
 

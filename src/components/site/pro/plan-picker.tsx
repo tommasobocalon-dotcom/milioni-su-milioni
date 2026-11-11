@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Check } from "lucide-react";
 import { ButtonLink } from "@/components/ui/button";
-import { formatEuro } from "@/lib/domain/format";
+import { PlanPrice, type PlanPromos } from "@/components/site/pro/plan-price";
 import { cn } from "@/lib/utils";
 
 export type PlanCard = {
@@ -11,6 +11,7 @@ export type PlanCard = {
   name: string;
   monthlyPriceCents: number;
   yearlyPriceCents: number;
+  promo: PlanPromos;
   lines: string[];
 };
 
@@ -23,7 +24,7 @@ export function PlanPicker({ plans }: { plans: PlanCard[] }) {
       <div role="radiogroup" aria-label="Come paghi" className="inline-flex rounded-full bg-surface p-1 ring-1 ring-line">
         {[
           { value: false, label: "Mensile" },
-          { value: true, label: "Annuale · costa meno" },
+          { value: true, label: "Annuale" },
         ].map((o) => (
           <button
             key={o.label}
@@ -58,17 +59,7 @@ export function PlanPicker({ plans }: { plans: PlanCard[] }) {
                 </span>
               )}
               <h3 className="text-h3 font-semibold">{p.name}</h3>
-              <div>
-                <p>
-                  <span className="font-display text-display-l tabular-nums">
-                    {formatEuro(yearly ? Math.round(p.yearlyPriceCents / 12) : p.monthlyPriceCents)}
-                  </span>
-                  <span className="text-body text-ink-2"> /mese</span>
-                </p>
-                <p className="text-body-s text-ink-2">
-                  {yearly ? `${formatEuro(p.yearlyPriceCents)} pagati una volta all'anno` : `${formatEuro(Math.round(p.yearlyPriceCents / 12))} al mese con l'annuale`} · IVA esclusa
-                </p>
-              </div>
+              <PlanPrice plan={p} yearly={yearly} />
               <ul className="flex flex-col gap-2.5 text-body-s">
                 {p.lines.map((l) => (
                   <li key={l} className="flex items-start gap-2">

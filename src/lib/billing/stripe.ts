@@ -5,7 +5,7 @@ import Stripe from "stripe";
 import { db } from "@/lib/db/client";
 import { municipalities, partners, plans, stripeProcessed, subscriptions, tokenLedger } from "@/lib/db/schema";
 import { accountStatusFrom, areaExtensionFromCheckout, grantsRenewalTokens, homeSponsorFromCheckout, searchBoostFromCheckout, periodFromItems, planFromLookupKey, planLookupKey, subscriptionStatusFromStripe, tokenMonthsDue, tokenPurchaseFromCheckout, TRIAL_DAYS } from "@/lib/domain/billing";
-import { AREA_EXTENSION_OFFER, HOME_SPONSOR_PACKAGES, homeSponsorPrice, launchDate, municipalityIdsFrom, SEARCH_BOOST_PACKAGES, TOKEN_PACKAGES } from "@/lib/domain/offers";
+import { AREA_EXTENSION_OFFER, HOME_SPONSOR_PACKAGES, homeSponsorPrice, launchDate, municipalityIdsFrom, planPromo, SEARCH_BOOST_PACKAGES, TOKEN_PACKAGES } from "@/lib/domain/offers";
 import { grantAreaExtensions, grantHomeSponsor, grantSearchBoost } from "@/lib/leads/service";
 import { tokenExpiryFrom } from "@/lib/domain/tokens";
 
@@ -173,6 +173,25 @@ export async function createAreaExtensionCheckout(payer: Payer, ids: number[]): 
   return session.url;
 }
 
+/**
+ * Sconto Stripe della promo sul primo pagamento del piano. Dura un mese da quando si applica: copre la prima fattura
+ * dopo i 7 giorni di prova, mentre con "once" lo consumerebbe la fattura a 0 € della prova. L'id contiene l'importo,
+ * così se cambia la promo nasce un coupon nuovo.
+ */
+async function promoCoupon(planCode: string, period: "monthly" | "yearly", amountOffCents: number): Promise<string> {
+  const id = `geco-promo-${planCode}-${period}-${amountOffCents}`;
+  try {
+    return (await stripe().coupons.retrieve(id)).id;
+  } catch (err) {
+    if (!(err instanceof Stripe.errors.StripeInvalidRequestError && err.code === "resource_missing")) throw err;
+  }
+  const coupon = await stripe().coupons.create(
+    { id, amount_off: amountOffCents, currency: "eur", duration: "repeating", duration_in_months: 1, name: period === "yearly" ? "Promo lancio annuale" : "Promo primo mese" },
+    { idempotencyKey: `coupon:${id}` },
+  );
+  return coupon.id;
+}
+
 export async function createSubscriptionCheckout(payer: Payer, planCode: string, period: "monthly" | "yearly"): Promise<string> {
   const [plan] = await db.select().from(plans).where(eq(plans.code, planCode));
   if (!plan) throw new BillingError("Piano non valido");
@@ -196,6 +215,7 @@ export async function createSubscriptionCheckout(payer: Payer, planCode: string,
     .where(and(eq(subscriptions.partnerId, payer.partnerId), isNotNull(subscriptions.stripeSubscriptionId)))
     .limit(1);
   const metadata = { kind: "subscription", partnerId: payer.partnerId };
+  const promo = planPromo(plan, period, new Date(), launchDate());
   const session = await stripe().checkout.sessions.create({
     mode: "subscription",
     customer: await customerFor(payer),
@@ -203,8 +223,14 @@ export async function createSubscriptionCheckout(payer: Payer, planCode: string,
     allowed_payment_method_types: PAYMENT_METHODS,
     line_items: [{ price, quantity: 1 }],
     metadata,
+    ...(promo ? { discounts: [{ coupon: await promoCoupon(plan.code, period, promo.listCents - promo.payNowCents) }] } : {}),
     // Carta chiesta subito (impostazione predefinita di Checkout): alla fine della prova l'addebito parte da solo.
-    subscription_data: { metadata, default_tax_rates: await taxRates(), ...(past ? {} : { trial_period_days: TRIAL_DAYS }) },
+    // Il regalo dell'annuale Premium viaggia nei metadati e arriva col primo incasso (grantInvoiceTokens).
+    subscription_data: {
+      metadata: promo?.giftHomeDays ? { ...metadata, giftHomeDays: String(promo.giftHomeDays) } : metadata,
+      default_tax_rates: await taxRates(),
+      ...(past ? {} : { trial_period_days: TRIAL_DAYS }),
+    },
     success_url: `${appUrl()}/api/stripe/ritorno?session_id={CHECKOUT_SESSION_ID}`,
     cancel_url: `${appUrl()}/area-partner/abbonamento`,
   });
@@ -216,13 +242,50 @@ export async function createSubscriptionCheckout(payer: Payer, planCode: string,
 export async function createPortalSession(partnerId: string): Promise<string> {
   const [p] = await db.select({ customer: partners.stripeCustomerId }).from(partners).where(eq(partners.id, partnerId));
   if (!p?.customer) throw new BillingError("Nessun pagamento ancora registrato con Stripe");
-  // Configurazione del portale creata da `npm run stripe:setup` (metadato geco=portale); altrimenti quella predefinita.
-  const configuration = (await stripe().billingPortal.configurations.list({ active: true, limit: 100 })).data.find((c) => c.metadata?.geco === "portale")?.id;
   const session = await stripe().billingPortal.sessions.create({
     customer: p.customer,
     locale: "it",
     return_url: `${appUrl()}/area-partner/abbonamento`,
-    ...(configuration ? { configuration } : {}),
+    ...(await portalConfiguration()),
+  });
+  return session.url;
+}
+
+/** Configurazione del portale creata da `npm run stripe:setup` (metadato geco=portale); altrimenti quella predefinita. */
+async function portalConfiguration(): Promise<{ configuration?: string }> {
+  const id = (await stripe().billingPortal.configurations.list({ active: true, limit: 100 })).data.find((c) => c.metadata?.geco === "portale")?.id;
+  return id ? { configuration: id } : {};
+}
+
+/**
+ * Cambio piano o periodo durante l'abbonamento: apre la pagina di conferma del portale Stripe, che mostra l'importo.
+ * Regole nel portale (stripe:setup): salendo di piano si paga subito la differenza per i giorni che restano,
+ * scendendo il cambio vale dal prossimo rinnovo. Il webhook allinea poi il piano nel database.
+ */
+export async function createPlanChangeSession(partnerId: string, planCode: string, period: "monthly" | "yearly"): Promise<string> {
+  const [row] = await db
+    .select({ customer: partners.stripeCustomerId, subscriptionId: subscriptions.stripeSubscriptionId })
+    .from(subscriptions)
+    .innerJoin(partners, eq(partners.id, subscriptions.partnerId))
+    .where(and(eq(subscriptions.partnerId, partnerId), eq(subscriptions.status, "active"), isNotNull(subscriptions.stripeSubscriptionId)));
+  if (!row?.customer || !row.subscriptionId) throw new BillingError("Nessun abbonamento attivo da cambiare");
+  const [plan] = await db.select().from(plans).where(eq(plans.code, planCode));
+  if (!plan) throw new BillingError("Piano non valido");
+  const price = await planPrice(plan, period);
+  if (!price) throw new BillingError("Il piano non è ancora collegato a Stripe (npm run stripe:setup)");
+  const item = (await stripe().subscriptions.retrieve(row.subscriptionId)).items.data[0];
+  if (!item) throw new Error(`Abbonamento Stripe ${row.subscriptionId} senza voci`);
+  if (item.price.id === price) throw new BillingError("È già il tuo piano");
+  const session = await stripe().billingPortal.sessions.create({
+    customer: row.customer,
+    locale: "it",
+    return_url: `${appUrl()}/area-partner/abbonamento`,
+    ...(await portalConfiguration()),
+    flow_data: {
+      type: "subscription_update_confirm",
+      subscription_update_confirm: { subscription: row.subscriptionId, items: [{ id: item.id, price, quantity: 1 }] },
+      after_completion: { type: "redirect", redirect: { return_url: `${appUrl()}/area-partner/abbonamento?pagamento=cambio` } },
+    },
   });
   return session.url;
 }
@@ -356,8 +419,11 @@ async function grantInvoiceTokens(invoice: Stripe.Invoice): Promise<void> {
   const synced = await syncSubscription(subscriptionId);
   if (!synced) return;
   const now = new Date();
+  const giftDays = Number(invoice.parent?.subscription_details?.metadata?.giftHomeDays ?? 0);
   await db.transaction(async (tx) => {
     if (!(await firstTime(tx, `invoice:${invoice.id}`))) return;
+    // Annuale Premium in promo: logo in Home in regalo col primo incasso, una volta sola per abbonamento.
+    if (giftDays > 0 && (await firstTime(tx, `gift:${subscriptionId}`))) await grantHomeSponsor(tx, synced.partnerId, giftDays, now);
     const [plan] = await tx
       .select({ name: plans.name, tokens: plans.renewalTokens })
       .from(subscriptions)
@@ -373,6 +439,8 @@ async function grantInvoiceTokens(invoice: Stripe.Invoice): Promise<void> {
       createdAt: now,
     });
   });
+  // La fascia loghi della Home è in cache: il logo in regalo compare subito.
+  if (giftDays > 0) revalidateTag("boosts", { expire: 0 });
 }
 
 /**

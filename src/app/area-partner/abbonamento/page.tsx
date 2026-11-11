@@ -9,7 +9,7 @@ import { ButtonLink } from "@/components/ui/button";
 import { requirePartner } from "@/lib/auth/session";
 import { stripeConfigured } from "@/lib/billing/stripe";
 import { getSubscription, hadStripeSubscription } from "@/lib/data/partner-area";
-import { getPlans } from "@/lib/data/plans";
+import { getPlansWithPromo } from "@/lib/data/plans";
 import { demoMode } from "@/lib/demo-mode";
 import { planFeatures } from "@/lib/domain/plan-features";
 import { formatEuro } from "@/lib/domain/format";
@@ -29,24 +29,39 @@ export default function SubscriptionPage({ searchParams }: PageProps<"/area-part
   return (
     <Suspense fallback={<PartnerSkeleton />}>
       {searchParams.then((sp) => (
-        <Subscription payment={sp.pagamento === "ricevuto" ? "received" : sp.pagamento === "ok" ? "started" : null} welcome={sp.benvenuto === "1"} />
+        <Subscription
+          payment={sp.pagamento === "ricevuto" ? "received" : sp.pagamento === "ok" ? "started" : sp.pagamento === "cambio" ? "changed" : null}
+          welcome={sp.benvenuto === "1"}
+        />
       ))}
     </Suspense>
   );
 }
 
-async function Chooser({ owner, demo, trial }: { owner: boolean; demo: boolean; trial: boolean }) {
-  const plans = (await getPlans()).map((p) => ({
+async function Chooser({
+  owner,
+  demo,
+  trial,
+  current,
+}: {
+  owner: boolean;
+  demo: boolean;
+  trial: boolean;
+  current?: { code: string; period: "monthly" | "yearly" };
+}) {
+  const plans = (await getPlansWithPromo()).map((p) => ({
     code: p.code,
     name: p.name,
     monthlyPriceCents: p.monthlyPriceCents,
     yearlyPriceCents: p.yearlyPriceCents,
+    // Le promo valgono per chi si abbona, non per chi cambia piano.
+    promo: current ? { monthly: null, yearly: null } : p.promo,
     features: planFeatures(p.code),
   }));
-  return <PlanChooser plans={plans} demo={demo} owner={owner} trial={trial} />;
+  return <PlanChooser plans={plans} demo={demo} owner={owner} trial={trial} current={current} />;
 }
 
-async function Subscription({ payment, welcome }: { payment: "received" | "started" | null; welcome: boolean }) {
+async function Subscription({ payment, welcome }: { payment: "received" | "started" | "changed" | null; welcome: boolean }) {
   // Pagina raggiungibile anche con account sospeso: è qui che il partner paga per riattivarsi.
   const { partner, memberRole } = await requirePartner({ allowSuspended: true });
   const [sub, hadStripe] = await Promise.all([getSubscription(partner.id), hadStripeSubscription(partner.id)]);
@@ -57,6 +72,8 @@ async function Subscription({ payment, welcome }: { payment: "received" | "start
   const notice =
     payment === "received" ? (
       <PaymentNotice received>Il piano è attivo. La ricevuta arriva per email.</PaymentNotice>
+    ) : payment === "changed" ? (
+      <PaymentNotice received>Cambio piano registrato. Se sei salito di piano è attivo da subito; se sei sceso parte dal prossimo rinnovo.</PaymentNotice>
     ) : (
       payment === "started" && (
         <PaymentNotice>Il piano si attiva appena Stripe conferma il pagamento: con la carta in pochi secondi, con l&apos;addebito SEPA in qualche giorno lavorativo.</PaymentNotice>
@@ -164,6 +181,20 @@ async function Subscription({ payment, welcome }: { payment: "received" | "start
           </ul>
         </div>
       </section>
+      {sub.status === "active" && ((stripeOn && sub.stripeSubscriptionId) || demo) && (
+        <section aria-labelledby="cambia-piano" className="flex flex-col gap-4">
+          <div className="flex flex-col gap-1">
+            <h2 id="cambia-piano" className="text-h3 font-semibold">
+              Cambia piano
+            </h2>
+            <p className="text-body-s text-ink-2">
+              Sali di piano: è attivo da subito e paghi solo la differenza per i giorni che restano. Scendi di piano: il cambio parte dal
+              prossimo rinnovo, così non perdi ciò che hai già pagato.
+            </p>
+          </div>
+          <Chooser owner={owner} demo={demo} trial={false} current={{ code: sub.planCode, period: sub.period }} />
+        </section>
+      )}
       <p className="text-body-s text-ink-2">
         Se un pagamento non va a buon fine la scheda viene sospesa subito e torna visibile da sola al pagamento riuscito.
       </p>
