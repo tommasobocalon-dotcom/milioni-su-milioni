@@ -206,7 +206,7 @@ export function BoostProjection({
                 </dd>
               </div>
             </dl>
-            <ButtonLink href="/area-partner/token#boost" className="w-full">
+            <ButtonLink href="/area-partner/sponsorizzazioni#boost" className="w-full">
               <Rocket aria-hidden /> Metti in evidenza
             </ButtonLink>
           </div>

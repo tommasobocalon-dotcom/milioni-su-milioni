@@ -1,11 +1,11 @@
 import { createHash } from "node:crypto";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import * as s from "../src/lib/db/schema";
 import { slugify } from "../src/lib/domain/format";
 import { ADMIN_DEMO_ACCOUNT, DEMO_ACCOUNT } from "../src/lib/auth/demo";
 import { hashPassword } from "../src/lib/domain/password";
-import { tokenExpiryFrom } from "../src/lib/domain/tokens";
+
 import {
   CATEGORIES,
   MUNICIPALITIES,
@@ -17,8 +17,7 @@ import {
   REGIONS,
   REVIEW_AUTHORS,
   REVIEW_TEXTS,
-  ROSSI_LEADS,
-} from "./seed-data";
+  ROSSI_LEADS } from "./seed-data";
 
 type Db = PostgresJsDatabase<typeof s>;
 
@@ -86,9 +85,13 @@ export async function seed(db: Db) {
   const now = new Date();
   const rand = rng(20261023);
 
-  await db.insert(s.regions).values(REGIONS);
-  await db.insert(s.provinces).values(PROVINCES.map((p) => ({ ...p, regionId: 5 })));
-  await db.insert(s.municipalities).values(MUNICIPALITIES.map((m) => ({ ...m, slug: slugify(m.name) })));
+  // Regione, province e comuni li crea già la migrazione 0018_comuni_veneto: qui si aggiungono coordinate e frazioni scritte a mano.
+  await db.insert(s.regions).values(REGIONS).onConflictDoNothing();
+  await db.insert(s.provinces).values(PROVINCES.map((p) => ({ ...p, regionId: 5 }))).onConflictDoNothing();
+  await db
+    .insert(s.municipalities)
+    .values(MUNICIPALITIES.map((m) => ({ ...m, slug: slugify(m.name) })))
+    .onConflictDoUpdate({ target: s.municipalities.id, set: { lat: sql`excluded.lat`, lng: sql`excluded.lng`, aliases: sql`excluded.aliases` } });
   const muni = new Map(MUNICIPALITIES.map((m) => [m.id, m]));
   const provinceByCode = new Map(PROVINCES.map((p) => [p.code, p]));
 
@@ -227,7 +230,6 @@ export async function seed(db: Db) {
 
     // Abbonamento attivo
     const periodStart = new Date(now.getTime() - (10 + Math.floor(rand() * 15)) * DAY);
-    const plan = PLANS.find((pl) => pl.code === p.plan)!;
     await db.insert(s.subscriptions).values({
       partnerId: row.id,
       planId: planId.get(p.plan)!,
@@ -236,27 +238,6 @@ export async function seed(db: Db) {
       currentPeriodStart: periodStart,
       currentPeriodEnd: new Date(periodStart.getTime() + 30 * DAY),
     });
-
-    // Token: un pacchetto acquistato e, dove previsto, i token omaggio del rinnovo
-    const purchaseAt = new Date(now.getTime() - 52 * DAY);
-    await db.insert(s.tokenLedger).values({
-      partnerId: row.id,
-      kind: "purchase",
-      amount: p.slug === "rossi-impianti" ? 300 : 50 + Math.floor(rand() * 4) * 25,
-      expiresAt: tokenExpiryFrom(purchaseAt),
-      reference: "Pacchetto token (esempio)",
-      createdAt: purchaseAt,
-    });
-    if (plan.renewalTokens > 0) {
-      await db.insert(s.tokenLedger).values({
-        partnerId: row.id,
-        kind: "credit",
-        amount: plan.renewalTokens,
-        expiresAt: tokenExpiryFrom(periodStart),
-        reference: `Crediti del piano ${plan.name}`,
-        createdAt: periodStart,
-      });
-    }
 
     if (p.boosted) {
       const province = PROVINCES.find((pr) => pr.id === m.provinceId)!;

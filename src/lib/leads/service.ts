@@ -1,11 +1,9 @@
 import "server-only";
 import { and, desc, eq, gt, inArray, isNotNull, ne } from "drizzle-orm";
 import { db } from "@/lib/db/client";
-import { areaExtensions, boosts, leadEvents, leads, municipalities, partners, plans, portfolioItems, showcaseFeatures, subscriptions, tokenLedger, type LeadAnswer } from "@/lib/db/schema";
-import { BOOST_OPTIONS, BOOST_PLACEMENTS, type BoostPlacement, SHOWCASE_OPTIONS } from "@/lib/domain/offers";
+import { areaExtensions, boosts, leadEvents, leads, municipalities, partners, subscriptions, type LeadAnswer } from "@/lib/db/schema";
+import { type BoostPlacement } from "@/lib/domain/offers";
 import { decideLeadCharge, isDuplicateLead, DUPLICATE_WINDOW_DAYS } from "@/lib/domain/lead-rules";
-import { canBoost } from "@/lib/domain/ranking";
-import { InsufficientTokensError, planConsumption, type LedgerEntry } from "@/lib/domain/tokens";
 
 export type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
@@ -30,16 +28,6 @@ export type NewLead = {
 export async function createPendingLead(input: NewLead): Promise<string> {
   const [row] = await db.insert(leads).values({ ...input, charge: "pending" }).returning({ id: leads.id });
   return row.id;
-}
-
-async function ledgerFor(tx: Tx, partnerId: string): Promise<LedgerEntry[]> {
-  const rows = await tx.select().from(tokenLedger).where(eq(tokenLedger.partnerId, partnerId));
-  return rows.map((r) => ({ id: r.id, kind: r.kind, amount: r.amount, lotId: r.lotId, expiresAt: r.expiresAt, createdAt: r.createdAt }));
-}
-
-async function debitTokens(tx: Tx, partnerId: string, amount: number, reference: string, now: Date) {
-  const plan = planConsumption(await ledgerFor(tx, partnerId), amount, now);
-  await tx.insert(tokenLedger).values(plan.map((d) => ({ partnerId, kind: "consume" as const, amount: d.amount, lotId: d.lotId, reference, createdAt: now })));
 }
 
 export type ConfirmOutcome = "delivered" | "duplicate" | "redirect";
@@ -107,21 +95,6 @@ export async function confirmLead(leadId: string, now = new Date()): Promise<{ o
 
 export class ExtraNotActivatableError extends Error {}
 
-/**
- * Per gli extra a token (boost, provincia vicina, Ispirazione): blocca la riga del partner, così due
- * acquisti insieme non si sovrappongono, e controlla che il piano attivo li consenta (Normal e Premium).
- */
-async function lockPartnerForExtra(tx: Tx, partnerId: string) {
-  const p = await lockPartner(tx, partnerId);
-  const [plan] = await tx
-    .select({ weight: plans.visibilityWeight })
-    .from(subscriptions)
-    .innerJoin(plans, eq(plans.id, subscriptions.planId))
-    .where(and(eq(subscriptions.partnerId, partnerId), eq(subscriptions.status, "active")));
-  if (!plan || !canBoost(plan.weight)) throw new ExtraNotActivatableError("Gli extra con i crediti sono inclusi nei piani Normal e Premium");
-  return p;
-}
-
 /** Riga del partner bloccata fino alla fine della transazione, con categoria e provincia per i boost. */
 async function lockPartner(tx: Tx, partnerId: string) {
   const [p] = await tx
@@ -132,30 +105,6 @@ async function lockPartner(tx: Tx, partnerId: string) {
     .for("update", { of: partners });
   if (!p) throw new ExtraNotActivatableError("Partner non trovato");
   return p;
-}
-
-async function payExtra(tx: Tx, partnerId: string, tokens: number, reference: string, now: Date) {
-  try {
-    await debitTokens(tx, partnerId, tokens, reference, now);
-  } catch (e) {
-    if (e instanceof InsufficientTokensError) throw new ExtraNotActivatableError(`Servono ${e.requested} crediti, ne hai ${e.available}`);
-    throw e;
-  }
-}
-
-/**
- * Boost "Sponsorizzato nella ricerca" pagato a token (solo Normal e Premium), per la categoria e la provincia del partner.
- * Il logo in Home non si paga più a token: pacchetti in euro con Stripe (grantHomeSponsor).
- */
-export async function activateBoost(partnerId: string, placement: BoostPlacement, hours: number, now = new Date()) {
-  if (placement === "home") throw new ExtraNotActivatableError("Il logo in Home si acquista con un pacchetto in euro");
-  const option = BOOST_OPTIONS.find((o) => o.hours === hours);
-  if (!option) throw new ExtraNotActivatableError("Durata non valida");
-  return db.transaction(async (tx) => {
-    const p = await lockPartnerForExtra(tx, partnerId);
-    await payExtra(tx, partnerId, option.tokens, `${BOOST_PLACEMENTS[placement]} ${option.hours} ore`, now);
-    return insertBoost(tx, partnerId, p, placement, option.hours * 3_600_000, option.tokens, now);
-  });
 }
 
 /**
@@ -217,28 +166,3 @@ export async function grantAreaExtensions(tx: Tx, partnerId: string, municipalit
   return known.length;
 }
 
-/** Un lavoro del portfolio (con foto) in evidenza nella pagina Ispirazione per 7 o 30 giorni. */
-export async function activateShowcase(partnerId: string, portfolioItemId: string, days: number, now = new Date()) {
-  const option = SHOWCASE_OPTIONS.find((o) => o.days === days);
-  if (!option) throw new ExtraNotActivatableError("Durata non valida");
-  return db.transaction(async (tx) => {
-    await lockPartnerForExtra(tx, partnerId);
-    const [item] = await tx
-      .select({ title: portfolioItems.title, imageUrl: portfolioItems.imageUrl })
-      .from(portfolioItems)
-      .where(and(eq(portfolioItems.id, portfolioItemId), eq(portfolioItems.partnerId, partnerId)));
-    if (!item) throw new ExtraNotActivatableError("Lavoro non trovato");
-    if (!item.imageUrl) throw new ExtraNotActivatableError("Serve un lavoro con la foto");
-    const [last] = await tx
-      .select({ endsAt: showcaseFeatures.endsAt })
-      .from(showcaseFeatures)
-      .where(and(eq(showcaseFeatures.portfolioItemId, portfolioItemId), gt(showcaseFeatures.endsAt, now)))
-      .orderBy(desc(showcaseFeatures.endsAt))
-      .limit(1);
-    const startsAt = last?.endsAt ?? now;
-    const endsAt = new Date(startsAt.getTime() + option.days * 86_400_000);
-    await payExtra(tx, partnerId, option.tokens, `Ispirazione ${option.days} giorni: ${item.title}`.slice(0, 120), now);
-    await tx.insert(showcaseFeatures).values({ partnerId, portfolioItemId, startsAt, endsAt, tokensSpent: option.tokens, createdAt: now });
-    return { endsAt };
-  });
-}

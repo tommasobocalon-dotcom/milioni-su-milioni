@@ -75,7 +75,7 @@ const SCREEN = {
   },
   business: {
     claim: "Richieste verificate dalla tua zona, senza intermediari.",
-    points: ["Ogni richiesta arriva con il numero verificato via SMS", "Richieste, crediti e abbonamento in un'unica area", "La tua scheda compare appena il piano è attivo"],
+    points: ["Ogni richiesta arriva con il numero verificato via SMS", "Richieste, abbonamento e sponsorizzazioni in un'unica area", "La tua scheda compare appena il piano è attivo"],
     switchText: "Cerchi casa o un professionista?",
     switchLink: { href: "/accedi", label: "Vai all'accesso clienti" },
   },

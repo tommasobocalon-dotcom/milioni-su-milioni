@@ -26,8 +26,8 @@ const DECISION = {
 } as const;
 
 const CHARGE = {
-  quota: "Conteggiato nella quota",
-  token: "Pagato con token",
+  quota: "Consegnato",
+  token: "Consegnato (sistema a pagamento dismesso)",
   locked: "Bloccato oltre quota",
   refunded: "Restituito",
   expired: "Scaduto",
@@ -45,7 +45,7 @@ async function Reports() {
     <div className="flex flex-col gap-6">
       <AdminPageHeader
         title="Segnalazioni lead"
-        subtitle={`${open} da decidere. Se accogli la segnalazione il lead viene restituito: token rimborsati o posto liberato nella quota.`}
+        subtitle={`${open} da decidere. Se accogli la segnalazione il lead non conta più tra quelli ricevuti dal partner.`}
       />
       <Panel>
         {rows.length === 0 ? (
@@ -68,7 +68,7 @@ async function Reports() {
                         {r.partnerName}
                       </Link>{" "}
                       · {CHARGE[r.charge]}
-                      {r.charge === "token" && ` (${r.tokensCharged} token)`} · segnalato il {r.reportedAt ? dateTime.format(r.reportedAt) : "—"}
+                      {" "}· segnalato il {r.reportedAt ? dateTime.format(r.reportedAt) : "—"}
                     </p>
                   </div>
                   {r.reportStatus === "open" ? (

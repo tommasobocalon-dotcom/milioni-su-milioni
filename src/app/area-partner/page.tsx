@@ -49,7 +49,7 @@ async function Dashboard() {
   const { user, partner } = await requirePartner();
   await connection();
   const now = new Date();
-  const [o, homeEnd] = await Promise.all([getOverview(partner.id, now), getBoostEnd(partner.id, "home", now)]);
+  const [o, homeEnd] = await Promise.all([getOverview(partner.id), getBoostEnd(partner.id, "home", now)]);
   const hour = Number(new Intl.DateTimeFormat("it-IT", { hour: "numeric", hour12: false, timeZone: "Europe/Rome" }).format(now));
   const greeting = hour < 13 ? "Buongiorno" : hour < 18 ? "Buon pomeriggio" : "Buonasera";
   const step = nextStep(o.counts.new ?? 0, o.completeness);
@@ -83,7 +83,7 @@ async function Dashboard() {
           <p className="text-body-s text-ink-2">Logo in Home</p>
           <p className="font-display text-h1">{homeEnd ? "Attivo" : "Non attivo"}</p>
           {homeEnd && <p className="text-caption text-ink-2">Fino al {dateFmt.format(homeEnd)}</p>}
-          <Link href="/area-partner/token" className="text-body-s font-semibold text-primary hover:underline">
+          <Link href="/area-partner/sponsorizzazioni" className="text-body-s font-semibold text-primary hover:underline">
             Vedi i pacchetti
           </Link>
         </div>

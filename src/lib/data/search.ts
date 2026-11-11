@@ -64,6 +64,8 @@ export async function searchPartners(input: {
   categoryId?: string;
   serviceId?: string;
   place?: Place | null;
+  /** Provincia intera (filtro "Provincia di …"): al posto di `place`, senza distanza. */
+  provinceId?: number;
   minRating?: number;
   sort?: SortKey;
   /** Con `page` i risultati sono tagliati a `pageSize` per pagina, `firstPageSize` nella prima (dove c'è anche il riquadro in evidenza). */
@@ -102,6 +104,16 @@ export async function searchPartners(input: {
         and (sa.municipality_id = ${input.place.id} or sa.province_id = ${input.place.provinceId}))
         or exists (select 1 from ${areaExtensions} ae where ae.partner_id = ${partners.id}
         and ae.municipality_id = ${input.place.id}
+        and ae.starts_at <= ${now.toISOString()}::timestamptz and ae.ends_at > ${now.toISOString()}::timestamptz))`,
+    );
+  } else if (input.provinceId) {
+    // Provincia intera: il partner serve la provincia o almeno un suo comune, anche con l'estensione territoriale.
+    const inProvince = sql`(select m.id from ${municipalities} m where m.province_id = ${input.provinceId})`;
+    conditions.push(
+      sql`(exists (select 1 from ${serviceAreas} sa where sa.partner_id = ${partners.id}
+        and (sa.province_id = ${input.provinceId} or sa.municipality_id in ${inProvince}))
+        or exists (select 1 from ${areaExtensions} ae where ae.partner_id = ${partners.id}
+        and ae.municipality_id in ${inProvince}
         and ae.starts_at <= ${now.toISOString()}::timestamptz and ae.ends_at > ${now.toISOString()}::timestamptz))`,
     );
   }
@@ -177,7 +189,8 @@ export async function searchPartners(input: {
 
   // Boost "Sponsorizzato nella ricerca" attivi per la categoria nella provincia cercata (quelli della Home non contano qui).
   const boosted = new Set<string>();
-  if (input.place) {
+  const boostProvince = input.place?.provinceId ?? input.provinceId;
+  if (boostProvince) {
     const active = await db
       .select({ partnerId: boosts.partnerId })
       .from(boosts)
@@ -185,7 +198,7 @@ export async function searchPartners(input: {
         and(
           inArray(boosts.partnerId, ids),
           eq(boosts.placement, "search"),
-          eq(boosts.provinceId, input.place.provinceId),
+          eq(boosts.provinceId, boostProvince),
           lte(boosts.startsAt, now),
           gt(boosts.endsAt, now),
           input.categoryId ? eq(boosts.categoryId, input.categoryId) : undefined,

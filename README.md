@@ -44,14 +44,14 @@ https://gecoitalia.it, riservato al team con nome e password: come pubblicarlo i
 
 ```
 src/app/(pubblico)/     pagine pubbliche: home, ricerca, profili, richiesta di contatto
-src/app/area-partner/   Area Partner: panoramica, lead, token, listino, abbonamento, assistenza
+src/app/area-partner/   Area Partner: panoramica, lead, sponsorizzazioni, listino, abbonamento, assistenza
 src/app/admin/          gestionale: assistenza, partner, segnalazioni, recensioni, registro attività
 src/app/api/            webhook Stripe e email in arrivo all'assistenza
 src/app/accedi/         accesso e registrazione con email e password
 src/app/auth/           ritorno da Google e Apple (OAuth)
-src/lib/domain/         regole di business pure e testate (lead, token, OTP, ordinamento)
+src/lib/domain/         regole di business pure e testate (lead, prezzi e promo, OTP, ordinamento)
 src/lib/data/           letture dal database (server-only)
-src/lib/leads/          consegna dei lead: quota, token, duplicati, sblocco
+src/lib/leads/          consegna dei lead e pacchetti pagati (boost, logo in Home, comuni)
 src/lib/support/        ticket di assistenza: apertura, email in arrivo, risposte del team
 src/lib/auth/           codici OTP, sessioni, Google/Apple
 src/lib/db/             schema Drizzle e connessione

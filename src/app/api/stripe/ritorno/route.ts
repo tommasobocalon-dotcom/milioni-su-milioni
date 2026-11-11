@@ -4,7 +4,7 @@ import { confirmCheckoutReturn } from "@/lib/billing/stripe";
 
 /**
  * Pagina di ritorno dal Checkout di Stripe (success_url). Conferma il pagamento rileggendo la sessione da
- * Stripe, così crediti e piano compaiono subito; il webhook resta la rete di sicurezza (stessi effetti, idempotenti).
+ * Stripe, così piano e pacchetti compaiono subito; il webhook resta la rete di sicurezza (stessi effetti, idempotenti).
  */
 export async function GET(request: NextRequest) {
   const { partner } = await requirePartner({ allowSuspended: true });
@@ -18,7 +18,7 @@ export async function GET(request: NextRequest) {
       console.error("[stripe] conferma al ritorno non riuscita:", sessionId, e);
     }
   }
-  const page = result?.kind === "subscription" ? "/area-partner/abbonamento" : "/area-partner/token";
+  const page = result?.kind === "subscription" ? "/area-partner/abbonamento" : "/area-partner/sponsorizzazioni";
   // "ricevuto": già applicato; "ok": avviato, la conferma arriva dal webhook (SEPA o errore temporaneo).
   const anchors: Record<string, string> = { home_sponsor: "#home", search_boost: "#boost", area_extension: "#estensione" };
   const what = anchors[result?.kind ?? ""] ?? "";

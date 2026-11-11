@@ -27,7 +27,7 @@ export const metadata = { title: "Boost e sponsorizzazioni" };
 
 const dateFmt = new Intl.DateTimeFormat("it-IT", { day: "numeric", month: "short", year: "numeric", timeZone: "Europe/Rome" });
 
-export default function TokenPage({ searchParams }: PageProps<"/area-partner/token">) {
+export default function SponsorshipsPage({ searchParams }: PageProps<"/area-partner/sponsorizzazioni">) {
   return (
     <Suspense fallback={<PartnerSkeleton />}>
       {searchParams.then((sp) => (

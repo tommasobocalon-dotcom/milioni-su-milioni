@@ -1,7 +1,7 @@
 /**
  * Dati di esempio per sviluppo e demo, coerenti con le schermate Figma.
- * Nomi di aziende e persone sono inventati. I codici ISTAT dei capoluoghi sono reali;
- * quelli dei comuni minori vanno verificati con l'import ufficiale ISTAT (Fase 0).
+ * Nomi di aziende e persone sono inventati. Tutti i 560 comuni del Veneto arrivano dalla migrazione
+ * 0018_comuni_veneto (elenco ISTAT); qui restano quelli usati dagli esempi, con coordinate e frazioni scritte a mano.
  */
 
 export const REGIONS = [{ id: 5, name: "Veneto", slug: "veneto", active: true }];
@@ -20,15 +20,15 @@ export const MUNICIPALITIES = [
   { id: 28060, provinceId: 28, name: "Padova", lat: 45.4064, lng: 11.8768, aliases: [] },
   { id: 28001, provinceId: 28, name: "Abano Terme", lat: 45.36, lng: 11.79, aliases: [] },
   { id: 28003, provinceId: 28, name: "Albignasego", lat: 45.347, lng: 11.859, aliases: [] },
-  { id: 28017, provinceId: 28, name: "Cadoneghe", lat: 45.44, lng: 11.928, aliases: [] },
+  { id: 28016, provinceId: 28, name: "Cadoneghe", lat: 45.44, lng: 11.928, aliases: [] },
   { id: 28058, provinceId: 28, name: "Noventa Padovana", lat: 45.415, lng: 11.953, aliases: [] },
   { id: 28072, provinceId: 28, name: "Rubano", lat: 45.427, lng: 11.788, aliases: [] },
   { id: 28086, provinceId: 28, name: "Selvazzano Dentro", lat: 45.395, lng: 11.786, aliases: ["Selvazzano"] },
-  { id: 28101, provinceId: 28, name: "Vigonza", lat: 45.443, lng: 11.985, aliases: [] },
+  { id: 28100, provinceId: 28, name: "Vigonza", lat: 45.443, lng: 11.985, aliases: [] },
   { id: 27042, provinceId: 27, name: "Venezia", lat: 45.4408, lng: 12.3155, aliases: ["Mestre", "Marghera", "Lido di Venezia", "Venezia-Mestre"] },
   { id: 27008, provinceId: 27, name: "Chioggia", lat: 45.219, lng: 12.279, aliases: ["Sottomarina"] },
   { id: 27024, provinceId: 27, name: "Mirano", lat: 45.493, lng: 12.108, aliases: [] },
-  { id: 27027, provinceId: 27, name: "Noale", lat: 45.55, lng: 12.071, aliases: [] },
+  { id: 27026, provinceId: 27, name: "Noale", lat: 45.55, lng: 12.071, aliases: [] },
   { id: 26086, provinceId: 26, name: "Treviso", lat: 45.6669, lng: 12.243, aliases: [] },
   { id: 26043, provinceId: 26, name: "Mogliano Veneto", lat: 45.562, lng: 12.237, aliases: ["Mogliano"] },
   { id: 26012, provinceId: 26, name: "Castelfranco Veneto", lat: 45.671, lng: 11.927, aliases: ["Castelfranco"] },
@@ -180,8 +180,8 @@ export const QUESTIONS: Record<
 /** Annuale = 10 mensilità (2 mesi di sconto, PRD §7.1). Prezzi come nel prototipo Figma, da confermare. */
 export const PLANS = [
   { code: "base", name: "Base", monthlyPriceCents: 3900, yearlyPriceCents: 34800, leadsIncluded: 0, visibilityWeight: 1, maxProvinces: 1, maxServices: 5, maxPortfolioItems: 5, maxUsers: 1, renewalTokens: 0, featuredSlots: false },
-  { code: "normal", name: "Normal", monthlyPriceCents: 8900, yearlyPriceCents: 82800, leadsIncluded: 0, visibilityWeight: 2, maxProvinces: 7, maxServices: 15, maxPortfolioItems: 25, maxUsers: 2, renewalTokens: 80, featuredSlots: true },
-  { code: "premium", name: "Premium", monthlyPriceCents: 19900, yearlyPriceCents: 190800, leadsIncluded: 0, visibilityWeight: 3, maxProvinces: 99, maxServices: null, maxPortfolioItems: null, maxUsers: 5, renewalTokens: 200, featuredSlots: true },
+  { code: "normal", name: "Normal", monthlyPriceCents: 8900, yearlyPriceCents: 82800, leadsIncluded: 0, visibilityWeight: 2, maxProvinces: 7, maxServices: 15, maxPortfolioItems: 25, maxUsers: 2, renewalTokens: 0, featuredSlots: true },
+  { code: "premium", name: "Premium", monthlyPriceCents: 19900, yearlyPriceCents: 190800, leadsIncluded: 0, visibilityWeight: 3, maxProvinces: 99, maxServices: null, maxPortfolioItems: null, maxUsers: 5, renewalTokens: 0, featuredSlots: true },
 ];
 
 /** Prezzo in token di un lead oltre quota (PRD §7.4, da confermare in §20). */
@@ -250,8 +250,8 @@ export const PARTNERS: PartnerSeed[] = [
     portfolio: [
       { title: "Bagno in stile naturale", municipality: 28001, beforeAfter: true },
       { title: "Caldaia a condensazione", municipality: 28060 },
-      { title: "Climatizzazione trilocale", municipality: 28101 },
-      { title: "Pompa di calore in villetta", municipality: 27027, beforeAfter: true },
+      { title: "Climatizzazione trilocale", municipality: 28100 },
+      { title: "Pompa di calore in villetta", municipality: 27026, beforeAfter: true },
     ],
     hours: H_ART,
   },
@@ -260,7 +260,7 @@ export const PARTNERS: PartnerSeed[] = [
     category: "idraulico",
     businessName: "Termoidraulica Brenta S.r.l.",
     displayName: "Termoidraulica Brenta",
-    municipality: 28101,
+    municipality: 28100,
     tagline: "Impianti e caldaie, pronto intervento in giornata",
     description:
       "Squadra di sei tecnici specializzati in impianti termici e idraulici per case e condomini della provincia di Padova e della Riviera del Brenta. Interveniamo in giornata sulle urgenze.",
@@ -464,7 +464,7 @@ export const PARTNERS: PartnerSeed[] = [
     category: "ristrutturazioni",
     businessName: "Edil Brenta Ristrutturazioni S.r.l.",
     displayName: "Edil Brenta Ristrutturazioni",
-    municipality: 28017,
+    municipality: 28016,
     tagline: "Ristrutturazioni chiavi in mano",
     description: "Impresa edile per ristrutturazioni complete di appartamenti e case, con un unico referente dal progetto alla consegna.",
     specialties: ["Chiavi in mano", "Bagni", "Cartongesso", "Detrazioni fiscali"],
@@ -478,7 +478,7 @@ export const PARTNERS: PartnerSeed[] = [
       ["cartongesso", 3500, 5500],
     ],
     portfolio: [
-      { title: "Trilocale anni '70 rinnovato", municipality: 28017, beforeAfter: true },
+      { title: "Trilocale anni '70 rinnovato", municipality: 28016, beforeAfter: true },
       { title: "Open space con cartongesso", municipality: 28060 },
     ],
     hours: H_ART,
@@ -554,7 +554,7 @@ export const PARTNERS: PartnerSeed[] = [
       ["compravendita", 250, 300, "+ IVA"],
     ],
     portfolio: [
-      { title: "Quadrilocale con giardino", municipality: 28017, contract: "sale", priceCents: 31000000, sqm: 120, rooms: 4 },
+      { title: "Quadrilocale con giardino", municipality: 28016, contract: "sale", priceCents: 31000000, sqm: 120, rooms: 4 },
       { title: "Monolocale per studenti", municipality: 28060, contract: "rent", priceCents: 55000, sqm: 35, rooms: 1 },
     ],
     hours: H_AG,
@@ -699,7 +699,7 @@ export const ROSSI_LEADS: {
     answers: [["Tipo di immobile", "Appartamento"], ["Che impianto hai oggi?", "Caldaia a gas"], ["Budget indicativo", "1.000 – 5.000 €"]],
   },
   {
-    name: "Luca F.", phone: "+393389998877", email: "luca.f@example.com", service: "climatizzazione", municipality: 28101,
+    name: "Luca F.", phone: "+393389998877", email: "luca.f@example.com", service: "climatizzazione", municipality: 28100,
     summary: "Climatizzazione dual split", hoursAgo: 17, status: "new", slot: "Qualsiasi orario", timing: "Entro 1 mese",
     answers: [["Tipo di immobile", "Villetta a schiera"], ["Metri quadri interessati", "90"]],
   },
@@ -709,7 +709,7 @@ export const ROSSI_LEADS: {
     answers: [["Tipo di immobile", "Appartamento"]],
   },
   {
-    name: "Sara N.", phone: "+393297776655", email: "sara.n@example.com", service: "pompa-di-calore", municipality: 27027,
+    name: "Sara N.", phone: "+393297776655", email: "sara.n@example.com", service: "pompa-di-calore", municipality: 27026,
     summary: "Pompa di calore · villetta", hoursAgo: 66, status: "contacted", slot: "18:00 – 20:00", timing: "Entro 3 mesi",
     answers: [["Tipo di immobile", "Casa indipendente"], ["Metri quadri interessati", "140"]],
   },
@@ -724,7 +724,7 @@ export const ROSSI_LEADS: {
     answers: [["Tipo di immobile", "Appartamento"], ["Metri quadri interessati", "6"]],
   },
   {
-    name: "Anna V.", phone: "+393471239876", email: "anna.v@example.com", service: "perdite", municipality: 28017,
+    name: "Anna V.", phone: "+393471239876", email: "anna.v@example.com", service: "perdite", municipality: 28016,
     summary: "Installazione scaldabagno", hoursAgo: 200, status: "lost", slot: "14:00 – 18:00", timing: "Entro 1 mese",
     answers: [["Tipo di immobile", "Appartamento"]],
   },

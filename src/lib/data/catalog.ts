@@ -101,6 +101,24 @@ export async function findPlace(query: string | undefined | null): Promise<Place
   );
 }
 
+export type ProvinceZone = { id: number; name: string; slug: string; label: string };
+
+/** Le province del Veneto come voci del filtro Zona ("Provincia di Padova"), ricavate dai comuni. */
+export async function getProvinceZones(): Promise<ProvinceZone[]> {
+  const byId = new Map<number, ProvinceZone>();
+  for (const m of await getMunicipalities()) {
+    byId.set(m.provinceId, { id: m.provinceId, name: m.provinceName, slug: m.provinceSlug, label: `Provincia di ${m.provinceName}` });
+  }
+  return [...byId.values()].sort((a, b) => a.name.localeCompare(b.name, "it"));
+}
+
+/** Zona dei filtri dei risultati: una provincia intera se si sceglie "Provincia di …", altrimenti un comune come findPlace. */
+export async function findZone(query: string | undefined | null): Promise<{ place: Place | null; province: ProvinceZone | null }> {
+  const q = slugify(query ?? "");
+  const province = q.startsWith("provincia-di-") ? (await getProvinceZones()).find((p) => slugify(p.label) === q) ?? null : null;
+  return { place: province ? null : await findPlace(query), province };
+}
+
 export async function getProvinceBySlug(slug: string) {
   const [row] = await db.select().from(provinces).where(and(eq(provinces.slug, slug))).limit(1);
   return row ?? null;

@@ -8,7 +8,7 @@ import type { HomeSponsor } from "@/lib/data/home";
 import { cn } from "@/lib/utils";
 
 /** Scelta del boost "Logo in evidenza in Home" nell'Area Partner; chi non è entrato passa prima dal login aziende. */
-export const BOOST_HREF = `/accedi/azienda?next=${encodeURIComponent("/area-partner/token#home")}`;
+export const BOOST_HREF = `/accedi/azienda?next=${encodeURIComponent("/area-partner/sponsorizzazioni#home")}`;
 
 /**
  * Nastro dei loghi. L'ordine cambia a ogni visita (decisione del cliente): lo mescola il browser dopo il caricamento,

@@ -34,7 +34,7 @@ const COPY = {
     signupButton: "Crea il tuo account",
   },
   business: {
-    login: { title: "Area aziende", text: "Entra per gestire richieste, token e abbonamento della tua attività." },
+    login: { title: "Area aziende", text: "Entra per gestire richieste, abbonamento e sponsorizzazioni della tua attività." },
     signup: { title: "Registra la tua attività", text: "Prima il tuo account personale, poi i dati dell'attività e il piano." },
     signupTab: "Registra l'attività",
     signupButton: "Continua con i dati dell'attività",

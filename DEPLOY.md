@@ -134,7 +134,7 @@ Manda a ogni persona:
 - **Caricamento foto** (logo, portfolio, foto profilo): in locale le foto vanno su disco, ma su Vercel il disco è di sola lettura. Serve Supabase Storage.
 - **SMS ed email** non partono finché `SMS_PROVIDER` ed `EMAIL_PROVIDER` restano `console`: i codici compaiono a schermo (`DEMO_MODE`). Per l'invio vero vedi "SMS ed email con Brevo".
 - **Accesso con Google/Apple**: funziona solo dopo aver inserito le variabili `GOOGLE_*` / `APPLE_*` su Vercel, con URI di ritorno `https://gecoitalia.it/auth/google/callback` e `https://gecoitalia.it/auth/apple/callback`.
-- **Pagamenti Stripe**: spenti finché non imposti le variabili `STRIPE_*` (vedi sotto); fino ad allora l'acquisto token è simulato.
+- **Pagamenti Stripe**: spenti finché non imposti le variabili `STRIPE_*` (vedi sotto); fino ad allora piani e pacchetti si attivano senza pagamento (solo sito di prova).
 - **Recensioni Google, email vere e antispam Turnstile**: spenti finché non imposti le chiavi, passo passo in [ATTIVAZIONE-SERVIZI.md](ATTIVAZIONE-SERVIZI.md).
 - I dati sono **di esempio** (partner e recensioni inventati): vanno bene finché il sito è riservato al team, **non al lancio** (PRD §5.6).
 
@@ -165,7 +165,7 @@ Un solo account [Brevo](https://www.brevo.com) per i codici SMS dei clienti e pe
 
 ## Pagamenti con Stripe
 
-Abbonamenti (mensile o annuale), pacchetti token e portale clienti passano da Stripe. Sul sito di prova usa **solo la modalità test** (chiavi `sk_test_...`): nessun addebito vero, carta di prova `4242 4242 4242 4242`.
+Abbonamenti (mensile o annuale), pacchetti in euro e portale clienti passano da Stripe. Sul sito di prova usa **solo la modalità test** (chiavi `sk_test_...`): nessun addebito vero, carta di prova `4242 4242 4242 4242`.
 
 1. **Account e metodi di pagamento.** Su https://dashboard.stripe.com usa la *sandbox* (modalità test). In **Settings → Payment methods** attiva *SEPA Direct Debit* (la carta è già attiva): il Checkout offre solo carta e SEPA, anche se nel Dashboard ci sono altri metodi.
 2. **Chiave segreta.** **Developers → API keys**: copia la *Secret key* (`sk_test_...`) in `.env.local` come `STRIPE_SECRET_KEY=...`. Mai in `.env.example` (va su GitHub) e mai in chat.
@@ -186,8 +186,8 @@ stripe listen --forward-to localhost:3000/api/stripe/webhook
 Il comando stampa un `whsec_...` da mettere in `STRIPE_WEBHOOK_SECRET` in `.env.local`, poi riavvia `npm run dev`.
 
 **Cosa succede quando:**
-- *Checkout pagato con carta*: il piano o i token arrivano in pochi secondi. *Con SEPA*: dopo la conferma della banca (qualche giorno lavorativo).
-- *Rinnovo pagato*: la quota lead del periodo si azzera e arrivano i token omaggio del piano.
+- *Checkout pagato con carta*: il piano o il pacchetto si attivano in pochi secondi. *Con SEPA*: dopo la conferma della banca (qualche giorno lavorativo).
+- *Rinnovo pagato*: il periodo si allunga; col primo incasso del Premium annuale in promo arriva il logo in Home in regalo.
 - *Pagamento fallito*: scheda nascosta dai risultati e richieste disattivate finché il pagamento non riesce.
 - *Disdetta dal portale*: il piano resta attivo fino a fine periodo pagato, poi la scheda esce dai risultati.
 

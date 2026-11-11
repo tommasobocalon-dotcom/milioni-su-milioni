@@ -34,7 +34,7 @@ test("da sospeso l'Area Partner si riduce al solo pagamento", async ({ page }) =
   await setStatus("suspended");
 
   // Le pagine normali rimandano all'abbonamento.
-  for (const path of ["/area-partner", "/area-partner/lead", "/area-partner/token", "/area-partner/scheda"]) {
+  for (const path of ["/area-partner", "/area-partner/lead", "/area-partner/sponsorizzazioni", "/area-partner/scheda"]) {
     await page.goto(path);
     await expect(page).toHaveURL(/\/area-partner\/abbonamento/);
   }

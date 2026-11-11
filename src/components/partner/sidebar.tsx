@@ -15,7 +15,7 @@ const NAV = [
   { href: "/area-partner/scheda", label: "La mia attività", icon: Building2, also: ["/area-partner/listino"] },
   { href: "/area-partner/profilo", label: "Profilo", icon: UserRound, also: [] },
   { href: "/area-partner/abbonamento", label: "Abbonamento", icon: CreditCard, also: [] },
-  { href: "/area-partner/token", label: "Boost e sponsorizzazioni", icon: Rocket, also: [] },
+  { href: "/area-partner/sponsorizzazioni", label: "Boost e sponsorizzazioni", icon: Rocket, also: [] },
   { href: "/area-partner/assistenza", label: "Aiuto", icon: LifeBuoy, also: [] },
 ];
 
@@ -50,7 +50,7 @@ function ActiveNavList({ locked }: { locked?: Record<string, React.ReactNode> })
 
 /** Componente "Sidebar partner" di Figma; su telefono diventa una barra di schede scorrevole. */
 export function PartnerSidebar({ bell, boostLock }: { bell: React.ReactNode; boostLock?: React.ReactNode }) {
-  const locked = { "/area-partner/token": boostLock };
+  const locked = { "/area-partner/sponsorizzazioni": boostLock };
   return (
     <aside className="flex shrink-0 flex-col bg-brand text-on-brand lg:sticky lg:top-0 lg:h-screen lg:w-64">
       <div className="flex items-center justify-between px-4 py-4 lg:px-5 lg:py-6">

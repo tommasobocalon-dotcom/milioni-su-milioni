@@ -53,6 +53,10 @@ const nextConfig: NextConfig = {
     },
   },
   poweredByHeader: false,
+  // La pagina dei pacchetti si chiamava "token" finché si pagava a crediti (tolti l'11/11/2026).
+  async redirects() {
+    return [{ source: "/area-partner/token", destination: "/area-partner/sponsorizzazioni", permanent: true }];
+  },
   async headers() {
     return [
       { source: "/:path*", headers: securityHeaders },

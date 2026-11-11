@@ -7,7 +7,7 @@ import { PartnerCard } from "@/components/site/partner-card";
 import { Button } from "@/components/ui/button";
 import { ChipLink } from "@/components/ui/chip";
 import { Input, Select } from "@/components/ui/field";
-import { findPlace, getCategories, getCategoryBySlug, getMunicipalities, getServicesForCategory } from "@/lib/data/catalog";
+import { findZone, getCategories, getCategoryBySlug, getMunicipalities, getProvinceZones, getServicesForCategory } from "@/lib/data/catalog";
 import { FeaturedPartner } from "@/components/site/featured-partner";
 import { ResultsMap, type MapPoint } from "@/components/site/results-map";
 import { recordImpressions, searchPartners, type SortKey } from "@/lib/data/search";
@@ -67,7 +67,7 @@ export async function Results({ mode, params }: { mode: "agency" | "pro"; params
 
 /** Filtri letti dall'indirizzo e ricerca. Le funzioni chiamate sono in cache: chiamarla due volte non rifà le query. */
 async function findResults(mode: "agency" | "pro", params: ResultsParams, seed: string) {
-  const [allCategories, place] = await Promise.all([getCategories(), findPlace(params.dove)]);
+  const [allCategories, { place, province }] = await Promise.all([getCategories(), findZone(params.dove)]);
   const category =
     mode === "agency" ? allCategories.find((c) => c.partnerType === "agency") ?? null : params.categoria ? await getCategoryBySlug(params.categoria) : null;
   const categoryServices = category ? await getServicesForCategory(category.id) : [];
@@ -80,6 +80,7 @@ async function findResults(mode: "agency" | "pro", params: ResultsParams, seed: 
     categoryId: category?.id,
     serviceId: service?.id,
     place,
+    provinceId: province?.id,
     minRating,
     sort,
     page: parsePage(params.pagina),
@@ -87,7 +88,7 @@ async function findResults(mode: "agency" | "pro", params: ResultsParams, seed: 
     firstPageSize: FIRST_PAGE_SIZE,
     visitorSeed: seed,
   });
-  return { allCategories, place, category, categoryServices, service, sort, found };
+  return { allCategories, place, province, category, categoryServices, service, sort, found };
 }
 
 async function ResultsBody({ mode, params, seed }: { mode: "agency" | "pro"; params: ResultsParams; seed: string }) {
@@ -95,9 +96,9 @@ async function ResultsBody({ mode, params, seed }: { mode: "agency" | "pro"; par
   cacheLife("minutes");
   cacheTag("catalog", "boosts");
   const basePath = mode === "agency" ? "/trova-casa" : "/trova-professionista";
-  const { allCategories, place, category, categoryServices, service, sort, found } = await findResults(mode, params, seed);
+  const { allCategories, place, province, category, categoryServices, service, sort, found } = await findResults(mode, params, seed);
   const { featured, results, total, page, pages } = found;
-  const places = await getMunicipalities();
+  const [places, provinceZones] = await Promise.all([getMunicipalities(), getProvinceZones()]);
 
   const href = (patch: Partial<ResultsParams>) => {
     // Ogni cambio di filtro riparte dalla prima pagina; solo la paginazione passa `pagina`.
@@ -114,7 +115,7 @@ async function ResultsBody({ mode, params, seed }: { mode: "agency" | "pro"; par
     .map((p) => ({ id: p.id, name: p.displayName, href: p.href, lat: p.lat, lng: p.lng }));
 
   const what = mode === "agency" ? "Agenzie immobiliari" : category?.pluralName ?? "Professionisti e artigiani";
-  const where = place ? `a ${place.name}` : "in Veneto";
+  const where = place ? `a ${place.name}` : province ? `in provincia di ${province.name}` : "in Veneto";
   const proCategories = allCategories.filter((c) => c.partnerType !== "agency");
 
   return (
@@ -133,10 +134,10 @@ async function ResultsBody({ mode, params, seed }: { mode: "agency" | "pro"; par
             <span>{category.name}</span>
           </>
         )}
-        {place && (
+        {(place || province) && (
           <>
             <ChevronRight className="size-3.5" aria-hidden />
-            <span>{place.name}</span>
+            <span>{place?.name ?? province?.label}</span>
           </>
         )}
       </nav>
@@ -171,8 +172,11 @@ async function ResultsBody({ mode, params, seed }: { mode: "agency" | "pro"; par
               <label htmlFor="dove" className="text-body-s font-semibold">
                 Zona
               </label>
-              <Input id="dove" name="dove" list="comuni-filtro" defaultValue={place?.name ?? params.dove ?? ""} placeholder="Comune" />
+              <Input id="dove" name="dove" list="comuni-filtro" defaultValue={place?.name ?? province?.label ?? params.dove ?? ""} placeholder="Comune o provincia" />
               <datalist id="comuni-filtro">
+                {provinceZones.map((p) => (
+                  <option key={p.id} value={p.label} />
+                ))}
                 {places.map((p) => (
                   <option key={p.id} value={p.name} />
                 ))}

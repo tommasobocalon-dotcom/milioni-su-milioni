@@ -1,5 +1,5 @@
 import "server-only";
-import { and, count, desc, eq, gt, ilike, inArray, isNotNull, ne, not, or, sql, sum, type SQL } from "drizzle-orm";
+import { and, count, desc, eq, gt, ilike, inArray, isNotNull, ne, not, or, sql, type SQL } from "drizzle-orm";
 import { db } from "@/lib/db/client";
 import {
   auditLogs,
@@ -13,13 +13,11 @@ import {
   reviews,
   subscriptions,
   supportTickets,
-  tokenLedger,
-  users,
-} from "@/lib/db/schema";
+  boosts,
+  users } from "@/lib/db/schema";
 import { profileHref } from "@/lib/data/search";
 import { countTicketsByStatus, listTickets } from "@/lib/data/support";
 import { monthlyRecurringCents } from "@/lib/domain/admin";
-import { tokenBalance } from "@/lib/domain/tokens";
 
 /** Letture del Backoffice (PRD §10). Ogni pagina che le usa passa prima da requireAdmin(). */
 
@@ -36,7 +34,7 @@ export const ACCOUNT_STATUSES: { value: AccountStatus; label: string }[] = [
 
 export async function getAdminOverview(now: Date) {
   const since = new Date(now.getTime() - 30 * DAY);
-  const [byStatus, [toVerify], [newPartners], activeSubs, [leadStats], tokenRows, [reports], [flagged], ticketCounts, openTickets, recentPartners] = await Promise.all([
+  const [byStatus, [toVerify], [newPartners], activeSubs, [leadStats], boostRows, [reports], [flagged], ticketCounts, openTickets, recentPartners] = await Promise.all([
     db.select({ status: partners.accountStatus, n: count() }).from(partners).groupBy(partners.accountStatus),
     db
       .select({ n: count() })
@@ -49,11 +47,7 @@ export async function getAdminOverview(now: Date) {
       .innerJoin(plans, eq(plans.id, subscriptions.planId))
       .where(eq(subscriptions.status, "active")),
     db.select({ verified: count(leads.verifiedAt), delivered: count(leads.deliveredAt) }).from(leads).where(gt(leads.createdAt, since)),
-    db
-      .select({ kind: tokenLedger.kind, total: sum(tokenLedger.amount) })
-      .from(tokenLedger)
-      .where(and(gt(tokenLedger.createdAt, since), inArray(tokenLedger.kind, ["purchase", "consume"])))
-      .groupBy(tokenLedger.kind),
+    db.select({ placement: boosts.placement, n: count() }).from(boosts).where(gt(boosts.startsAt, since)).groupBy(boosts.placement),
     db.select({ n: count() }).from(leads).where(eq(leads.reportStatus, "open")),
     db.select({ n: count() }).from(reviews).where(eq(reviews.status, "flagged")),
     countTicketsByStatus(),
@@ -67,7 +61,7 @@ export async function getAdminOverview(now: Date) {
       .limit(5),
   ]);
   const partnersBy = Object.fromEntries(byStatus.map((r) => [r.status, r.n])) as Partial<Record<AccountStatus, number>>;
-  const tokens = Object.fromEntries(tokenRows.map((r) => [r.kind, Math.abs(Number(r.total ?? 0))]));
+  const sponsored = Object.fromEntries(boostRows.map((r) => [r.placement, r.n])) as Partial<Record<"home" | "search", number>>;
   return {
     partnersBy,
     toVerify: toVerify?.n ?? 0,
@@ -76,8 +70,8 @@ export async function getAdminOverview(now: Date) {
     activeSubscriptions: activeSubs.length,
     leadsVerified: leadStats?.verified ?? 0,
     leadsDelivered: leadStats?.delivered ?? 0,
-    tokensSold: tokens.purchase ?? 0,
-    tokensUsed: tokens.consume ?? 0,
+    homeSponsors: sponsored.home ?? 0,
+    searchBoosts: sponsored.search ?? 0,
     openReports: reports?.n ?? 0,
     flaggedReviews: flagged?.n ?? 0,
     ticketsToAnswer: ticketCounts.open,
@@ -140,7 +134,7 @@ export async function countPartnersByFilter(): Promise<Record<PartnerFilter | "a
   return counts;
 }
 
-export async function getPartnerAdmin(id: string, now: Date) {
+export async function getPartnerAdmin(id: string) {
   const [p] = await db
     .select({
       id: partners.id,
@@ -175,7 +169,7 @@ export async function getPartnerAdmin(id: string, now: Date) {
     .limit(1);
   if (!p) return null;
 
-  const [[sub], ledger, [leadTotals], members, tickets, history] = await Promise.all([
+  const [[sub], [leadTotals], members, tickets, history] = await Promise.all([
     db
       .select({
         status: subscriptions.status,
@@ -189,7 +183,6 @@ export async function getPartnerAdmin(id: string, now: Date) {
       .where(eq(subscriptions.partnerId, id))
       .orderBy(desc(subscriptions.createdAt))
       .limit(1),
-    db.select().from(tokenLedger).where(eq(tokenLedger.partnerId, id)).orderBy(desc(tokenLedger.createdAt)),
     db
       .select({
         total: count(),
@@ -216,16 +209,10 @@ export async function getPartnerAdmin(id: string, now: Date) {
       .orderBy(desc(auditLogs.createdAt))
       .limit(15),
   ]);
-  const balance = tokenBalance(
-    ledger.map((r) => ({ id: r.id, kind: r.kind, amount: r.amount, lotId: r.lotId, expiresAt: r.expiresAt, createdAt: r.createdAt })),
-    now,
-  );
   return {
     ...p,
     publicPath: profileHref({ partnerType: p.type, provinceSlug: p.provinceSlug, categorySlug: p.categorySlug, slug: p.slug }),
     sub: sub ?? null,
-    balance,
-    ledger: ledger.slice(0, 8),
     leads: leadTotals ?? { total: 0, last30: 0, reported: 0 },
     members,
     tickets,

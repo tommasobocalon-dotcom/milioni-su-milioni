@@ -3,11 +3,10 @@ import { revalidateTag } from "next/cache";
 import { and, eq, inArray, isNotNull, isNull, or, sql } from "drizzle-orm";
 import Stripe from "stripe";
 import { db } from "@/lib/db/client";
-import { municipalities, partners, plans, stripeProcessed, subscriptions, tokenLedger } from "@/lib/db/schema";
-import { accountStatusFrom, areaExtensionFromCheckout, grantsRenewalTokens, homeSponsorFromCheckout, searchBoostFromCheckout, periodFromItems, planFromLookupKey, planLookupKey, subscriptionStatusFromStripe, tokenMonthsDue, tokenPurchaseFromCheckout, TRIAL_DAYS } from "@/lib/domain/billing";
-import { AREA_EXTENSION_OFFER, changePromo, HOME_SPONSOR_PACKAGES, homeSponsorPrice, launchDate, municipalityIdsFrom, planPromo, type PlanPromo, SEARCH_BOOST_PACKAGES, TOKEN_PACKAGES } from "@/lib/domain/offers";
+import { municipalities, partners, plans, stripeProcessed, subscriptions } from "@/lib/db/schema";
+import { accountStatusFrom, areaExtensionFromCheckout, homeSponsorFromCheckout, searchBoostFromCheckout, periodFromItems, planFromLookupKey, planLookupKey, subscriptionStatusFromStripe, TRIAL_DAYS } from "@/lib/domain/billing";
+import { AREA_EXTENSION_OFFER, changePromo, HOME_SPONSOR_PACKAGES, homeSponsorPrice, launchDate, municipalityIdsFrom, planPromo, type PlanPromo, SEARCH_BOOST_PACKAGES } from "@/lib/domain/offers";
 import { grantAreaExtensions, grantHomeSponsor, grantSearchBoost } from "@/lib/leads/service";
-import { tokenExpiryFrom } from "@/lib/domain/tokens";
 
 /**
  * Stripe Billing e Checkout (PRD §7, §13.1). Le azioni creano solo le sessioni di pagamento: abbonamenti e
@@ -77,32 +76,6 @@ async function customerFor({ partnerId, email, name }: Payer): Promise<string> {
   return customer.id;
 }
 
-export async function createTokenCheckout(payer: Payer, packageCode: string): Promise<string> {
-  const pkg = TOKEN_PACKAGES.find((p) => p.code === packageCode);
-  if (!pkg) throw new BillingError("Pacchetto non valido");
-  const metadata = { kind: "tokens", partnerId: payer.partnerId, packageCode: pkg.code };
-  const session = await stripe().checkout.sessions.create({
-    mode: "payment",
-    customer: await customerFor(payer),
-    locale: "it",
-    allowed_payment_method_types: PAYMENT_METHODS,
-    line_items: [
-      {
-        quantity: 1,
-        tax_rates: await taxRates(),
-        price_data: { currency: "eur", unit_amount: pkg.priceCents, product_data: { name: `Pacchetto token ${pkg.name} · ${pkg.tokens} token` } },
-      },
-    ],
-    metadata,
-    payment_intent_data: { metadata },
-    invoice_creation: { enabled: true, invoice_data: { metadata } },
-    success_url: `${appUrl()}/api/stripe/ritorno?session_id={CHECKOUT_SESSION_ID}`,
-    cancel_url: `${appUrl()}/area-partner/token`,
-  });
-  if (!session.url) throw new Error("Stripe non ha restituito l'indirizzo del Checkout");
-  return session.url;
-}
-
 /** Pacchetto a pagamento unico (logo in Home, boost nella ricerca): una riga con IVA, ricevuta e fattura per email. */
 async function packageCheckout(payer: Payer, p: { kind: string; code: string; name: string; cents: number; back: string }): Promise<string> {
   const metadata = { kind: p.kind, partnerId: payer.partnerId, packageCode: p.code };
@@ -116,7 +89,7 @@ async function packageCheckout(payer: Payer, p: { kind: string; code: string; na
     payment_intent_data: { metadata },
     invoice_creation: { enabled: true, invoice_data: { metadata } },
     success_url: `${appUrl()}/api/stripe/ritorno?session_id={CHECKOUT_SESSION_ID}`,
-    cancel_url: `${appUrl()}/area-partner/token#${p.back}`,
+    cancel_url: `${appUrl()}/area-partner/sponsorizzazioni#${p.back}`,
   });
   if (!session.url) throw new Error("Stripe non ha restituito l'indirizzo del Checkout");
   return session.url;
@@ -167,7 +140,7 @@ export async function createAreaExtensionCheckout(payer: Payer, ids: number[]): 
     payment_intent_data: { metadata },
     invoice_creation: { enabled: true, invoice_data: { metadata } },
     success_url: `${appUrl()}/api/stripe/ritorno?session_id={CHECKOUT_SESSION_ID}`,
-    cancel_url: `${appUrl()}/area-partner/token#estensione`,
+    cancel_url: `${appUrl()}/area-partner/sponsorizzazioni#estensione`,
   });
   if (!session.url) throw new Error("Stripe non ha restituito l'indirizzo del Checkout");
   return session.url;
@@ -225,7 +198,7 @@ export async function createSubscriptionCheckout(payer: Payer, planCode: string,
     metadata,
     ...(promo ? { discounts: [{ coupon: await promoCoupon(plan.code, period, promo.listCents - promo.payNowCents) }] } : {}),
     // Carta chiesta subito (impostazione predefinita di Checkout): alla fine della prova l'addebito parte da solo.
-    // Il regalo dell'annuale Premium viaggia nei metadati e arriva col primo incasso (grantInvoiceTokens).
+    // Il regalo dell'annuale Premium viaggia nei metadati e arriva col primo incasso (grantInvoiceGift).
     subscription_data: {
       metadata: promo?.giftHomeDays ? { ...metadata, giftHomeDays: String(promo.giftHomeDays) } : metadata,
       default_tax_rates: await taxRates(),
@@ -344,7 +317,7 @@ async function changePlanWithPromo(
   await db.insert(stripeProcessed).values({ key: changePromoKey(partnerId) }).onConflictDoNothing();
   // Effetti subito, senza aspettare il webhook (che li ripete senza doppioni).
   await syncSubscription(subscriptionId);
-  if (!trialing && updated.latest_invoice && typeof updated.latest_invoice !== "string") await grantInvoiceTokens(updated.latest_invoice);
+  if (!trialing && updated.latest_invoice && typeof updated.latest_invoice !== "string") await grantInvoiceGift(updated.latest_invoice);
 }
 
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
@@ -419,7 +392,7 @@ async function syncSubscription(subscriptionId: string): Promise<{ id: string; p
 
 const idOf = (v: string | { id: string } | null | undefined) => (typeof v === "string" ? v : (v?.id ?? null));
 
-/** Checkout concluso: abbonamento allineato, crediti nel registro o logo in Home per i pacchetti pagati (una volta sola). */
+/** Checkout concluso: abbonamento allineato o pacchetto pagato applicato (una volta sola). */
 async function applyCheckoutSession(session: Stripe.Checkout.Session): Promise<void> {
   const subscriptionId = idOf(session.subscription);
   if (subscriptionId) await syncSubscription(subscriptionId);
@@ -452,75 +425,44 @@ async function applyCheckoutSession(session: Stripe.Checkout.Session): Promise<v
     revalidateTag("boosts", { expire: 0 });
     return;
   }
-  const purchase = tokenPurchaseFromCheckout(session);
-  if (!purchase) return;
-  const now = new Date();
-  await db.transaction(async (tx) => {
-    if (!(await firstTime(tx, `checkout:${session.id}`))) return;
-    await tx.insert(tokenLedger).values({
-      partnerId: purchase.partnerId,
-      kind: "purchase",
-      amount: purchase.tokens,
-      expiresAt: tokenExpiryFrom(now),
-      reference: `Pacchetto ${purchase.name}`,
-      createdAt: now,
-    });
-  });
+  // Le sessioni senza effetto da applicare (abbonamento già allineato sopra) finiscono qui.
 }
 
-/** Periodo pagato: arrivano i crediti del piano (la prima quota mensile; le altre dell'annuale dal cron mensile). */
-async function grantInvoiceTokens(invoice: Stripe.Invoice): Promise<void> {
+/** Annuale Premium in promo: logo in Home in regalo col primo incasso (anche da cambio piano), una volta sola per abbonamento. */
+async function grantInvoiceGift(invoice: Stripe.Invoice): Promise<void> {
   const subscriptionId = idOf(invoice.parent?.subscription_details?.subscription);
-  // La fattura a 0 € della prova gratuita non porta crediti: arrivano col primo pagamento vero.
-  // Il cambio piano in promo (fattura "subscription_update") porta solo il regalo, non i crediti del rinnovo.
-  const renewal = grantsRenewalTokens(invoice.billing_reason);
-  if (invoice.status !== "paid" || !subscriptionId || !(renewal || invoice.billing_reason === "subscription_update") || invoice.amount_paid <= 0) return;
+  const giftDays = Number(invoice.parent?.subscription_details?.metadata?.giftHomeDays ?? 0);
+  // La fattura a 0 € della prova gratuita non conta: il regalo arriva col primo pagamento vero.
+  const paidPeriod = ["subscription_create", "subscription_cycle", "subscription_update"].includes(invoice.billing_reason ?? "");
+  if (invoice.status !== "paid" || !subscriptionId || !paidPeriod || invoice.amount_paid <= 0 || giftDays <= 0) return;
   const synced = await syncSubscription(subscriptionId);
   if (!synced) return;
-  const now = new Date();
-  const giftDays = Number(invoice.parent?.subscription_details?.metadata?.giftHomeDays ?? 0);
   await db.transaction(async (tx) => {
     if (!(await firstTime(tx, `invoice:${invoice.id}`))) return;
-    // Annuale Premium in promo: logo in Home in regalo col primo incasso, una volta sola per abbonamento.
-    if (giftDays > 0 && (await firstTime(tx, `gift:${subscriptionId}`))) await grantHomeSponsor(tx, synced.partnerId, giftDays, now);
-    if (!renewal) return;
-    const [plan] = await tx
-      .select({ name: plans.name, tokens: plans.renewalTokens })
-      .from(subscriptions)
-      .innerJoin(plans, eq(plans.id, subscriptions.planId))
-      .where(eq(subscriptions.id, synced.id));
-    if (!plan?.tokens) return;
-    await tx.insert(tokenLedger).values({
-      partnerId: synced.partnerId,
-      kind: "credit",
-      amount: plan.tokens,
-      expiresAt: tokenExpiryFrom(now),
-      reference: `Crediti del piano ${plan.name}`,
-      createdAt: now,
-    });
+    if (await firstTime(tx, `gift:${subscriptionId}`)) await grantHomeSponsor(tx, synced.partnerId, giftDays, new Date());
   });
   // La fascia loghi della Home è in cache: il logo in regalo compare subito.
-  if (giftDays > 0) revalidateTag("boosts", { expire: 0 });
+  revalidateTag("boosts", { expire: 0 });
 }
 
 /**
  * Ritorno dal Checkout: rilegge la sessione da Stripe e ne applica gli effetti subito, senza aspettare il
  * webhook (che in locale senza Stripe CLI non arriva). Gli effetti sono gli stessi del webhook e idempotenti:
- * se arrivano entrambi, i crediti si accreditano una volta. Ignora le sessioni di un altro partner.
+ * se arrivano entrambi, gli effetti si applicano una volta. Ignora le sessioni di un altro partner.
  */
 export async function confirmCheckoutReturn(
   sessionId: string,
   partnerId: string,
-): Promise<{ kind: "tokens" | "subscription" | "home_sponsor" | "area_extension" | "search_boost"; confirmed: boolean } | null> {
+): Promise<{ kind: "subscription" | "home_sponsor" | "area_extension" | "search_boost"; confirmed: boolean } | null> {
   const session = await stripe().checkout.sessions.retrieve(sessionId);
   const kind = session.metadata?.kind;
-  if (session.metadata?.partnerId !== partnerId || (kind !== "tokens" && kind !== "subscription" && kind !== "home_sponsor" && kind !== "area_extension" && kind !== "search_boost")) return null;
+  if (session.metadata?.partnerId !== partnerId || (kind !== "subscription" && kind !== "home_sponsor" && kind !== "area_extension" && kind !== "search_boost")) return null;
   // Con l'addebito SEPA la sessione è completa ma l'incasso arriva giorni dopo (webhook async_payment_succeeded).
   const confirmed = session.status === "complete" && session.payment_status !== "unpaid";
   if (!confirmed) return { kind, confirmed };
   await applyCheckoutSession(session);
   const invoiceId = idOf(session.invoice);
-  if (invoiceId) await grantInvoiceTokens(await stripe().invoices.retrieve(invoiceId));
+  if (invoiceId) await grantInvoiceGift(await stripe().invoices.retrieve(invoiceId));
   return { kind, confirmed };
 }
 
@@ -541,42 +483,10 @@ export async function handleStripeEvent(event: Stripe.Event): Promise<void> {
       return;
 
     case "invoice.paid":
-      await grantInvoiceTokens(event.data.object);
+      await grantInvoiceGift(event.data.object);
       return;
 
     default:
       return;
   }
-}
-
-/**
- * Crediti del piano "ogni mese" per chi paga l'annuale: la prima quota arriva col pagamento (invoice.paid),
- * le altre una per ogni mese compiuto. Gira ogni giorno dal cron di Vercel; la chiave in stripe_processed
- * evita doppi accrediti anche se il job viene ripetuto.
- */
-export async function grantMonthlyTokens(now = new Date()): Promise<number> {
-  const rows = await db
-    .select({ id: subscriptions.id, partnerId: subscriptions.partnerId, start: subscriptions.currentPeriodStart, name: plans.name, tokens: plans.renewalTokens })
-    .from(subscriptions)
-    .innerJoin(plans, eq(plans.id, subscriptions.planId))
-    .where(and(eq(subscriptions.status, "active"), eq(subscriptions.period, "yearly"), isNotNull(subscriptions.stripeSubscriptionId)));
-  let granted = 0;
-  for (const sub of rows) {
-    if (sub.tokens <= 0) continue;
-    for (let month = 2; month <= tokenMonthsDue(sub.start, now); month++) {
-      await db.transaction(async (tx) => {
-        if (!(await firstTime(tx, `monthly-tokens:${sub.id}:${sub.start.toISOString()}:${month}`))) return;
-        await tx.insert(tokenLedger).values({
-          partnerId: sub.partnerId,
-          kind: "credit",
-          amount: sub.tokens,
-          expiresAt: tokenExpiryFrom(now),
-          reference: `Crediti del piano ${sub.name} (mese ${month})`,
-          createdAt: now,
-        });
-        granted++;
-      });
-    }
-  }
-  return granted;
 }

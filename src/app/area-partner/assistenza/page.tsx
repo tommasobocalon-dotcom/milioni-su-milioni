@@ -112,7 +112,7 @@ async function Support() {
               </li>
               <li>
                 Logo in Home e altre sponsorizzazioni: trovi tutto in{" "}
-                <Link href="/area-partner/token" className="font-semibold text-primary underline">
+                <Link href="/area-partner/sponsorizzazioni" className="font-semibold text-primary underline">
                   Boost e sponsorizzazioni
                 </Link>
                 .

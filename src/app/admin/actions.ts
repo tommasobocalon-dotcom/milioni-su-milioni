@@ -7,12 +7,12 @@ import { z } from "zod";
 import { signIn } from "@/app/accedi/actions";
 import { destroySession, requireAdmin } from "@/lib/auth/session";
 import { db } from "@/lib/db/client";
-import { auditLogs, leadEvents, leads, partners, reviews, subscriptions, supportMessages, supportTickets, tokenLedger } from "@/lib/db/schema";
-import { manualCreditProblem } from "@/lib/domain/admin";
+import { auditLogs, leadEvents, leads, partners, reviews, subscriptions, supportMessages, supportTickets } from "@/lib/db/schema";
+
 import { accountStatusFrom } from "@/lib/domain/billing";
 import { REPORT_REASONS } from "@/lib/domain/lead-rules";
 import { MESSAGE_MAX, TICKET_STATUSES } from "@/lib/domain/support";
-import { tokenExpiryFrom } from "@/lib/domain/tokens";
+
 import { replyToTicket } from "@/lib/support/service";
 import type { FormState } from "@/components/ui/message-form";
 
@@ -42,7 +42,6 @@ export async function logoutAdmin() {
   redirect("/admin/accedi");
 }
 const Body = z.string().trim().min(2, "Scrivi il messaggio").max(MESSAGE_MAX, "Messaggio troppo lungo");
-
 
 async function ticketNumber(ticketId: string) {
   const [t] = await db.select({ number: supportTickets.number }).from(supportTickets).where(eq(supportTickets.id, ticketId));
@@ -157,33 +156,13 @@ export async function setAccountStatusAction(partnerId: string, _prev: FormState
   return { ok: next === "suspended" ? "Partner sospeso" : "Partner riattivato" };
 }
 
-/** Token omaggio o di rimborso: una riga "credit" nel registro immutabile, con la solita scadenza. */
-export async function creditTokensAction(partnerId: string, _prev: FormState, formData: FormData): Promise<FormState> {
-  const admin = await requireAdmin();
-  if (!Id.safeParse(partnerId).success) return { error: "Partner non valido" };
-  const amount = Number(formData.get("amount"));
-  const reason = String(formData.get("reason") ?? "").trim().slice(0, 200);
-  const problem = manualCreditProblem(amount, reason);
-  if (problem) return { error: problem };
-  const [p] = await db.select({ id: partners.id }).from(partners).where(eq(partners.id, partnerId));
-  if (!p) return { error: "Partner non trovato" };
-  const now = new Date();
-  await db.transaction(async (tx) => {
-    await tx.insert(tokenLedger).values({ partnerId, kind: "credit", amount, expiresAt: tokenExpiryFrom(now), reference: `Accredito dall'assistenza: ${reason}`, createdAt: now });
-    await tx.insert(auditLogs).values({ actor: admin.email, action: "tokens.credit", entity: "partner", entityId: partnerId, data: { amount, reason } });
-  });
-  revalidatePath("/admin", "layout");
-  revalidatePath("/area-partner", "layout");
-  return { ok: `${amount} token accreditati` };
-}
-
 // ---------------------------------------------------------------------------
 // Moderazione: segnalazioni dei lead e recensioni
 // ---------------------------------------------------------------------------
 
 /**
  * Decisione su un lead segnalato dal partner (PRD §7.4). Se la segnalazione è accolta il lead viene
- * restituito: i token tornano con una riga "refund", oppure si libera un posto nella quota del periodo.
+ * restituito e non conta più tra quelli ricevuti.
  */
 export async function resolveLeadReportAction(leadId: string, formData: FormData) {
   const admin = await requireAdmin();
@@ -198,22 +177,12 @@ export async function resolveLeadReportAction(leadId: string, formData: FormData
       await tx.update(leads).set({ reportStatus: "rejected" }).where(eq(leads.id, lead.id));
       await tx.insert(leadEvents).values({ leadId: lead.id, type: "report_rejected", message: `Segnalazione respinta (${reason}): il lead resta conteggiato`, actor: "Assistenza geco", createdAt: now });
     } else {
-      if (lead.charge === "token" && lead.tokensCharged > 0) {
-        await tx.insert(tokenLedger).values({
-          partnerId: lead.partnerId,
-          kind: "refund",
-          amount: lead.tokensCharged,
-          expiresAt: tokenExpiryFrom(now),
-          reference: `Rimborso lead segnalato ${lead.id.slice(0, 8)}`,
-          createdAt: now,
-        });
-      }
       const refunded = lead.charge === "token" || lead.charge === "quota";
       await tx.update(leads).set({ reportStatus: "accepted", charge: refunded ? "refunded" : lead.charge }).where(eq(leads.id, lead.id));
       await tx.insert(leadEvents).values({
         leadId: lead.id,
         type: "report_accepted",
-        message: lead.charge === "token" ? `Segnalazione accolta: ${lead.tokensCharged} token restituiti` : "Segnalazione accolta",
+        message: "Segnalazione accolta",
         actor: "Assistenza geco",
         createdAt: now,
       });

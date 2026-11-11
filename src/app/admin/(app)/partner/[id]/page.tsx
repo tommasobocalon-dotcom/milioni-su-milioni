@@ -4,8 +4,8 @@ import { Suspense } from "react";
 import { ExternalLink } from "lucide-react";
 import { connection } from "next/server";
 import { z } from "zod";
-import { creditTokensAction, setAccountStatusAction, setVerificationAction } from "@/app/admin/actions";
-import { AccountStatusForm, CreditTokensForm } from "@/components/admin/forms";
+import { setAccountStatusAction, setVerificationAction } from "@/app/admin/actions";
+import { AccountStatusForm } from "@/components/admin/forms";
 import { AccountStatusPill, actionLabel, AdminPageHeader, AdminSkeleton, dateOnly, dateTime, Empty, Panel, TicketStatusPill, VerificationPill } from "@/components/admin/ui";
 import { Button } from "@/components/ui/button";
 import { requireAdmin } from "@/lib/auth/session";
@@ -40,7 +40,7 @@ async function PartnerDetail({ id }: { id: string }) {
   await requireAdmin();
   if (!z.uuid().safeParse(id).success) notFound();
   await connection();
-  const p = await getPartnerAdmin(id, new Date());
+  const p = await getPartnerAdmin(id);
   if (!p) notFound();
 
   return (
@@ -65,7 +65,6 @@ async function PartnerDetail({ id }: { id: string }) {
         {[
           { label: "Piano", value: p.sub ? p.sub.planName : "Nessuno", note: p.sub ? `${PERIOD_LABEL[p.sub.period]}, ${SUB_LABEL[p.sub.status]}` : "Non ha ancora pagato" },
           { label: "Piano", value: p.sub?.planName ?? "—", note: p.sub ? `Rinnovo il ${dateOnly.format(p.sub.currentPeriodEnd)}` : "" },
-          { label: "Saldo token", value: String(p.balance), note: "Dal registro immutabile" },
           { label: "Lead ricevuti", value: String(p.leads.total), note: `${p.leads.last30} negli ultimi 30 giorni · ${p.leads.reported} segnalati` },
         ].map((k) => (
           <div key={k.label} className="flex flex-col gap-1 rounded-lg border border-line bg-surface p-5">
@@ -128,23 +127,6 @@ async function PartnerDetail({ id }: { id: string }) {
             )}
           </Panel>
 
-          <Panel title="Ultimi movimenti token">
-            {p.ledger.length === 0 ? (
-              <Empty>Nessun movimento.</Empty>
-            ) : (
-              <ul className="divide-y divide-line">
-                {p.ledger.map((l) => (
-                  <li key={l.id} className="flex items-center justify-between gap-3 px-5 py-2.5 text-body-s">
-                    <span className="min-w-0 truncate">{l.reference}</span>
-                    <span className="flex shrink-0 gap-3 text-ink-2">
-                      <span className={l.amount > 0 ? "font-semibold text-primary" : "font-semibold text-ink"}>{l.amount > 0 ? `+${l.amount}` : l.amount}</span>
-                      <span>{dateOnly.format(l.createdAt)}</span>
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </Panel>
         </div>
 
         <div className="flex flex-col gap-6">
@@ -188,13 +170,6 @@ async function PartnerDetail({ id }: { id: string }) {
                   : "La sospensione nasconde la scheda e ferma i nuovi lead. Un pagamento andato a buon fine la toglie in automatico."}
               </p>
               <AccountStatusForm action={setAccountStatusAction.bind(null, p.id)} suspended={p.accountStatus === "suspended"} />
-            </div>
-          </Panel>
-
-          <Panel title="Accredita token">
-            <div className="flex flex-col gap-3 p-5">
-              <p className="text-body-s text-ink-2">Omaggi o rimborsi: finiscono nel registro token del partner con il motivo, e scadono dopo 12 mesi.</p>
-              <CreditTokensForm action={creditTokensAction.bind(null, p.id)} />
             </div>
           </Panel>
 

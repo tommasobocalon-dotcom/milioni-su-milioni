@@ -2,7 +2,7 @@
  * Regole di fatturazione (PRD §7.2, §7.3) indipendenti da Stripe e dal database: il webhook le usa
  * per tradurre lo stato di Stripe nello stato di abbonamento e scheda del partner.
  */
-import { HOME_SPONSOR_PACKAGES, municipalityIdsFrom, SEARCH_BOOST_PACKAGES, TOKEN_PACKAGES } from "./offers";
+import { HOME_SPONSOR_PACKAGES, municipalityIdsFrom, SEARCH_BOOST_PACKAGES } from "./offers";
 
 /** Giorni di prova gratuita al primo abbonamento (documento del 4/11/2026). */
 export const TRIAL_DAYS = 7;
@@ -44,14 +44,6 @@ export function periodFromItems(items: { current_period_start: number; current_p
 
 type CheckoutLike = { mode: string; payment_status: string; metadata: Record<string, string> | null };
 
-/** Pacchetto token da accreditare per un Checkout pagato; null se non c'è niente da accreditare (ancora). */
-export function tokenPurchaseFromCheckout(session: CheckoutLike): { partnerId: string; tokens: number; name: string } | null {
-  const m = session.metadata;
-  if (session.mode !== "payment" || session.payment_status !== "paid" || m?.kind !== "tokens" || !m.partnerId) return null;
-  const pkg = TOKEN_PACKAGES.find((p) => p.code === m.packageCode);
-  return pkg ? { partnerId: m.partnerId, tokens: pkg.tokens, name: pkg.name } : null;
-}
-
 /** Sponsorizzazione in Home pagata (Checkout "home_sponsor"): partner e giorni di logo in evidenza. */
 export function homeSponsorFromCheckout(session: CheckoutLike): { partnerId: string; days: number } | null {
   const m = session.metadata;
@@ -74,32 +66,6 @@ export function searchBoostFromCheckout(session: CheckoutLike): { partnerId: str
   if (session.mode !== "payment" || session.payment_status !== "paid" || m?.kind !== "search_boost" || !m.partnerId) return null;
   const pkg = SEARCH_BOOST_PACKAGES.find((p) => p.code === m.packageCode);
   return pkg ? { partnerId: m.partnerId, hours: pkg.hours } : null;
-}
-
-/** Token del piano: a ogni periodo pagato (primo compreso), non sui conguagli. */
-export function grantsRenewalTokens(billingReason: string | null): boolean {
-  return billingReason === "subscription_create" || billingReason === "subscription_cycle";
-}
-
-/**
- * Token del piano "ogni mese" (documento del 4/11/2026): quante quote mensili spettano dall'inizio del
- * periodo pagato fino a `now`, prima compresa. Con il mensile è sempre 1; con l'annuale ne arriva una a ogni
- * mese compiuto, al massimo 12. Il 31 gennaio + 1 mese = 28 febbraio (fine mese).
- */
-export function tokenMonthsDue(periodStart: Date, now: Date): number {
-  let months = 0;
-  while (months < 12 && addMonths(periodStart, months).getTime() <= now.getTime()) months++;
-  return Math.max(months, 1);
-}
-
-function addMonths(date: Date, months: number): Date {
-  const d = new Date(date);
-  const day = d.getUTCDate();
-  d.setUTCDate(1);
-  d.setUTCMonth(d.getUTCMonth() + months);
-  const last = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 0)).getUTCDate();
-  d.setUTCDate(Math.min(day, last));
-  return d;
 }
 
 /** I prezzi dei piani in Stripe si riconoscono dalla lookup_key: niente id da copiare nel database o su Vercel. */

@@ -14,8 +14,8 @@ function signed(event: object, secret = E2E_STRIPE_WEBHOOK_SECRET) {
   return { data: payload, headers: { "content-type": "application/json", "stripe-signature": Stripe.webhooks.generateTestHeaderString({ payload, secret }) } };
 }
 
-async function purchases(partnerId: string) {
-  const [{ count }] = await sql<{ count: number }[]>`select count(*)::int as count from token_ledger where partner_id = ${partnerId} and reference = 'Pacchetto Starter'`;
+async function homeSponsors(partnerId: string) {
+  const [{ count }] = await sql<{ count: number }[]>`select count(*)::int as count from boosts where partner_id = ${partnerId} and placement = 'home'`;
   return count;
 }
 
@@ -25,7 +25,7 @@ test("il webhook rifiuta un evento senza firma valida", async ({ request }) => {
   expect(res.status()).toBe(400);
 });
 
-test("pacchetto token pagato: accredito una sola volta anche se Stripe ripete l'evento", async ({ request }) => {
+test("pacchetto Logo in Home pagato: applicato una sola volta anche se Stripe ripete l'evento", async ({ request }) => {
   const [{ id: partnerId }] = await sql<{ id: string }[]>`select id from partners where slug = 'rossi-impianti'`;
   const sessionId = `cs_test_e2e_${Date.now()}`;
   const event = (id: string, type: string) => ({
@@ -39,20 +39,18 @@ test("pacchetto token pagato: accredito una sola volta anche se Stripe ripete l'
         mode: "payment",
         payment_status: "paid",
         subscription: null,
-        metadata: { kind: "tokens", partnerId, packageCode: "starter" },
+        metadata: { kind: "home_sponsor", partnerId, packageCode: "home-7" },
       },
     },
   });
-  const before = await purchases(partnerId);
+  const before = await homeSponsors(partnerId);
 
   const first = await request.post("/api/stripe/webhook", signed(event(`evt_a_${sessionId}`, "checkout.session.completed")));
   test.skip(first.status() === 503, NO_SECRET);
   expect(first.status()).toBe(200);
-  // Stessa consegna ripetuta e l'evento SEPA della stessa sessione: nessun nuovo accredito.
+  // Stessa consegna ripetuta e l'evento SEPA della stessa sessione: nessun logo in più.
   expect((await request.post("/api/stripe/webhook", signed(event(`evt_a_${sessionId}`, "checkout.session.completed")))).status()).toBe(200);
   expect((await request.post("/api/stripe/webhook", signed(event(`evt_b_${sessionId}`, "checkout.session.async_payment_succeeded")))).status()).toBe(200);
 
-  expect(await purchases(partnerId)).toBe(before + 1);
-  const [{ amount }] = await sql<{ amount: number }[]>`select amount from token_ledger where partner_id = ${partnerId} and reference = 'Pacchetto Starter' order by created_at desc limit 1`;
-  expect(amount).toBe(100);
+  expect(await homeSponsors(partnerId)).toBe(before + 1);
 });

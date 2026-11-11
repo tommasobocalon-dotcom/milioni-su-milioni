@@ -15,10 +15,7 @@ import {
   reviews,
   services,
   showcaseFeatures,
-  subscriptions,
-  tokenLedger,
-} from "@/lib/db/schema";
-import { tokenBalance } from "@/lib/domain/tokens";
+  subscriptions } from "@/lib/db/schema";
 
 /**
  * Dati dell'Area Partner. Tutte le funzioni ricevono l'id del partner dalla sessione
@@ -41,7 +38,6 @@ export async function getSubscription(partnerId: string) {
       maxServices: plans.maxServices,
       maxPortfolioItems: plans.maxPortfolioItems,
       maxUsers: plans.maxUsers,
-      renewalTokens: plans.renewalTokens,
       status: subscriptions.status,
       period: subscriptions.period,
       currentPeriodStart: subscriptions.currentPeriodStart,
@@ -54,18 +50,6 @@ export async function getSubscription(partnerId: string) {
     .orderBy(desc(subscriptions.createdAt))
     .limit(1);
   return row ?? null;
-}
-
-export async function getLedger(partnerId: string) {
-  return db.select().from(tokenLedger).where(eq(tokenLedger.partnerId, partnerId)).orderBy(desc(tokenLedger.createdAt));
-}
-
-export async function getTokenBalance(partnerId: string, now: Date) {
-  const rows = await getLedger(partnerId);
-  return tokenBalance(
-    rows.map((r) => ({ id: r.id, kind: r.kind, amount: r.amount, lotId: r.lotId, expiresAt: r.expiresAt, createdAt: r.createdAt })),
-    now,
-  );
 }
 
 const leadListColumns = {
@@ -142,10 +126,9 @@ export async function getLeadDetail(partnerId: string, leadId: string) {
   return { ...lead, events };
 }
 
-export async function getOverview(partnerId: string, now: Date) {
-  const [sub, balance, counts, recent, ratingRow, lastReview, partner, priceCount] = await Promise.all([
+export async function getOverview(partnerId: string) {
+  const [sub, counts, recent, ratingRow, lastReview, partner, priceCount] = await Promise.all([
     getSubscription(partnerId),
-    getTokenBalance(partnerId, now),
     countLeadsByStatus(partnerId),
     listLeads(partnerId, undefined, 5),
     db
@@ -167,7 +150,6 @@ export async function getOverview(partnerId: string, now: Date) {
 
   return {
     sub,
-    balance,
     counts,
     recent,
     rating: ratingRow[0],

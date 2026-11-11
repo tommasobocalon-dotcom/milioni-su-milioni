@@ -3,7 +3,7 @@ import { E2E_INBOUND_EMAIL_TOKEN } from "../playwright.config";
 
 /*
  * Gestionale (/admin). Questo file gira per primo sullo stesso database degli altri test:
- * non tocca token e piano di Rossi Impianti né il partner usato da lead-request.spec.ts.
+ * non tocca il piano di Rossi Impianti né il partner usato da lead-request.spec.ts.
  */
 
 const ADMIN = "admin@gecoitalia.it";
@@ -164,17 +164,11 @@ test("lead segnalato: il partner segnala e l'amministratore accoglie", async ({ 
   await expect(partner.getByText(/: accolto\.$/)).toBeVisible();
 });
 
-test("l'amministratore accredita token e sospende e riattiva un partner", async ({ page }) => {
+test("l'amministratore sospende e riattiva un partner", async ({ page }) => {
   await login(page, ADMIN);
   await page.goto("/admin/partner?q=Mazzon");
   await page.getByRole("link", { name: /Pittura Mazzon/ }).click();
   await expect(page.getByRole("heading", { level: 1, name: "Pittura Mazzon" })).toBeVisible();
-
-  await page.getByLabel("Token", { exact: true }).fill("15");
-  await page.getByLabel("Motivo", { exact: true }).fill("Omaggio di benvenuto");
-  await page.getByRole("button", { name: "Accredita token" }).click();
-  await expect(page.getByRole("status").filter({ hasText: "15 token accreditati" })).toBeVisible();
-  await expect(page.getByText("Accredito dall'assistenza: Omaggio di benvenuto")).toBeVisible();
 
   page.once("dialog", (d) => d.accept());
   await page.getByRole("button", { name: "Sospendi il partner" }).click();

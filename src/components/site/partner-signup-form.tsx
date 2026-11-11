@@ -79,7 +79,7 @@ export function PartnerSignupForm({ categories, places }: { categories: OptionGr
       <section className="flex flex-col gap-5 rounded-lg border border-line bg-surface p-6">
         <div className="flex flex-col gap-1">
           <h2 className="text-h3 font-semibold">Dati per la fattura</h2>
-          <p className="text-body-s text-ink-2">Servono per la fattura elettronica di abbonamento e token.</p>
+          <p className="text-body-s text-ink-2">Servono per la fattura elettronica di abbonamento e pacchetti.</p>
         </div>
         <Field label="Ragione sociale" htmlFor="businessName" required error={error("businessName")}>
           <Input id="businessName" name="businessName" required maxLength={160} {...invalid("businessName")} />

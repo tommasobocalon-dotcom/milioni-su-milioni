@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Suspense } from "react";
-import { ArrowRight, BadgeCheck, Coins, Euro, Flag, Inbox, LifeBuoy, Star, Store } from "lucide-react";
+import { ArrowRight, BadgeCheck, Rocket, Euro, Flag, Inbox, LifeBuoy, Star, Store } from "lucide-react";
 import { connection } from "next/server";
 import { AccountStatusPill, AdminPageHeader, AdminSkeleton, ago, dateOnly, Empty, Panel, TicketStatusPill } from "@/components/admin/ui";
 import { Kpi } from "@/components/partner/kpi";
@@ -64,7 +64,7 @@ async function Overview() {
           note={`${o.partnersBy.activating ?? 0} in attivazione · ${o.partnersBy.suspended ?? 0} sospesi · ${o.newPartners} nuovi`}
         />
         <Kpi icon={Inbox} label="Lead verificati" value={String(o.leadsVerified)} note={`${o.leadsDelivered} consegnati ai partner`} />
-        <Kpi icon={Coins} label="Token venduti" value={String(o.tokensSold)} note={`${o.tokensUsed} usati per lead e boost`} />
+        <Kpi icon={Rocket} label="Sponsorizzazioni" value={String(o.homeSponsors + o.searchBoosts)} note={`${o.homeSponsors} logo in Home · ${o.searchBoosts} boost nella ricerca`} />
       </section>
 
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_380px]">

@@ -44,7 +44,7 @@ test("un'azienda si registra, la scheda resta nascosta fino all'attivazione del 
   await page.getByRole("button", { name: "Scegli Normal (prova senza pagare)" }).click();
   await expect(page.getByRole("heading", { level: 1, name: "Il tuo abbonamento" })).toBeVisible();
   await expect(page.getByText("89 € al mese + IVA")).toBeVisible();
-  await page.goto("/area-partner/token");
+  await page.goto("/area-partner/sponsorizzazioni");
   await expect(page.getByRole("heading", { name: "Logo in Home" })).toBeVisible();
   await expect(page.getByText("Disponibile con i piani Normal e Premium")).toHaveCount(0);
   await page.goto(profile);

@@ -24,7 +24,7 @@ async function Leads({ status }: { status?: string }) {
   const { partner } = await requirePartner();
   await connection();
   const now = new Date();
-  const [o, counts, rows] = await Promise.all([getOverview(partner.id, now), countLeadsByStatus(partner.id), listLeads(partner.id, status)]);
+  const [o, counts, rows] = await Promise.all([getOverview(partner.id), countLeadsByStatus(partner.id), listLeads(partner.id, status)]);
 
   return (
     <div className="flex flex-col gap-6">

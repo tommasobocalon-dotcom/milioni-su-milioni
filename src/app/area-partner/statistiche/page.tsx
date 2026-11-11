@@ -119,7 +119,7 @@ async function Stats({ days }: { days: StatsPeriod }) {
             <h2 id="boost" className="inline-flex items-center gap-2 text-h3 font-semibold">
               <Rocket className="size-5" aria-hidden /> Scheda in evidenza
             </h2>
-            <ButtonLink href="/area-partner/token" size="s">
+            <ButtonLink href="/area-partner/sponsorizzazioni" size="s">
               {active ? "Allunga il periodo" : "Metti in evidenza"}
             </ButtonLink>
           </div>
@@ -366,7 +366,7 @@ function StatsTip({ s }: { s: PartnerStats }) {
     unhandled > 0
       ? { text: `Hai ${unhandled} ${unhandled === 1 ? "richiesta nuova" : "richieste nuove"} da gestire: chi risponde entro poche ore sale nei risultati.`, href: "/area-partner/lead?stato=new", cta: "Vedi le richieste" }
       : t.impressions < 20
-        ? { text: "Compari poco nelle ricerche: metterti in evidenza ti porta tra i primi risultati della tua provincia.", href: "/area-partner/token", cta: "Metti in evidenza" }
+        ? { text: "Compari poco nelle ricerche: metterti in evidenza ti porta tra i primi risultati della tua provincia.", href: "/area-partner/sponsorizzazioni", cta: "Metti in evidenza" }
         : (stepRate(t.views, t.impressions) ?? 100) < 15
           ? { text: "Molti ti vedono ma pochi aprono la scheda: una foto di copertina e una descrizione chiara aiutano.", href: "/area-partner/scheda", cta: "Migliora la scheda" }
           : { text: "Chi vede prezzi indicativi chiede più spesso un contatto: tieni aggiornato il listino.", href: "/area-partner/listino", cta: "Apri il listino" };

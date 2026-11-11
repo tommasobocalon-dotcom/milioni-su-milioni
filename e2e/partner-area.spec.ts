@@ -155,7 +155,7 @@ test("campanella, profilo, boost, statistiche, assistenza e lavori svolti", asyn
   await expect(presentation.getByText("Caldaie", { exact: true })).toHaveCount(0);
 
   // Boost nella ricerca a pacchetto (senza Stripe nei test: acquisto simulato), poi visibile nelle statistiche.
-  await page.goto("/area-partner/token");
+  await page.goto("/area-partner/sponsorizzazioni");
   const boost = page.locator("#boost");
   await boost.getByRole("button", { name: "Simula" }).first().click();
   await expect(boost.getByText(/Attivo fino al/)).toBeVisible();
@@ -192,7 +192,7 @@ test("pacchetti in euro: logo in Home ed estensione territoriale a un comune", a
   await login(page);
 
   // Logo in Home per 7 giorni: il nome compare nella fascia "Aziende in evidenza".
-  await page.goto("/area-partner/token");
+  await page.goto("/area-partner/sponsorizzazioni");
   const home = page.locator("#home");
   await home.getByRole("button", { name: "Simula" }).first().click();
   await expect(home.getByText(/Attivo fino al/)).toBeVisible();
@@ -203,7 +203,7 @@ test("pacchetti in euro: logo in Home ed estensione territoriale a un comune", a
   const verona = "/trova-professionista?categoria=idraulico&dove=Verona";
   await page.goto(verona);
   await expect(page.getByRole("link", { name: "Rossi Impianti" })).toHaveCount(0);
-  await page.goto("/area-partner/token");
+  await page.goto("/area-partner/sponsorizzazioni");
   const extension = page.locator("#estensione");
   await extension.getByLabel("Comune").fill("Verona (VR)");
   await extension.getByRole("button", { name: "Aggiungi" }).click();

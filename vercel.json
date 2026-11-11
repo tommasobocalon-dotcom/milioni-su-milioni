@@ -3,11 +3,5 @@
   "regions": [
     "fra1"
   ],
-  "buildCommand": "npm run db:migrate && npm run db:seed && npm run build",
-  "crons": [
-    {
-      "path": "/api/cron/crediti-mensili",
-      "schedule": "0 4 * * *"
-    }
-  ]
+  "buildCommand": "npm run db:migrate && npm run db:seed && npm run build"
 }
