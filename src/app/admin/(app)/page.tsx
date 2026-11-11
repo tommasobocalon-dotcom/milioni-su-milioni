@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Suspense } from "react";
-import { ArrowRight, BadgeCheck, Rocket, Euro, Flag, Inbox, LifeBuoy, Star, Store } from "lucide-react";
+import { ArrowRight, BadgeCheck, Rocket, Euro, Flag, Inbox, LifeBuoy, Store } from "lucide-react";
 import { connection } from "next/server";
 import { AccountStatusPill, AdminPageHeader, AdminSkeleton, ago, dateOnly, Empty, Panel, TicketStatusPill } from "@/components/admin/ui";
 import { Kpi } from "@/components/partner/kpi";
@@ -27,7 +27,6 @@ async function Overview() {
   const todo = [
     { n: o.ticketsToAnswer, label: ["richiesta di assistenza da rispondere", "richieste di assistenza da rispondere"], href: "/admin/assistenza?stato=open", icon: LifeBuoy },
     { n: o.openReports, label: ["lead segnalato da decidere", "lead segnalati da decidere"], href: "/admin/segnalazioni", icon: Flag },
-    { n: o.flaggedReviews, label: ["recensione segnalata", "recensioni segnalate"], href: "/admin/recensioni?stato=flagged", icon: Star },
     { n: o.toVerify, label: ["partner da verificare", "partner da verificare"], href: "/admin/partner?filtro=da-verificare", icon: BadgeCheck },
   ].filter((t) => t.n > 0);
 

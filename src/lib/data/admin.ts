@@ -10,7 +10,6 @@ import {
   partners,
   plans,
   provinces,
-  reviews,
   subscriptions,
   supportTickets,
   boosts,
@@ -34,7 +33,7 @@ export const ACCOUNT_STATUSES: { value: AccountStatus; label: string }[] = [
 
 export async function getAdminOverview(now: Date) {
   const since = new Date(now.getTime() - 30 * DAY);
-  const [byStatus, [toVerify], [newPartners], activeSubs, [leadStats], boostRows, [reports], [flagged], ticketCounts, openTickets, recentPartners] = await Promise.all([
+  const [byStatus, [toVerify], [newPartners], activeSubs, [leadStats], boostRows, [reports], ticketCounts, openTickets, recentPartners] = await Promise.all([
     db.select({ status: partners.accountStatus, n: count() }).from(partners).groupBy(partners.accountStatus),
     db
       .select({ n: count() })
@@ -49,7 +48,6 @@ export async function getAdminOverview(now: Date) {
     db.select({ verified: count(leads.verifiedAt), delivered: count(leads.deliveredAt) }).from(leads).where(gt(leads.createdAt, since)),
     db.select({ placement: boosts.placement, n: count() }).from(boosts).where(gt(boosts.startsAt, since)).groupBy(boosts.placement),
     db.select({ n: count() }).from(leads).where(eq(leads.reportStatus, "open")),
-    db.select({ n: count() }).from(reviews).where(eq(reviews.status, "flagged")),
     countTicketsByStatus(),
     listTickets({ status: "open", limit: 6 }),
     db
@@ -73,7 +71,6 @@ export async function getAdminOverview(now: Date) {
     homeSponsors: sponsored.home ?? 0,
     searchBoosts: sponsored.search ?? 0,
     openReports: reports?.n ?? 0,
-    flaggedReviews: flagged?.n ?? 0,
     ticketsToAnswer: ticketCounts.open,
     openTickets,
     recentPartners,
@@ -241,38 +238,6 @@ export async function listLeadReports() {
     .where(isNotNull(leads.reportStatus))
     .orderBy(sql`${leads.reportStatus} = 'open' desc`, desc(leads.reportedAt))
     .limit(200);
-}
-
-export type ReviewStatus = (typeof reviews.status.enumValues)[number];
-
-export async function listReviewsAdmin(status?: ReviewStatus) {
-  return db
-    .select({
-      id: reviews.id,
-      partnerId: partners.id,
-      partnerName: partners.displayName,
-      authorName: reviews.authorName,
-      rating: reviews.rating,
-      text: reviews.text,
-      status: reviews.status,
-      partnerReply: reviews.partnerReply,
-      createdAt: reviews.createdAt,
-    })
-    .from(reviews)
-    .innerJoin(partners, eq(partners.id, reviews.partnerId))
-    .where(status ? eq(reviews.status, status) : undefined)
-    .orderBy(sql`${reviews.status} = 'flagged' desc`, desc(reviews.createdAt))
-    .limit(200);
-}
-
-export async function countReviewsByStatus(): Promise<Record<ReviewStatus | "all", number>> {
-  const rows = await db.select({ status: reviews.status, n: count() }).from(reviews).groupBy(reviews.status);
-  const counts = { published: 0, flagged: 0, hidden: 0, all: 0 };
-  for (const r of rows) {
-    counts[r.status] = r.n;
-    counts.all += r.n;
-  }
-  return counts;
 }
 
 /** Registro delle attività, senza le righe del freno anti-flood per IP (servono solo a contare). */

@@ -8,8 +8,6 @@ import { revalidatePath, updateTag } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { requirePartner } from "@/lib/auth/session";
-import { googlePlacesEnabled, searchGooglePlaces } from "@/lib/google/places";
-import type { GooglePlaceMatch } from "@/lib/domain/google-reviews";
 import { ipRateLimited } from "@/lib/security/ip-limit";
 import { putImage } from "@/lib/storage";
 import { BillingError, createAreaExtensionCheckout, createHomeSponsorCheckout, createSearchBoostCheckout, createPlanChangeSession, createPortalSession, createSubscriptionCheckout, stripeConfigured } from "@/lib/billing/stripe";
@@ -495,35 +493,6 @@ export async function simulateSubscription(planCode: string, period: "monthly" |
   updateTag(`partner:${partner.slug}`);
   updateTag("catalog");
   revalidatePath("/area-partner", "layout");
-}
-
-export type GoogleSearchResult = { ok: true; matches: GooglePlaceMatch[] } | { ok: false; error: string };
-
-/** Cerca l'attività su Google per collegarne le recensioni. Ogni ricerca costa: massimo 30 al giorno. */
-export async function searchGoogleBusiness(rawQuery: string): Promise<GoogleSearchResult> {
-  await requirePartner();
-  if (!googlePlacesEnabled()) return { ok: false, error: "Il collegamento con Google non è ancora attivo." };
-  const query = rawQuery.trim().replace(/\s+/g, " ");
-  if (query.length < 3 || query.length > 120) return { ok: false, error: "Scrivi il nome dell'attività e il comune" };
-  if (await ipRateLimited("google_search", 30, 24 * 60)) return { ok: false, error: "Hai fatto molte ricerche oggi. Riprova domani." };
-  return { ok: true, matches: await searchGooglePlaces(query) };
-}
-
-/** Collega (o scollega, con null) la scheda Google Maps: le recensioni compaiono sulla scheda pubblica. */
-export async function linkGooglePlace(placeId: string | null) {
-  const { user, partner } = await requirePartner();
-  if (placeId !== null && !/^[\w-]{10,300}$/.test(placeId)) return;
-  await db.update(partners).set({ googlePlaceId: placeId }).where(eq(partners.id, partner.id));
-  // Registro per il Backoffice: chi ha collegato quale scheda (un partner non deve prendersi le recensioni di un altro).
-  await db.insert(auditLogs).values({
-    actor: user.email,
-    action: placeId ? "partner.google_linked" : "partner.google_unlinked",
-    entity: "partner",
-    entityId: partner.id,
-    data: { placeId },
-  });
-  updateTag(`partner:${partner.slug}`);
-  revalidatePath("/area-partner/scheda");
 }
 
 // ---------------------------------------------------------------------------

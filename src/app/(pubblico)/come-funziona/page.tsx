@@ -3,7 +3,7 @@ import { ButtonLink } from "@/components/ui/button";
 
 export const metadata: Metadata = {
   title: "Come funziona",
-  description: "Come ordiniamo i risultati (piano di abbonamento e boost) e come verifichiamo le recensioni. Contenuti sponsorizzati sempre etichettati.",
+  description: "Come ordiniamo i risultati (piano di abbonamento e boost). Contenuti sponsorizzati sempre etichettati.",
 };
 
 
@@ -14,7 +14,7 @@ export default function HowItWorksPage() {
         <div className="flex flex-col gap-3">
           <h1 className="font-display text-h1">Come funziona</h1>
           <p className="text-body-l text-ink-2">
-            Trovi agenzie, tecnici e artigiani della tua zona, confronti prezzi indicativi e recensioni verificate, e chiedi di
+            Trovi agenzie, tecnici e artigiani della tua zona, confronti prezzi indicativi e lavori svolti, e chiedi di
             essere ricontattato. È gratis per chi cerca: i partner pagano un abbonamento.
           </p>
         </div>
@@ -24,19 +24,10 @@ export default function HowItWorksPage() {
         <h2 className="font-display text-h2">Per chi cerca</h2>
         <ol className="flex list-decimal flex-col gap-3 pl-6 text-body">
           <li>Scegli la sezione: Trova Casa per le agenzie, Trova Professionista per tecnici e artigiani.</li>
-          <li>Filtra per comune, tipo di lavoro e valutazione. Ogni scheda mostra prezzi indicativi, zone servite e portfolio.</li>
+          <li>Filtra per comune o provincia e tipo di lavoro. Ogni scheda mostra prezzi indicativi, zone servite e portfolio.</li>
           <li>Invia una richiesta guidata. Verifichiamo il tuo numero con un SMS: così i professionisti ricevono solo richieste vere.</li>
           <li>Vieni ricontattato nella fascia oraria che preferisci. Se il partner non può rispondere, ti proponiamo alternative.</li>
         </ol>
-      </section>
-
-      <section id="recensioni" className="flex flex-col gap-3 scroll-mt-24">
-        <h2 className="font-display text-h2">Come verifichiamo le recensioni</h2>
-        <p className="text-body">
-          Può recensire un partner solo chi gli ha inviato una richiesta verificata con SMS tramite la piattaforma. Il partner può
-          rispondere pubblicamente e segnalare una recensione, ma non può cancellarla. Un filtro automatico blocca linguaggio
-          offensivo e dati personali; le segnalazioni le valuta il nostro team.
-        </p>
       </section>
 
       <section id="ordinamento" className="flex flex-col gap-3 scroll-mt-24">
@@ -54,8 +45,8 @@ export default function HowItWorksPage() {
         </ol>
         <p className="text-body">
           Tra aziende dello stesso gruppo l&apos;ordine cambia da un visitatore all&apos;altro, così nessuna resta sempre prima. Il
-          riquadro grande in cima va a un&apos;azienda Premium, a rotazione. Recensioni e prezzi non cambiano l&apos;ordine
-          consigliato, ma puoi ordinare tu per valutazione, numero di recensioni, distanza o prezzo indicativo.
+          riquadro grande in cima va a un&apos;azienda Premium, a rotazione. I prezzi non cambiano l&apos;ordine
+          consigliato, ma puoi ordinare tu per distanza o prezzo indicativo.
         </p>
       </section>
 

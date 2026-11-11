@@ -1,5 +1,5 @@
 import "server-only";
-import { and, asc, avg, count, desc, eq, gt, isNotNull, ne, sql } from "drizzle-orm";
+import { and, asc, count, desc, eq, gt, isNotNull, ne, sql } from "drizzle-orm";
 import { db } from "@/lib/db/client";
 import {
   areaExtensions,
@@ -12,7 +12,6 @@ import {
   plans,
   portfolioItems,
   provinces,
-  reviews,
   services,
   showcaseFeatures,
   subscriptions } from "@/lib/db/schema";
@@ -127,20 +126,10 @@ export async function getLeadDetail(partnerId: string, leadId: string) {
 }
 
 export async function getOverview(partnerId: string) {
-  const [sub, counts, recent, ratingRow, lastReview, partner, priceCount] = await Promise.all([
+  const [sub, counts, recent, partner, priceCount] = await Promise.all([
     getSubscription(partnerId),
     countLeadsByStatus(partnerId),
     listLeads(partnerId, undefined, 5),
-    db
-      .select({ average: avg(reviews.rating).mapWith(Number), total: count() })
-      .from(reviews)
-      .where(and(eq(reviews.partnerId, partnerId), eq(reviews.status, "published"))),
-    db
-      .select({ authorName: reviews.authorName, rating: reviews.rating, text: reviews.text, replied: sql<boolean>`${reviews.partnerReply} is not null` })
-      .from(reviews)
-      .where(and(eq(reviews.partnerId, partnerId), eq(reviews.status, "published")))
-      .orderBy(desc(reviews.createdAt))
-      .limit(1),
     db
       .select({ completeness: partners.completeness, responseMinutes: partners.responseMinutes, slug: partners.slug })
       .from(partners)
@@ -152,8 +141,6 @@ export async function getOverview(partnerId: string) {
     sub,
     counts,
     recent,
-    rating: ratingRow[0],
-    lastReview: lastReview[0] ?? null,
     completeness: partner[0]?.completeness ?? 0,
     responseMinutes: partner[0]?.responseMinutes ?? null,
     priceCount: priceCount[0]?.n ?? 0,

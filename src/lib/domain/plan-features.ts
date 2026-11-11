@@ -12,7 +12,7 @@ export const PLAN_FEATURES: Record<string, string[]> = {
   normal: [
     "Richieste dei clienti illimitate e gratis",
     "Badge \"Partner Pro\" e scheda con il bordo verde",
-    "Recensioni verificate e sezione Prima e Dopo",
+    "Sezione Prima e Dopo",
     "Fino a 25 progetti con dettagli tecnici",
     "Copertura provinciale o regionale",
     "Statistiche complete",

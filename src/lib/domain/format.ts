@@ -50,10 +50,6 @@ export function formatResponseTime(minutes: number | null): string | null {
   return `~${days} ${days === 1 ? "giorno" : "giorni"}`;
 }
 
-export function formatRating(value: number): string {
-  return value.toLocaleString("it-IT", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
-}
-
 export function formatDistanceKm(km: number): string {
   return `${km.toLocaleString("it-IT", { maximumFractionDigits: 1, minimumFractionDigits: km < 10 ? 1 : 0 })} km`;
 }

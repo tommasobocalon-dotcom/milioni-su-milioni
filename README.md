@@ -45,7 +45,7 @@ https://gecoitalia.it, riservato al team con nome e password: come pubblicarlo i
 ```
 src/app/(pubblico)/     pagine pubbliche: home, ricerca, profili, richiesta di contatto
 src/app/area-partner/   Area Partner: panoramica, lead, sponsorizzazioni, listino, abbonamento, assistenza
-src/app/admin/          gestionale: assistenza, partner, segnalazioni, recensioni, registro attività
+src/app/admin/          gestionale: assistenza, partner, segnalazioni, registro attività
 src/app/api/            webhook Stripe e email in arrivo all'assistenza
 src/app/accedi/         accesso e registrazione con email e password
 src/app/auth/           ritorno da Google e Apple (OAuth)

@@ -7,7 +7,7 @@ import { z } from "zod";
 import { signIn } from "@/app/accedi/actions";
 import { destroySession, requireAdmin } from "@/lib/auth/session";
 import { db } from "@/lib/db/client";
-import { auditLogs, leadEvents, leads, partners, reviews, subscriptions, supportMessages, supportTickets } from "@/lib/db/schema";
+import { auditLogs, leadEvents, leads, partners, subscriptions, supportMessages, supportTickets } from "@/lib/db/schema";
 
 import { accountStatusFrom } from "@/lib/domain/billing";
 import { REPORT_REASONS } from "@/lib/domain/lead-rules";
@@ -48,7 +48,7 @@ async function ticketNumber(ticketId: string) {
   return t?.number ?? null;
 }
 
-/** Scheda pubblica e risultati di ricerca del partner, dopo un cambio di stato, badge o recensione. */
+/** Scheda pubblica e risultati di ricerca del partner, dopo un cambio di stato o badge. */
 async function refreshPartnerPages(partnerId: string) {
   const [p] = await db.select({ slug: partners.slug }).from(partners).where(eq(partners.id, partnerId));
   if (p) updateTag(`partner:${p.slug}`);
@@ -157,7 +157,7 @@ export async function setAccountStatusAction(partnerId: string, _prev: FormState
 }
 
 // ---------------------------------------------------------------------------
-// Moderazione: segnalazioni dei lead e recensioni
+// Moderazione: segnalazioni dei lead
 // ---------------------------------------------------------------------------
 
 /**
@@ -191,16 +191,4 @@ export async function resolveLeadReportAction(leadId: string, formData: FormData
   });
   revalidatePath("/admin", "layout");
   revalidatePath("/area-partner", "layout");
-}
-
-const ReviewStatus = z.enum(["published", "flagged", "hidden"]);
-
-export async function setReviewStatusAction(reviewId: string, formData: FormData) {
-  const admin = await requireAdmin();
-  const status = ReviewStatus.safeParse(formData.get("status"));
-  if (!Id.safeParse(reviewId).success || !status.success) return;
-  const [r] = await db.update(reviews).set({ status: status.data }).where(eq(reviews.id, reviewId)).returning({ partnerId: reviews.partnerId });
-  if (!r) return;
-  await db.insert(auditLogs).values({ actor: admin.email, action: "review.status", entity: "review", entityId: reviewId, data: { status: status.data, partnerId: r.partnerId } });
-  await refreshPartnerPages(r.partnerId);
 }

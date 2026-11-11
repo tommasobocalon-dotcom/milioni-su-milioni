@@ -14,10 +14,10 @@ export const metadata: Metadata = {
 };
 
 const STEPS = [
-  { icon: Search, title: "Il cliente ti trova", text: "Cerca il lavoro e il comune e vede la tua scheda con prezzi indicativi, foto e recensioni." },
+  { icon: Search, title: "Il cliente ti trova", text: "Cerca il lavoro e il comune e vede la tua scheda con prezzi indicativi e foto dei lavori." },
   { icon: BadgeCheck, title: "Conferma il numero", text: "Prima di inviarti la richiesta conferma il suo telefono con un codice via SMS." },
   { icon: Inbox, title: "Ricevi la richiesta", text: "Per email e nell'Area aziende: che lavoro, dove, quando e a che ora chiamarlo." },
-  { icon: PhoneCall, title: "Lo chiami tu", text: "Nella fascia oraria che ha scelto. A lavoro finito può lasciarti una recensione." },
+  { icon: PhoneCall, title: "Lo chiami tu", text: "Nella fascia oraria che ha scelto, quando sai già cosa gli serve." },
 ];
 
 const FAQ = [

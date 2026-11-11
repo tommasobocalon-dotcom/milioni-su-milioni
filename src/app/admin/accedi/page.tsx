@@ -15,7 +15,7 @@ export default function AdminLoginPage() {
         <div className="flex flex-col items-center gap-3 text-center">
           <p aria-hidden className="font-wordmark text-3xl font-extrabold tracking-[-0.01em] text-brand">GECOITALIA</p>
           <h1 className="font-display text-h2">Gestionale GecoItalia</h1>
-          <p className="text-body-s text-ink-2">Riservato al team: assistenza, partner, segnalazioni e recensioni.</p>
+          <p className="text-body-s text-ink-2">Riservato al team: assistenza, partner e segnalazioni.</p>
         </div>
         <div className="rounded-lg border border-line bg-surface p-6">
           <Suspense fallback={<AdminLoginForm />}>

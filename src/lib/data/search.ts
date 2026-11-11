@@ -13,19 +13,17 @@ import {
   plans,
   portfolioItems,
   provinces,
-  reviews,
   serviceAreas,
   services,
   subscriptions,
 } from "@/lib/db/schema";
 import { distanceKm, formatPriceRange, type PriceUnit } from "@/lib/domain/format";
-import { canBoost, RATING_PRIOR, rankListing } from "@/lib/domain/ranking";
-import { bayesianScore } from "@/lib/domain/rating";
+import { canBoost, rankListing } from "@/lib/domain/ranking";
 import type { Place } from "./catalog";
 import { recordProfileEvents } from "./stats";
 import { pageItems } from "@/lib/domain/pagination";
 
-export type SortKey = "rilevanza" | "valutazione" | "recensioni" | "distanza" | "prezzo";
+export type SortKey = "rilevanza" | "distanza" | "prezzo";
 
 export type PartnerListItem = {
   id: string;
@@ -39,7 +37,6 @@ export type PartnerListItem = {
   partnerType: "agency" | "technician" | "artisan" | "b2b";
   municipalityName: string;
   provinceCode: string;
-  rating: { average: number; count: number };
   responseMinutes: number | null;
   planCode: string | null;
   verified: boolean;
@@ -66,7 +63,6 @@ export async function searchPartners(input: {
   place?: Place | null;
   /** Provincia intera (filtro "Provincia di …"): al posto di `place`, senza distanza. */
   provinceId?: number;
-  minRating?: number;
   sort?: SortKey;
   /** Con `page` i risultati sono tagliati a `pageSize` per pagina, `firstPageSize` nella prima (dove c'è anche il riquadro in evidenza). */
   page?: number;
@@ -81,17 +77,6 @@ export async function searchPartners(input: {
   cacheTag("catalog", "boosts");
   const visitorSeed = input.visitorSeed ?? "";
   const now = new Date();
-
-  const ratingAgg = db
-    .select({
-      partnerId: reviews.partnerId,
-      average: sql<number>`avg(${reviews.rating})::float`.as("average"),
-      count: sql<number>`count(*)::int`.as("count"),
-    })
-    .from(reviews)
-    .where(eq(reviews.status, "published"))
-    .groupBy(reviews.partnerId)
-    .as("rating_agg");
 
   const conditions = [eq(partners.accountStatus, "active")];
   if (input.categoryId) conditions.push(eq(partners.categoryId, input.categoryId));
@@ -142,8 +127,6 @@ export async function searchPartners(input: {
       provinceCode: provinces.code,
       provinceSlug: provinces.slug,
       provinceId: provinces.id,
-      ratingAverage: sql<number>`coalesce(${ratingAgg.average}, 0)`,
-      ratingCount: sql<number>`coalesce(${ratingAgg.count}, 0)`,
       planCode: plans.code,
       planWeight: plans.visibilityWeight,
       portfolioCount: sql<number>`(select count(*)::int from ${portfolioItems} pi where pi.partner_id = ${partners.id})`,
@@ -153,7 +136,6 @@ export async function searchPartners(input: {
     .innerJoin(categories, eq(categories.id, partners.categoryId))
     .innerJoin(municipalities, eq(municipalities.id, partners.municipalityId))
     .innerJoin(provinces, eq(provinces.id, municipalities.provinceId))
-    .leftJoin(ratingAgg, eq(ratingAgg.partnerId, partners.id))
     .leftJoin(subscriptions, and(eq(subscriptions.partnerId, partners.id), eq(subscriptions.status, "active")))
     .leftJoin(plans, eq(plans.id, subscriptions.planId))
     .where(and(...conditions));
@@ -213,7 +195,7 @@ export async function searchPartners(input: {
       const label = price ? formatPriceRange(price.priceFrom, price.priceTo, price.unit as PriceUnit) : null;
       const dist = input.place ? distanceKm(input.place, r) : null;
       const planWeight = r.planWeight ?? 1;
-      const item: PartnerListItem & { planWeight: number; boosted: boolean; bayes: number } = {
+      const item: PartnerListItem & { planWeight: number; boosted: boolean } = {
         id: r.id,
         slug: r.slug,
         href: profileHref(r),
@@ -225,7 +207,6 @@ export async function searchPartners(input: {
         partnerType: r.partnerType,
         municipalityName: r.municipalityName,
         provinceCode: r.provinceCode,
-        rating: { average: r.ratingAverage, count: r.ratingCount },
         responseMinutes: r.responseMinutes,
         planCode: r.planCode,
         verified: r.verified,
@@ -238,17 +219,13 @@ export async function searchPartners(input: {
         lng: r.lng,
         planWeight,
         boosted: boosted.has(r.id),
-        bayes: bayesianScore({ average: r.ratingAverage, count: r.ratingCount }, RATING_PRIOR),
       };
       return item;
-    })
-    .filter((i) => !input.minRating || i.rating.average >= input.minRating);
+    });
 
   // Classifica decisa dal cliente (ranking.ts): riquadro grande per un Premium, poi per piano e boost.
   const ranked = rankListing(items, visitorSeed);
   const sorters: Record<Exclude<SortKey, "rilevanza">, (a: (typeof items)[number], b: (typeof items)[number]) => number> = {
-    valutazione: (a, b) => b.bayes - a.bayes,
-    recensioni: (a, b) => b.rating.count - a.rating.count,
     distanza: (a, b) => (a.distanceKm ?? Infinity) - (b.distanceKm ?? Infinity),
     prezzo: (a, b) => (a.price?.fromCents ?? Infinity) - (b.price?.fromCents ?? Infinity),
   };
@@ -263,7 +240,6 @@ export async function searchPartners(input: {
     const out: Partial<typeof i> = { ...i };
     delete out.planWeight;
     delete out.boosted;
-    delete out.bayes;
     return out as PartnerListItem;
   };
   return {

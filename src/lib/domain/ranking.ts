@@ -10,9 +10,6 @@
 /** Cookie di sessione con un id casuale del visitatore: decide l'ordine tra pari grado (niente profilazione). */
 export const VISITOR_COOKIE = "geco_visita";
 
-/** Media a priori per l'ordinamento "per valutazione" (media bayesiana, rating.ts). */
-export const RATING_PRIOR = { mean: 4.2, weight: 10 };
-
 /** Peso del piano (colonna plans.visibility_weight): 1 Base, 2 Normal, 3 Premium. */
 export const PREMIUM_WEIGHT = 3;
 

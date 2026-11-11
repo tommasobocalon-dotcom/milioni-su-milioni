@@ -4,7 +4,7 @@ import { ButtonLink } from "@/components/ui/button";
 export const metadata: Metadata = {
   title: "Chi siamo",
   description:
-    "GecoItalia mette in contatto privati e famiglie con agenzie immobiliari, studi tecnici e artigiani del Veneto. Servizio gratuito per chi cerca, recensioni soltanto da clienti verificati.",
+    "GecoItalia mette in contatto privati e famiglie con agenzie immobiliari, studi tecnici e artigiani del Veneto. Servizio gratuito per chi cerca, richieste verificate con un SMS.",
 };
 
 /** Pagina "Chi siamo": tono formale, su richiesta del cliente (10/11/2026). */
@@ -39,10 +39,6 @@ export default function AboutPage() {
           <li>
             <strong>Gratuità per l&apos;utente.</strong> La ricerca, il confronto e l&apos;invio di una richiesta di contatto
             sono gratuiti. Il servizio è sostenuto dagli abbonamenti delle imprese aderenti.
-          </li>
-          <li>
-            <strong>Recensioni verificate.</strong> Possono pubblicare una recensione soltanto gli utenti che hanno inviato
-            all&apos;impresa una richiesta verificata tramite SMS. L&apos;impresa ha facoltà di replicare, ma non di rimuoverla.
           </li>
           <li>
             <strong>Trasparenza.</strong> I criteri di ordinamento dei risultati sono pubblici e ogni contenuto a pagamento è

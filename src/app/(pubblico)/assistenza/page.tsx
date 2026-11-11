@@ -55,7 +55,7 @@ export default function SupportPage() {
           ))}
         </dl>
         <p className="text-body-s">
-          Come ordiniamo i risultati e come funzionano le recensioni:{" "}
+          Come ordiniamo i risultati e cosa è sponsorizzato:{" "}
           <Link href="/come-funziona" className="font-semibold text-primary underline">
             Come funziona
           </Link>

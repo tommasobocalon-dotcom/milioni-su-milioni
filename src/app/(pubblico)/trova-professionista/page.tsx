@@ -4,7 +4,7 @@ import { parseResultsParams, Results, ResultsSkeleton } from "@/components/site/
 
 export const metadata: Metadata = {
   title: "Trova Professionista",
-  description: "Geometri, tecnici e artigiani verificati in Veneto, con prezzi indicativi e recensioni verificate.",
+  description: "Geometri, tecnici e artigiani verificati in Veneto, con prezzi indicativi e zone servite.",
 };
 
 export default function TrovaProfessionistaPage({ searchParams }: PageProps<"/trova-professionista">) {

@@ -248,7 +248,7 @@ export const partners = pgTable(
     completeness: smallint("completeness").notNull().default(0),
     /** Cliente Stripe del partner, creato al primo pagamento. */
     stripeCustomerId: text("stripe_customer_id").unique(),
-    /** Scheda Google Maps collegata dal partner: le recensioni si leggono da Google, qui solo l'id (regole Google). */
+    /** Storico: scheda Google Maps per le recensioni Google, tolte dal sito l'11/11/2026. Il codice non la usa più. */
     googlePlaceId: text("google_place_id"),
     createdAt: createdAt(),
   },
@@ -426,7 +426,7 @@ export const leadEvents = pgTable(
 );
 
 // ---------------------------------------------------------------------------
-// Recensioni verificate
+// Recensioni: tolte dal sito l'11/11/2026, la tabella resta solo come storico (il codice non la legge più)
 // ---------------------------------------------------------------------------
 
 export const reviewStatus = pgEnum("review_status", ["published", "flagged", "hidden"]);

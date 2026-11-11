@@ -17,7 +17,7 @@ export const TICKET_TOPICS = [
   { value: "account", label: "Accesso e account" },
   { value: "payments", label: "Abbonamento, pagamenti e fatture" },
   { value: "leads", label: "Richieste di contatto e lead" },
-  { value: "listing", label: "Scheda, listino e recensioni" },
+  { value: "listing", label: "Scheda e listino" },
   { value: "other", label: "Altro" },
 ] as const;
 

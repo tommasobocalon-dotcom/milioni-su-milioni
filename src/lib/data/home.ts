@@ -6,19 +6,17 @@ import { boosts, categories, municipalities, partners, provinces } from "@/lib/d
 import { profileHref } from "./search";
 
 /** Numeri della hero, solo dal database: mai numeri inventati sulle pagine pubbliche. */
-export type HomeStats = { reviews: number; average: number; partners: number; categories: number };
+export type HomeStats = { partners: number; categories: number };
 
 /** Sotto queste soglie la riga dei numeri non si mostra: pochi numeri piccoli non rassicurano nessuno. */
-export const HOME_STATS_MIN = { reviews: 30, partners: 10 } as const;
+export const HOME_STATS_MIN = { partners: 10 } as const;
 
 export async function getHomeStats(): Promise<HomeStats> {
   "use cache";
   cacheLife("hours");
   cacheTag("catalog");
   const [row] = await db.execute<HomeStats>(sql`
-    select (select count(*)::int from reviews where status = 'published') as reviews,
-           (select coalesce(avg(rating), 0)::float from reviews where status = 'published') as average,
-           (select count(*)::int from partners where verification_status = 'verified' and account_status = 'active') as partners,
+    select (select count(*)::int from partners where verification_status = 'verified' and account_status = 'active') as partners,
            (select count(distinct category_id)::int from partners where account_status = 'active') as categories`);
   return row;
 }

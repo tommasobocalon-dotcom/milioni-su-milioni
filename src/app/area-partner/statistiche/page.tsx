@@ -1,6 +1,6 @@
 import { Suspense } from "react";
 import type { LucideIcon } from "lucide-react";
-import { ArrowDownRight, ArrowUpRight, Eye, Inbox, MapPin, Minus, MousePointerClick, Rocket, Search, Star, Wrench } from "lucide-react";
+import { ArrowDownRight, ArrowUpRight, Eye, Inbox, MapPin, Minus, MousePointerClick, Rocket, Search, Wrench } from "lucide-react";
 import { connection } from "next/server";
 import { BoostProjection } from "@/components/partner/boost-projection";
 import { PartnerPageHeader } from "@/components/partner/page-header";
@@ -20,7 +20,6 @@ import { cn } from "@/lib/utils";
 export const metadata = { title: "Statistiche" };
 
 const dateFmt = new Intl.DateTimeFormat("it-IT", { day: "numeric", month: "short", timeZone: "Europe/Rome" });
-const ratingFmt = new Intl.NumberFormat("it-IT", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
 
 export default function StatsPage({ searchParams }: PageProps<"/area-partner/statistiche">) {
   return (
@@ -111,10 +110,8 @@ async function Stats({ days }: { days: StatsPeriod }) {
         <BarList title="Lavori più richiesti" icon={Wrench} rows={s.topServices} empty="Nessuna richiesta nel periodo." />
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-3">
-        <Reviews reviews={s.reviews} days={days} />
-
-        <section className="flex flex-col gap-4 rounded-lg border border-line bg-surface p-6 lg:col-span-2" aria-labelledby="boost">
+      <div className="grid gap-6">
+        <section className="flex flex-col gap-4 rounded-lg border border-line bg-surface p-6" aria-labelledby="boost">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <h2 id="boost" className="inline-flex items-center gap-2 text-h3 font-semibold">
               <Rocket className="size-5" aria-hidden /> Scheda in evidenza
@@ -314,45 +311,6 @@ function BarList({ title, icon: Icon, rows, empty }: { title: string; icon: Luci
             </li>
           ))}
         </ul>
-      )}
-    </section>
-  );
-}
-
-function Reviews({ reviews, days }: { reviews: PartnerStats["reviews"]; days: number }) {
-  return (
-    <section className="flex flex-col gap-4 rounded-lg border border-line bg-surface p-6" aria-labelledby="recensioni">
-      <h2 id="recensioni" className="inline-flex items-center gap-2 text-h3 font-semibold">
-        <Star className="size-5" aria-hidden /> Recensioni del periodo
-      </h2>
-      {reviews.count === 0 || reviews.rating == null ? (
-        <div className="flex items-center gap-3">
-          <p className="text-body-s text-ink-2">
-            Nessuna nuova recensione negli ultimi {days} giorni. Le recensioni arrivano solo dai clienti che ti hanno contattato dal sito.
-          </p>
-        </div>
-      ) : (
-        <>
-          <p className="flex items-baseline gap-2">
-            <span className="font-display text-h1">{ratingFmt.format(reviews.rating)}</span>
-            <span className="text-body-s text-ink-2">
-              su 5 · {reviews.count} {reviews.count === 1 ? "recensione" : "recensioni"}
-            </span>
-          </p>
-          <ul className="flex flex-col gap-3">
-            {reviews.criteria.map((c) => (
-              <li key={c.label} className="flex flex-col gap-1.5 text-body-s">
-                <span className="flex justify-between gap-3">
-                  <span>{c.label}</span>
-                  <span className="font-semibold tabular-nums">{c.value != null ? ratingFmt.format(c.value) : "—"}</span>
-                </span>
-                <span className="h-2 rounded-full bg-salvia-100">
-                  <span className="block h-full rounded-full bg-primary" style={{ width: `${((c.value ?? 0) / 5) * 100}%` }} />
-                </span>
-              </li>
-            ))}
-          </ul>
-        </>
       )}
     </section>
   );

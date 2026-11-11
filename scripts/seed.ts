@@ -9,14 +9,11 @@ import { hashPassword } from "../src/lib/domain/password";
 import {
   CATEGORIES,
   MUNICIPALITIES,
-  PARTNER_REPLIES,
   PARTNERS,
   PLANS,
   PROVINCES,
   QUESTIONS,
   REGIONS,
-  REVIEW_AUTHORS,
-  REVIEW_TEXTS,
   ROSSI_LEADS } from "./seed-data";
 
 type Db = PostgresJsDatabase<typeof s>;
@@ -45,21 +42,6 @@ function rng(seed: number) {
   };
 }
 
-/** Voti interi la cui media si avvicina a `average`. */
-function ratingsFor(average: number, count: number, rand: () => number): number[] {
-  let fives = Math.round(count * Math.max(0, average - 4));
-  const rest = count - fives;
-  const threes = Math.floor(rest * 0.12);
-  const ones = rest > 20 ? 1 : 0;
-  let fours = rest - threes - ones;
-  const shift = Math.min(fours, threes + 3 * ones);
-  fours -= shift;
-  fives += shift;
-  const out = [...Array(fives).fill(5), ...Array(fours).fill(4), ...Array(threes).fill(3), ...Array(ones).fill(1)];
-  return out.sort(() => rand() - 0.5);
-}
-
-const clamp = (v: number) => Math.max(1, Math.min(5, v));
 
 async function insertChunks<T extends Record<string, unknown>>(db: Db, table: Parameters<Db["insert"]>[0], rows: T[], size = 200) {
   for (let i = 0; i < rows.length; i += size) {
@@ -204,29 +186,6 @@ export async function seed(db: Db) {
         })),
       );
     }
-
-    // Recensioni verificate (dati di esempio)
-    const texts = REVIEW_TEXTS[cat.partnerType === "agency" ? "agency" : cat.partnerType] ?? REVIEW_TEXTS.artisan;
-    const ratings = ratingsFor(p.rating[0], p.rating[1], rand);
-    await insertChunks(
-      db,
-      s.reviews,
-      ratings.map((r, i) => {
-        const jitter = () => clamp(r + (rand() < 0.25 ? -1 : 0) + (rand() < 0.1 ? 1 : 0));
-        return {
-          partnerId: row.id,
-          authorName: REVIEW_AUTHORS[Math.floor(rand() * REVIEW_AUTHORS.length)],
-          rating: r,
-          quality: jitter(),
-          punctuality: jitter(),
-          value: jitter(),
-          communication: jitter(),
-          text: texts[i % texts.length],
-          partnerReply: rand() < 0.35 ? PARTNER_REPLIES[i % PARTNER_REPLIES.length] : null,
-          createdAt: new Date(now.getTime() - (i * 5 + Math.floor(rand() * 4)) * DAY),
-        };
-      }),
-    );
 
     // Abbonamento attivo
     const periodStart = new Date(now.getTime() - (10 + Math.floor(rand() * 15)) * DAY);

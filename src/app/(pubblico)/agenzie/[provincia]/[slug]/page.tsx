@@ -18,7 +18,7 @@ export async function generateMetadata({ params }: PageProps<"/agenzie/[provinci
   if (!p || p.accountStatus !== "active") return {};
   return {
     title: `${p.displayName} — agenzia immobiliare a ${p.municipalityName}`,
-    description: `${p.tagline}. Valutazioni verificate, portfolio immobili e richiesta di contatto gratuita.`,
+    description: `${p.tagline}. Specializzazioni, portfolio immobili e richiesta di contatto gratuita.`,
     alternates: { canonical: p.href },
   };
 }

@@ -8,7 +8,7 @@ const SECTIONS = [
   { href: "/trova-professionista", label: "Trova un professionista", note: "Tecnici e artigiani verificati, con prezzi indicativi" },
   { href: "/trova-casa", label: "Trova un'agenzia", note: "Comprare, vendere, affittare o far valutare casa" },
   { href: "/ispirazione", label: "Ispirazione", note: "Lavori veri delle aziende, per farti un'idea" },
-  { href: "/come-funziona", label: "Come funziona", note: "Ordinamento, recensioni e contenuti sponsorizzati" },
+  { href: "/come-funziona", label: "Come funziona", note: "Ordinamento e contenuti sponsorizzati" },
 ];
 
 /** Navbar sul modello di Thumbtack: marchio a sinistra, Esplora, Chi siamo, Area clienti e Area aziende a destra. */

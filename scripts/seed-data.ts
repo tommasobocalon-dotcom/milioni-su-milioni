@@ -199,8 +199,6 @@ type PartnerSeed = {
   foundedYear: number;
   responseMinutes: number;
   plan: "base" | "normal" | "premium";
-  /** Media voti e numero recensioni da generare. */
-  rating: [average: number, count: number];
   /** Province servite (sigle) e comuni extra. */
   areas: { provinces?: string[]; municipalities?: number[] };
   prices: [service: string, from: number | null, to: number | null, notes?: string][];
@@ -238,7 +236,6 @@ export const PARTNERS: PartnerSeed[] = [
     foundedYear: 2009,
     responseMinutes: 110,
     plan: "normal",
-    rating: [4.8, 126],
     areas: { provinces: ["PD"] },
     prices: [
       ["sopralluogo", 0, 0, "Entro 48 ore"],
@@ -268,7 +265,6 @@ export const PARTNERS: PartnerSeed[] = [
     foundedYear: 2001,
     responseMinutes: 55,
     plan: "premium",
-    rating: [4.8, 126],
     areas: { provinces: ["PD", "VE"] },
     prices: [
       ["sopralluogo", 5000, null, "Scalato dal preventivo"],
@@ -294,7 +290,6 @@ export const PARTNERS: PartnerSeed[] = [
     foundedYear: 2014,
     responseMinutes: 180,
     plan: "base",
-    rating: [4.6, 38],
     areas: { municipalities: [28001, 28086, 28060, 28003] },
     prices: [
       ["bagno", 580000, 950000, "Fino a 5 m²"],
@@ -315,7 +310,6 @@ export const PARTNERS: PartnerSeed[] = [
     foundedYear: 2006,
     responseMinutes: 240,
     plan: "normal",
-    rating: [4.5, 71],
     areas: { provinces: ["PD"] },
     prices: [
       ["manutenzione-caldaia", 8500, 11000, "Bollino blu incluso"],
@@ -336,7 +330,6 @@ export const PARTNERS: PartnerSeed[] = [
     foundedYear: 1998,
     responseMinutes: 150,
     plan: "premium",
-    rating: [4.7, 92],
     areas: { provinces: ["VE"] },
     prices: [
       ["sopralluogo", 0, 0, "Mestre e terraferma"],
@@ -362,7 +355,6 @@ export const PARTNERS: PartnerSeed[] = [
     foundedYear: 1995,
     responseMinutes: 300,
     plan: "normal",
-    rating: [4.9, 64],
     areas: { provinces: ["PD"] },
     prices: [
       ["ape", 15000, 25000, "Appartamenti fino a 120 m²"],
@@ -385,7 +377,6 @@ export const PARTNERS: PartnerSeed[] = [
     foundedYear: 2011,
     responseMinutes: 420,
     plan: "base",
-    rating: [4.6, 22],
     areas: { provinces: ["TV"] },
     prices: [
       ["ape", 14000, 22000],
@@ -406,7 +397,6 @@ export const PARTNERS: PartnerSeed[] = [
     foundedYear: 2008,
     responseMinutes: 200,
     plan: "normal",
-    rating: [4.7, 48],
     areas: { provinces: ["TV"] },
     prices: [
       ["impianto", 4500, 6500, "Appartamenti, materiale incluso"],
@@ -429,7 +419,6 @@ export const PARTNERS: PartnerSeed[] = [
     foundedYear: 2016,
     responseMinutes: 95,
     plan: "base",
-    rating: [4.4, 19],
     areas: { municipalities: [28003, 28060, 28001] },
     prices: [
       ["pronto-intervento", 7000, 12000, "Uscita e prima ora"],
@@ -450,7 +439,6 @@ export const PARTNERS: PartnerSeed[] = [
     foundedYear: 1987,
     responseMinutes: 360,
     plan: "normal",
-    rating: [4.8, 57],
     areas: { provinces: ["PD"] },
     prices: [
       ["tinteggiatura", 700, 1200, "Pareti e soffitti, due mani"],
@@ -471,7 +459,6 @@ export const PARTNERS: PartnerSeed[] = [
     foundedYear: 2003,
     responseMinutes: 480,
     plan: "premium",
-    rating: [4.6, 83],
     areas: { provinces: ["PD", "VE"] },
     prices: [
       ["ristrutturazione-completa", 55000, 90000, "Escluse finiture di pregio"],
@@ -496,7 +483,6 @@ export const PARTNERS: PartnerSeed[] = [
     foundedYear: 2012,
     responseMinutes: 600,
     plan: "premium",
-    rating: [4.9, 31],
     areas: { provinces: ["TV", "VE"] },
     prices: [
       ["progetto-ristrutturazione", 150000, 400000, "Appartamenti fino a 120 m²"],
@@ -519,7 +505,6 @@ export const PARTNERS: PartnerSeed[] = [
     foundedYear: 1998,
     responseMinutes: 115,
     plan: "premium",
-    rating: [4.9, 212],
     areas: { provinces: ["PD"] },
     prices: [
       ["valutazione", 0, 0, "Relazione scritta entro 48 ore"],
@@ -547,7 +532,6 @@ export const PARTNERS: PartnerSeed[] = [
     foundedYear: 2010,
     responseMinutes: 170,
     plan: "normal",
-    rating: [4.7, 98],
     areas: { provinces: ["PD"] },
     prices: [
       ["valutazione", 0, 0],
@@ -571,7 +555,6 @@ export const PARTNERS: PartnerSeed[] = [
     foundedYear: 2005,
     responseMinutes: 1300,
     plan: "normal",
-    rating: [4.6, 61],
     areas: { provinces: ["PD"] },
     prices: [["compravendita", 200, 300, "+ IVA"]],
     portfolio: [{ title: "Villa in classe A", municipality: 28001, contract: "sale", priceCents: 52000000, sqm: 210, rooms: 6 }],
@@ -589,7 +572,6 @@ export const PARTNERS: PartnerSeed[] = [
     foundedYear: 2000,
     responseMinutes: 230,
     plan: "base",
-    rating: [4.5, 143],
     areas: { provinces: ["PD"] },
     prices: [["affitti", null, null, "Una mensilità + IVA"]],
     portfolio: [{ title: "Negozio su strada", municipality: 28060, contract: "rent", priceCents: 180000, sqm: 80, rooms: 2 }],
@@ -607,7 +589,6 @@ export const PARTNERS: PartnerSeed[] = [
     foundedYear: 1992,
     responseMinutes: 160,
     plan: "premium",
-    rating: [4.8, 77],
     areas: { provinces: ["TV"] },
     prices: [
       ["valutazione", 0, 0],
@@ -629,47 +610,11 @@ export const PARTNERS: PartnerSeed[] = [
     foundedYear: 2015,
     responseMinutes: 90,
     plan: "normal",
-    rating: [4.7, 44],
     areas: { provinces: ["PD", "VE", "TV"] },
     prices: [["consulenza-mutuo", 0, 0, "Primo incontro gratuito"]],
     portfolio: [],
     hours: H_STUDIO,
   },
-];
-
-export const REVIEW_AUTHORS = [
-  "Giulia M.", "Andrea T.", "Francesca R.", "Luca e Sara B.", "Paolo V.", "Elena S.", "Marco D.", "Chiara Z.",
-  "Davide P.", "Silvia C.", "Alessandro F.", "Martina L.", "Roberto G.", "Valentina N.", "Stefano B.", "Anna P.",
-];
-
-export const REVIEW_TEXTS: Record<string, string[]> = {
-  artisan: [
-    "Lavoro fatto nei tempi promessi e preventivo rispettato. Cantiere lasciato pulito ogni sera.",
-    "Puntuali e gentili, hanno spiegato bene cosa serviva e cosa no.",
-    "Intervento rapido dopo la chiamata, prezzo in linea con quanto indicato sulla scheda.",
-    "Ottimo lavoro, qualche giorno di ritardo sull'inizio ma poi tutto preciso.",
-    "Seri e disponibili, li richiamerei senza dubbio.",
-  ],
-  technician: [
-    "Pratica seguita dall'inizio alla fine senza che dovessi preoccuparmi di nulla.",
-    "Chiaro su costi e tempi, documenti pronti prima del previsto.",
-    "Molto preparato, ci ha evitato un errore sulla planimetria.",
-  ],
-  agency: [
-    "Venduto il nostro appartamento in sei settimane, al prezzo stimato. Sempre chiari su ogni passaggio fino al rogito.",
-    "Trovato casa in affitto in pochi giorni, visite organizzate anche il sabato.",
-    "Valutazione onesta e realistica, nessuna pressione.",
-    "Agenzia seria, ci hanno seguito anche per il mutuo.",
-  ],
-  b2b: [
-    "Ci hanno trovato un tasso migliore di quello proposto dalla nostra banca.",
-    "Molto disponibili, pratica chiusa in tempi brevi.",
-  ],
-};
-
-export const PARTNER_REPLIES = [
-  "Grazie, è stato un piacere lavorare con voi!",
-  "Grazie per la fiducia, a presto.",
 ];
 
 /** Lead di esempio per Rossi Impianti (schermata "Area Partner — Lead"). Ore fa rispetto al seed. */

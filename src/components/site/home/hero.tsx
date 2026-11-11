@@ -1,8 +1,7 @@
-import { Lock, Star } from "lucide-react";
+import { Lock } from "lucide-react";
 import { getMunicipalities } from "@/lib/data/catalog";
 import { getHomeStats, HOME_STATS_MIN } from "@/lib/data/home";
 import { HERO_SLIDES } from "@/lib/data/home-content";
-import { formatRating } from "@/lib/domain/format";
 import { HeroSearchWatcher } from "@/components/site/header-client";
 import { HeroSearchForm } from "./hero-search-form";
 import { HeroSlides } from "./hero-slides";
@@ -53,32 +52,20 @@ export async function Hero({ next }: { next: string }) {
   );
 }
 
-/** Media voti, recensioni e partner verificati: si mostrano solo sopra una soglia minima (dati reali). */
+/** Partner verificati e tipi di professionisti: si mostrano solo sopra una soglia minima (dati reali). */
 async function HeroStats() {
   const s = await getHomeStats();
-  if (s.reviews < HOME_STATS_MIN.reviews || s.partners < HOME_STATS_MIN.partners) return null;
+  if (s.partners < HOME_STATS_MIN.partners) return null;
   const items = [
-    {
-      value: (
-        <>
-          {formatRating(s.average)} <Star className="ml-1 inline size-5 fill-star text-star" aria-hidden />
-        </>
-      ),
-      label: `su ${s.reviews.toLocaleString("it-IT")} recensioni verificate`,
-      sr: `Valutazione media ${formatRating(s.average)} su 5`,
-    },
-    { value: s.partners.toLocaleString("it-IT"), label: "partner verificati", sr: undefined },
-    { value: s.categories.toLocaleString("it-IT"), label: "tipi di professionisti", sr: undefined },
+    { value: s.partners.toLocaleString("it-IT"), label: "partner verificati" },
+    { value: s.categories.toLocaleString("it-IT"), label: "tipi di professionisti" },
   ];
   return (
     <dl className="hero-rise mt-4 flex flex-wrap gap-6 [animation-delay:320ms]">
       {items.map((it) => (
         <div key={it.label} className="flex flex-col-reverse">
           <dt className="mt-2 text-body-s">{it.label}</dt>
-          <dd className="font-display text-[1.75rem] leading-[1.1] tracking-[-0.02em]">
-            {it.sr && <span className="sr-only">{it.sr}, </span>}
-            <span aria-hidden={it.sr ? true : undefined}>{it.value}</span>
-          </dd>
+          <dd className="font-display text-[1.75rem] leading-[1.1] tracking-[-0.02em]">{it.value}</dd>
         </div>
       ))}
     </dl>

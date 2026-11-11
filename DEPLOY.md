@@ -135,8 +135,8 @@ Manda a ogni persona:
 - **SMS ed email** non partono finché `SMS_PROVIDER` ed `EMAIL_PROVIDER` restano `console`: i codici compaiono a schermo (`DEMO_MODE`). Per l'invio vero vedi "SMS ed email con Brevo".
 - **Accesso con Google/Apple**: funziona solo dopo aver inserito le variabili `GOOGLE_*` / `APPLE_*` su Vercel, con URI di ritorno `https://gecoitalia.it/auth/google/callback` e `https://gecoitalia.it/auth/apple/callback`.
 - **Pagamenti Stripe**: spenti finché non imposti le variabili `STRIPE_*` (vedi sotto); fino ad allora piani e pacchetti si attivano senza pagamento (solo sito di prova).
-- **Recensioni Google, email vere e antispam Turnstile**: spenti finché non imposti le chiavi, passo passo in [ATTIVAZIONE-SERVIZI.md](ATTIVAZIONE-SERVIZI.md).
-- I dati sono **di esempio** (partner e recensioni inventati): vanno bene finché il sito è riservato al team, **non al lancio** (PRD §5.6).
+- **Email vere e antispam Turnstile**: spenti finché non imposti le chiavi, passo passo in [ATTIVAZIONE-SERVIZI.md](ATTIVAZIONE-SERVIZI.md).
+- I dati sono **di esempio** (partner inventati): vanno bene finché il sito è riservato al team, **non al lancio** (PRD §5.6).
 
 ## SMS ed email con Brevo
 

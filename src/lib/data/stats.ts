@@ -1,7 +1,7 @@
 import "server-only";
-import { and, avg, count, desc, eq, gte, isNotNull, ne, sql } from "drizzle-orm";
+import { and, count, desc, eq, gte, isNotNull, ne, sql } from "drizzle-orm";
 import { db } from "@/lib/db/client";
-import { boosts, leads, municipalities, profileEvents, reviews, services } from "@/lib/db/schema";
+import { boosts, leads, municipalities, profileEvents, services } from "@/lib/db/schema";
 import { dayKeys, fillDaily, type StatsPeriod } from "@/lib/domain/stats";
 
 type ProfileEventType = (typeof profileEvents.$inferInsert)["type"];
@@ -12,7 +12,7 @@ export async function recordProfileEvents(partnerIds: string[], type: ProfileEve
   await db.insert(profileEvents).values(partnerIds.map((partnerId) => ({ partnerId, type })));
 }
 
-const romeDaySql = (col: typeof profileEvents.createdAt | typeof leads.createdAt | typeof reviews.createdAt) =>
+const romeDaySql = (col: typeof profileEvents.createdAt | typeof leads.createdAt) =>
   sql<string>`to_char(${col} at time zone 'Europe/Rome', 'YYYY-MM-DD')`;
 
 const sum = (xs: number[]) => xs.reduce((a, b) => a + b, 0);
@@ -33,7 +33,7 @@ export async function getPartnerStats(partnerId: string, now: Date, days: StatsP
   const visibleLeads = and(eq(leads.partnerId, partnerId), isNotNull(leads.deliveredAt), ne(leads.charge, "duplicate"));
   const inPeriod = and(visibleLeads, gte(leads.createdAt, since), gte(romeDaySql(leads.createdAt), current[0]));
 
-  const [eventRows, leadRows, byStatus, byPlace, byService, [reviewRow], boostRows] = await Promise.all([
+  const [eventRows, leadRows, byStatus, byPlace, byService, boostRows] = await Promise.all([
     db
       .select({ type: profileEvents.type, day: romeDaySql(profileEvents.createdAt), n: count() })
       .from(profileEvents)
@@ -61,17 +61,6 @@ export async function getPartnerStats(partnerId: string, now: Date, days: StatsP
       .groupBy(sql`coalesce(${services.name}, ${leads.requestType})`)
       .orderBy(desc(count()))
       .limit(5),
-    db
-      .select({
-        n: count(),
-        rating: avg(reviews.rating),
-        quality: avg(reviews.quality),
-        punctuality: avg(reviews.punctuality),
-        value: avg(reviews.value),
-        communication: avg(reviews.communication),
-      })
-      .from(reviews)
-      .where(and(eq(reviews.partnerId, partnerId), eq(reviews.status, "published"), gte(reviews.createdAt, since), gte(romeDaySql(reviews.createdAt), current[0]))),
     db
       .select({ id: boosts.id, placement: boosts.placement, startsAt: boosts.startsAt, endsAt: boosts.endsAt, tokensSpent: boosts.tokensSpent })
       .from(boosts)
@@ -102,7 +91,6 @@ export async function getPartnerStats(partnerId: string, now: Date, days: StatsP
     leads: sum(s.leads),
   });
 
-  const num = (v: string | null) => (v == null ? null : Number(v));
   return {
     days: current,
     /** Ultimi 90 giorni (o più), per stimare l'effetto dei boost. */
@@ -113,16 +101,6 @@ export async function getPartnerStats(partnerId: string, now: Date, days: StatsP
     leadsByStatus: Object.fromEntries(byStatus.map((r) => [r.status, r.n])) as Partial<Record<(typeof byStatus)[number]["status"], number>>,
     topPlaces: byPlace,
     topServices: byService,
-    reviews: {
-      count: reviewRow?.n ?? 0,
-      rating: num(reviewRow?.rating ?? null),
-      criteria: [
-        { label: "Qualità del lavoro", value: num(reviewRow?.quality ?? null) },
-        { label: "Puntualità", value: num(reviewRow?.punctuality ?? null) },
-        { label: "Rapporto qualità-prezzo", value: num(reviewRow?.value ?? null) },
-        { label: "Comunicazione", value: num(reviewRow?.communication ?? null) },
-      ],
-    },
     boosts: boostRows.map((b) => ({ ...b, active: b.startsAt <= now && b.endsAt > now, upcoming: b.startsAt > now })),
   };
 }

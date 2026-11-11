@@ -8,7 +8,6 @@ import {
   MapPin,
   Search,
   SlidersHorizontal,
-  Star,
   Wrench,
 } from "lucide-react";
 import { useReducedMotion } from "@/lib/hooks/use-reduced-motion";
@@ -22,7 +21,7 @@ const STEPS = [
   },
   {
     title: "Confronta chi lavora in zona",
-    text: "Prezzi indicativi, zone servite, tempi di risposta e recensioni lasciate solo da clienti verificati.",
+    text: "Prezzi indicativi, zone servite, tempi di risposta e lavori già svolti.",
   },
   {
     title: "Richiedi un contatto",
@@ -30,7 +29,7 @@ const STEPS = [
   },
   {
     title: "Vieni richiamato",
-    text: "Il professionista ti chiama nella fascia oraria che hai scelto. A lavoro finito lasci la tua recensione.",
+    text: "Il professionista ti chiama nella fascia oraria che hai scelto. Se non può, ti proponiamo altri della tua zona.",
   },
 ];
 
@@ -312,14 +311,6 @@ function ScreenCompare() {
                 </span>
               </span>
             </div>
-            <span className="flex items-center gap-0.5 text-star">
-              {[0, 1, 2, 3, 4].map((s) => (
-                <Star key={s} className="size-3 fill-current" />
-              ))}
-              <span className="ml-1.5 text-[10px] text-ink-2">
-                Recensioni verificate
-              </span>
-            </span>
             <span className="flex items-center gap-1.5 text-[10px] text-ink-2">
               <Clock className="size-3" /> Tempo medio di risposta
             </span>
@@ -403,14 +394,9 @@ function ScreenDone() {
         </span>
       </div>
       <div className="mt-6 flex flex-col items-center gap-2 rounded-lg bg-surface p-4 text-center">
-        <p className="text-[12px] font-semibold">A lavoro finito</p>
-        <span className="flex gap-1 text-star">
-          {[0, 1, 2, 3, 4].map((s) => (
-            <Star key={s} className="size-5" />
-          ))}
-        </span>
+        <p className="text-[12px] font-semibold">Non ti hanno chiamato?</p>
         <p className="text-[11px] text-ink-2">
-          Lascia una recensione verificata
+          Ti proponiamo altri professionisti della tua zona
         </p>
       </div>
       <span className="mt-auto inline-flex h-11 shrink-0 items-center justify-center rounded-full border border-primary text-[13px] font-semibold text-primary">

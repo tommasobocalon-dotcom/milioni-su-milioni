@@ -4,7 +4,6 @@ import { MapPin } from "lucide-react";
 import { Badge, publicPlanBadge } from "@/components/ui/badge";
 import { ButtonLink } from "@/components/ui/button";
 import { LogoPartner } from "@/components/ui/logo-partner";
-import { Rating } from "@/components/ui/stars";
 import type { PartnerListItem } from "@/lib/data/search";
 import { formatDistanceKm } from "@/lib/domain/format";
 import { cn } from "@/lib/utils";
@@ -64,7 +63,6 @@ export function FeaturedPartner({ p, lavender = false }: { p: PartnerListItem; l
         <p className="text-body text-ink-2">
           {p.categoryName} · {p.tagline}
         </p>
-        <Rating average={p.rating.average} count={p.rating.count} />
         <p className="flex flex-wrap gap-x-4 gap-y-1 text-body-s text-ink-2">
           <span className="inline-flex items-center gap-1">
             <MapPin className="size-4" aria-hidden />

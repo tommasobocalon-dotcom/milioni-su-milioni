@@ -4,7 +4,7 @@ import { parseResultsParams, Results, ResultsSkeleton } from "@/components/site/
 
 export const metadata: Metadata = {
   title: "Trova Casa",
-  description: "Confronta le agenzie immobiliari della tua zona: valutazioni verificate, specializzazioni e portfolio immobili.",
+  description: "Confronta le agenzie immobiliari della tua zona: specializzazioni e portfolio immobili.",
 };
 
 export default function TrovaCasaPage({ searchParams }: PageProps<"/trova-casa">) {

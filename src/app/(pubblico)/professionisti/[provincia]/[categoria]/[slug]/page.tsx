@@ -18,7 +18,7 @@ export async function generateMetadata({ params }: PageProps<"/professionisti/[p
   if (!p || p.accountStatus !== "active") return {};
   return {
     title: `${p.displayName} — ${p.categoryName} a ${p.municipalityName}`,
-    description: `${p.tagline}. Prezzi indicativi, recensioni verificate e richiesta di contatto gratuita.`,
+    description: `${p.tagline}. Prezzi indicativi, lavori svolti e richiesta di contatto gratuita.`,
     alternates: { canonical: p.href },
   };
 }

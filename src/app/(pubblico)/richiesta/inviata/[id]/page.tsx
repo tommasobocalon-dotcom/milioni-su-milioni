@@ -98,7 +98,7 @@ async function Sent({ id }: { id: string }) {
             {[
               ["Il partner riceve la notifica", "Arriva in pochi secondi, via email e nella sua Area Partner."],
               ["Ti ricontatta", `Nella fascia oraria che hai scelto: ${lead.callbackSlot}.`],
-              ["Ci dici com'è andata", "Tra qualche giorno ti chiediamo se sei stato ricontattato e puoi lasciare una recensione verificata."],
+              ["Se non ti richiama", "Qui sotto trovi altri della tua zona a cui chiedere un contatto."],
             ].map(([t, d], i) => (
               <li key={t} className="flex flex-col gap-2 rounded-lg border border-line bg-surface p-5">
                 <span className="inline-flex size-8 items-center justify-center rounded-full bg-primary text-body-s font-semibold text-on-brand">

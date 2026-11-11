@@ -61,7 +61,7 @@ export async function EntryBlocks({ id }: { id: string }) {
             }}
             label="Tecnici e artigiani"
             title="Cerca professionisti"
-            text="Geometri, tecnici e artigiani della tua zona, con prezzi indicativi e recensioni solo da clienti verificati."
+            text="Geometri, tecnici e artigiani della tua zona, con prezzi indicativi e lavori già svolti."
             shortcuts={proShortcuts}
             href="/trova-professionista"
             cta="Cerca un professionista"

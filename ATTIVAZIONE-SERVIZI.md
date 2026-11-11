@@ -1,10 +1,9 @@
-# Attivare i servizi esterni: recensioni Google, email, antispam, assistenza
+# Attivare i servizi esterni: email, antispam, assistenza
 
 Il codice di queste funzioni è già pronto e testato. Restano **spente** finché non si inseriscono le chiavi dei servizi esterni: senza chiavi il sito funziona lo stesso, solo senza quella funzione.
 
 | Funzione | Servizio | Cosa succede senza chiavi | Costo indicativo |
 |---|---|---|---|
-| Recensioni Google sulla scheda dei partner | Google Cloud, Places API (New) | Sezione nascosta; nell'Area Partner il collegamento è disattivato | Pay-as-you-go con quota gratuita mensile, carta obbligatoria |
 | Email (conferma account, recupero password) | Resend | Le email vengono stampate nel terminale; sul sito di prova il link si vede a schermo | Gratis fino a 3.000 email al mese |
 | Antispam su richiesta di contatto, registrazione e recupero password | Cloudflare Turnstile | Nessun controllo antispam (restano i limiti per IP) | Gratis |
 | Email di assistenza che entrano da sole nel gestionale | Resend Inbound (oppure Postmark) | Le richieste arrivano lo stesso dal modulo del sito e dall'Area Partner; quelle per email restano nella casella | Incluso nel piano Resend (verificare i limiti) |
@@ -87,61 +86,9 @@ Con `EMAIL_PROVIDER=console` (o vuoto) le email non partono: vengono stampate ne
 
 ---
 
-## 3. Recensioni Google: Places API (New)
+## 3. Recensioni Google (tolte)
 
-Il partner collega la sua scheda Google Maps dall'Area Partner. Sulla sua scheda pubblica compaiono voto, numero di recensioni e le ultime cinque recensioni, con il link a Google Maps.
-
-**Regole di Google già rispettate dal codice:**
-- nel database si salva solo il codice della scheda Google (place ID), mai le recensioni;
-- le recensioni restano solo qualche ora nella cache del server, poi si rileggono da Google;
-- ogni recensione mostra autore, foto e link, e la sezione porta la scritta "Google Maps";
-- Google restituisce **al massimo 5 recensioni**, le "più pertinenti": per leggerle tutte si va su Google Maps;
-- voti e recensioni Google non vanno mostrati su una mappa non Google (la futura mappa MapLibre non li userà).
-
-### Passo 3.1 — Account di fatturazione (lo fai tu: serve la carta)
-1. Vai su https://console.cloud.google.com/billing.
-2. **Crea account** → nome `geco` → paese Italia → inserisci i dati e la carta.
-3. Google applica una quota gratuita mensile per ogni tipo di chiamata; oltre quella si paga a consumo. Le recensioni rientrano nella fascia più cara (*Place Details Enterprise + Atmosphere*): controlla il prezzo aggiornato su https://mapsplatform.google.com/pricing.
-
-### Passo 3.2 — Progetto
-1. In alto, nel selettore dei progetti → **Nuovo progetto**.
-2. Nome `geco`, account di fatturazione `geco` → **Crea**.
-3. Assicurati che in alto sia selezionato il progetto `geco` (non quelli di n8n).
-
-### Passo 3.3 — Attivare l'API giusta
-1. Menu → **API e servizi → Libreria**.
-2. Cerca **Places API (New)**. Attenzione: esiste anche la vecchia "Places API", che il codice non usa.
-3. Apri **Places API (New)** → **Abilita**.
-
-### Passo 3.4 — Creare la chiave
-1. **API e servizi → Credenziali → Crea credenziali → Chiave API**.
-2. Appena creata, premi **Modifica chiave**:
-   - **Nome:** `geco-server`
-   - **Restrizioni dell'applicazione:** *Nessuna*. La chiave è usata solo dal server, che su Vercel non ha un IP fisso. Restrizioni per sito web (referrer) bloccherebbero le chiamate del server.
-   - **Restrizioni API:** **Limita chiave** → seleziona solo **Places API (New)**.
-3. **Salva** e copia la chiave.
-
-Non mettere mai questa chiave in una variabile che inizia con `NEXT_PUBLIC_`: finirebbe nel codice della pagina, visibile a tutti.
-
-### Passo 3.5 — Mettere un tetto alla spesa (consigliato)
-1. **Fatturazione → Budget e avvisi → Crea budget**: per esempio 20 € al mese, con avvisi al 50%, 90% e 100%. Il budget avvisa ma non blocca.
-2. Per bloccare davvero: **API e servizi → Places API (New) → Quote e limiti di sistema**. Abbassa le richieste al giorno di *Place Details* (es. 1.000) e di *Text Search* (es. 200). Oltre il limite Google risponde con un errore e la sezione recensioni semplicemente non compare.
-
-### Passo 3.6 — Inserire la chiave
-```
-GOOGLE_PLACES_API_KEY=<chiave>
-```
-
-### Passo 3.7 — Verificare
-1. Entra nell'Area Partner con un account azienda → **La mia scheda**.
-2. Nel riquadro **Recensioni Google** il campo di ricerca è già compilato con nome e comune: premi **Cerca**.
-3. Accanto all'attività giusta premi **È la mia attività**. Il riquadro mostra "Collegata: X su 5 con N recensioni".
-4. Premi **Vedi sulla scheda**: nella scheda pubblica c'è la sezione **Recensioni su Google**.
-5. Per togliere il collegamento: **Scollega**.
-
-Ogni collegamento e scollegamento viene registrato (tabella `audit_logs`, azioni `partner.google_linked` e `partner.google_unlinked`). Servirà al Backoffice per controllare che nessun partner colleghi la scheda Google di un altro.
-
----
+Le recensioni, comprese quelle Google, sono state tolte dal sito l'11/11/2026: `GOOGLE_PLACES_API_KEY` non serve più e su Vercel si può cancellare.
 
 ## 4. Gestionale e assistenza
 
@@ -209,9 +156,6 @@ Le email da indirizzi automatici (noreply, rimbalzi) e dai nostri stessi indiriz
 | L'email non arriva | Dominio non ancora verificato su Resend, oppure `EMAIL_PROVIDER` non è `resend` | Su Resend → Domains tutte le righe devono essere verdi; su Resend → Logs si vede ogni invio con l'eventuale errore |
 | L'email arriva nello spam | Manca il record DMARC o il dominio è appena verificato | Aggiungi `_dmarc` (Passo 2.2); i primi giorni capita |
 | I link nelle email portano a `localhost` | `APP_URL` mancante o sbagliata | Imposta `APP_URL=https://gecoitalia.it` e fai Redeploy |
-| Nell'Area Partner: "Il collegamento con Google non è ancora attivo" | Manca `GOOGLE_PLACES_API_KEY` | Passo 3.6, poi Redeploy |
-| La ricerca Google non trova nulla o la sezione non compare | API sbagliata abilitata, restrizioni della chiave errate, fatturazione non attiva o quota finita | Nei log di Vercel cerca le righe `[google] Places API` con il codice di errore: 403 = chiave o API, 429 = quota |
-| Recensioni cambiate su Google ma non ancora sulla scheda | Cache del server di qualche ora | È normale: si aggiornano da sole |
 | `/admin` mostra "Questa pagina non c'è" | La tua email non è in `ADMIN_EMAILS` o non è ancora confermata | Passo 4.1, poi Redeploy |
 | Le email all'assistenza non compaiono nel gestionale | Inoltro non attivo, webhook sbagliato o segreto diverso | Su Resend/Postmark guarda i tentativi del webhook: 400 = firma, 401 = token, 503 = variabile mancante su Vercel |
 
@@ -229,9 +173,6 @@ EMAIL_PROVIDER=resend
 RESEND_API_KEY=
 EMAIL_FROM=geco <noreply@gecoitalia.it>
 APP_URL=https://gecoitalia.it
-
-# Recensioni Google
-GOOGLE_PLACES_API_KEY=
 
 # Gestionale e assistenza
 ADMIN_EMAILS=

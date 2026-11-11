@@ -26,15 +26,12 @@ export type ResultsParams = {
   categoria?: string;
   dove?: string;
   servizio?: string;
-  voto?: string;
   ordina?: string;
   pagina?: string;
 };
 
 const SORTS: { value: SortKey; label: string }[] = [
   { value: "rilevanza", label: "Consigliati" },
-  { value: "valutazione", label: "Valutazione" },
-  { value: "recensioni", label: "Numero di recensioni" },
   { value: "distanza", label: "Distanza" },
   { value: "prezzo", label: "Prezzo indicativo" },
 ];
@@ -46,7 +43,6 @@ export function parseResultsParams(sp: Record<string, string | string[] | undefi
     categoria: first(sp.categoria),
     dove: first(sp.dove),
     servizio: first(sp.servizio),
-    voto: first(sp.voto),
     ordina: first(sp.ordina),
     pagina: first(sp.pagina),
   };
@@ -72,7 +68,6 @@ async function findResults(mode: "agency" | "pro", params: ResultsParams, seed: 
     mode === "agency" ? allCategories.find((c) => c.partnerType === "agency") ?? null : params.categoria ? await getCategoryBySlug(params.categoria) : null;
   const categoryServices = category ? await getServicesForCategory(category.id) : [];
   const service = categoryServices.find((s) => s.slug === params.servizio) ?? null;
-  const minRating = params.voto ? Number(params.voto.replace(",", ".")) : undefined;
   const sort = (SORTS.find((s) => s.value === params.ordina)?.value ?? "rilevanza") as SortKey;
 
   const found = await searchPartners({
@@ -81,7 +76,6 @@ async function findResults(mode: "agency" | "pro", params: ResultsParams, seed: 
     serviceId: service?.id,
     place,
     provinceId: province?.id,
-    minRating,
     sort,
     page: parsePage(params.pagina),
     pageSize: PAGE_SIZE,
@@ -149,7 +143,7 @@ async function ResultsBody({ mode, params, seed }: { mode: "agency" | "pro"; par
         <p className="text-body text-ink-2">
           {total} {total === 1 ? "risultato" : "risultati"}
           {mode === "pro" && " · prezzi indicativi nel profilo di ogni partner"}
-          {mode === "agency" && " · valutazioni verificate e portfolio immobili"}
+          {mode === "agency" && " · specializzazioni e portfolio immobili"}
         </p>
       </div>
 
@@ -168,7 +162,6 @@ async function ResultsBody({ mode, params, seed }: { mode: "agency" | "pro"; par
             <form action={basePath} method="get" className="flex flex-col gap-3">
               {category && mode === "pro" && <input type="hidden" name="categoria" value={category.slug} />}
               {service && <input type="hidden" name="servizio" value={service.slug} />}
-              {params.voto && <input type="hidden" name="voto" value={params.voto} />}
               <label htmlFor="dove" className="text-body-s font-semibold">
                 Zona
               </label>
@@ -228,21 +221,6 @@ async function ResultsBody({ mode, params, seed }: { mode: "agency" | "pro"; par
                 </div>
               </fieldset>
             )}
-
-            <fieldset className="flex flex-col gap-2">
-              <legend className="mb-2 text-body-s font-semibold">Valutazione minima</legend>
-              <div className="flex flex-wrap gap-2">
-                {[
-                  ["", "Tutte"],
-                  ["4", "4+"],
-                  ["4.5", "4,5+"],
-                ].map(([v, l]) => (
-                  <ChipLink key={l} href={href({ voto: v || undefined })} selected={(params.voto ?? "") === v}>
-                    {l}
-                  </ChipLink>
-                ))}
-              </div>
-            </fieldset>
 
             <p id="ordinamento" className="flex gap-2 rounded-md bg-subtle p-3 text-caption text-ink-2">
               <Info className="size-4 shrink-0" aria-hidden />

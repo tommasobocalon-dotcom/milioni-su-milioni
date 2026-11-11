@@ -69,7 +69,7 @@ async function RedirectIfSignedIn({ audience, searchParams }: { audience: Audien
 const SCREEN = {
   client: {
     claim: "Casa e lavori di casa, con persone verificate del Veneto.",
-    points: ["Richieste dei clienti verificate con un SMS", "Recensioni solo da chi ha fatto una richiesta", "Prezzi indicativi prima di chiamare"],
+    points: ["Richieste dei clienti verificate con un SMS", "Zone servite e lavori già svolti in vista", "Prezzi indicativi prima di chiamare"],
     switchText: "Hai un'attività?",
     switchLink: { href: "/accedi/azienda", label: "Vai all'accesso aziende" },
   },

@@ -1,5 +1,5 @@
 import "server-only";
-import { and, asc, avg, count, desc, eq, sql } from "drizzle-orm";
+import { and, asc, eq, sql } from "drizzle-orm";
 import { cacheLife, cacheTag } from "next/cache";
 import { db } from "@/lib/db/client";
 import {
@@ -10,13 +10,11 @@ import {
   plans,
   portfolioItems,
   provinces,
-  reviews,
   serviceAreas,
   serviceQuestions,
   services,
   subscriptions,
 } from "@/lib/db/schema";
-import { ratingDistribution } from "@/lib/domain/rating";
 import { profileHref } from "./search";
 
 /** Scheda pubblica completa di un partner. Cache breve: i dati li aggiorna il partner. */
@@ -46,7 +44,6 @@ export async function getPartnerProfile(slug: string) {
       email: partners.email,
       verified: sql<boolean>`${partners.verificationStatus} = 'verified'`,
       accountStatus: partners.accountStatus,
-      googlePlaceId: partners.googlePlaceId,
       categoryId: categories.id,
       categoryName: categories.name,
       categoryPlural: categories.pluralName,
@@ -64,7 +61,7 @@ export async function getPartnerProfile(slug: string) {
     .limit(1);
   if (!p) return null;
 
-  const [priceList, areas, portfolio, ratingRows, subScores, latestReviews, plan] = await Promise.all([
+  const [priceList, areas, portfolio, plan] = await Promise.all([
     db
       .select({
         id: partnerServices.id,
@@ -108,42 +105,12 @@ export async function getPartnerProfile(slug: string) {
       .where(eq(portfolioItems.partnerId, p.id))
       .orderBy(asc(portfolioItems.sortOrder)),
     db
-      .select({ rating: reviews.rating })
-      .from(reviews)
-      .where(and(eq(reviews.partnerId, p.id), eq(reviews.status, "published"))),
-    db
-      .select({
-        quality: avg(reviews.quality).mapWith(Number),
-        punctuality: avg(reviews.punctuality).mapWith(Number),
-        value: avg(reviews.value).mapWith(Number),
-        communication: avg(reviews.communication).mapWith(Number),
-        total: count(),
-      })
-      .from(reviews)
-      .where(and(eq(reviews.partnerId, p.id), eq(reviews.status, "published"))),
-    db
-      .select({
-        id: reviews.id,
-        authorName: reviews.authorName,
-        rating: reviews.rating,
-        text: reviews.text,
-        partnerReply: reviews.partnerReply,
-        createdAt: reviews.createdAt,
-      })
-      .from(reviews)
-      .where(and(eq(reviews.partnerId, p.id), eq(reviews.status, "published")))
-      .orderBy(desc(reviews.createdAt))
-      .limit(4),
-    db
       .select({ code: plans.code, name: plans.name })
       .from(subscriptions)
       .innerJoin(plans, eq(plans.id, subscriptions.planId))
       .where(and(eq(subscriptions.partnerId, p.id), eq(subscriptions.status, "active")))
       .limit(1),
   ]);
-
-  const ratings = ratingRows.map((r) => r.rating);
-  const average = ratings.length ? ratings.reduce((a, b) => a + b, 0) / ratings.length : 0;
 
   return {
     ...p,
@@ -152,9 +119,6 @@ export async function getPartnerProfile(slug: string) {
     priceList,
     areas: areas.map((a) => (a.province ? `Provincia di ${a.province}` : a.municipality!)),
     portfolio,
-    rating: { average, count: ratings.length, distribution: ratingDistribution(ratings) },
-    subScores: subScores[0],
-    latestReviews,
   };
 }
 

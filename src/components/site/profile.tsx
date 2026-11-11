@@ -1,34 +1,23 @@
 import Image from "next/image";
-import Link from "next/link";
 import {
-  BadgeCheck,
   CalendarDays,
   Home,
   Image as ImageIcon,
   MapPin,
   ShieldCheck,
 } from "lucide-react";
-import { Suspense } from "react";
-import { GoogleReviewsSection } from "@/components/site/google-reviews";
 import { Badge, publicPlanBadge } from "@/components/ui/badge";
 import { ButtonLink } from "@/components/ui/button";
 import { Chip } from "@/components/ui/chip";
 import { LogoPartner } from "@/components/ui/logo-partner";
-import { Rating, Stars } from "@/components/ui/stars";
 import type { PartnerProfile } from "@/lib/data/partners";
 import {
   formatEuro,
   formatPriceRange,
-  formatRating,
   PRICE_UNIT_LABEL,
   type PriceUnit,
 } from "@/lib/domain/format";
 import { videoEmbedUrl } from "@/lib/domain/extras";
-
-const dateFmt = new Intl.DateTimeFormat("it-IT", {
-  month: "long",
-  year: "numeric",
-});
 
 /** Profilo pubblico del partner (PRD §5.4), stesso impianto per agenzie e professionisti. */
 export function ProfileView({ p }: { p: PartnerProfile }) {
@@ -49,15 +38,6 @@ export function ProfileView({ p }: { p: PartnerProfile }) {
       addressCountry: "IT",
     },
     areaServed: p.areas,
-    ...(p.rating.count > 0 && {
-      aggregateRating: {
-        "@type": "AggregateRating",
-        ratingValue: Number(p.rating.average.toFixed(1)),
-        reviewCount: p.rating.count,
-        bestRating: 5,
-        worstRating: 1,
-      },
-    }),
   };
 
   return (
@@ -88,7 +68,6 @@ export function ProfileView({ p }: { p: PartnerProfile }) {
               {p.provinceCode})
             </p>
             <div className="flex flex-wrap items-center gap-x-5 gap-y-1 text-body-s text-ink-2">
-              <Rating average={p.rating.average} count={p.rating.count} />
               {p.verified && (
                 <span className="inline-flex items-center gap-1">
                   <ShieldCheck className="size-4" aria-hidden /> P.IVA
@@ -113,7 +92,6 @@ export function ProfileView({ p }: { p: PartnerProfile }) {
             ["#panoramica", "Panoramica"],
             ["#prezzi", isAgency ? "Servizi e costi" : "Listino prezzi"],
             ["#portfolio", `${portfolioLabel} (${p.portfolio.length})`],
-            ["#recensioni", `Recensioni (${p.rating.count})`],
             ["#zone", "Zone servite"],
           ].map(([href, label]) => (
             <a
@@ -291,124 +269,6 @@ export function ProfileView({ p }: { p: PartnerProfile }) {
               )}
             </section>
 
-            {p.googlePlaceId && (
-              <Suspense fallback={null}>
-                <GoogleReviewsSection placeId={p.googlePlaceId} />
-              </Suspense>
-            )}
-
-            {/* Con la scheda Google collegata le recensioni interne compaiono solo se ce ne sono. */}
-            {(p.rating.count > 0 || !p.googlePlaceId) && (
-              <section
-                id="recensioni"
-                className="flex flex-col gap-5 rounded-lg border border-line bg-surface p-6"
-              >
-                <div className="flex items-center gap-3">
-                  <h2 className="font-display text-h2">
-                    Recensioni verificate
-                  </h2>
-                </div>
-                {p.rating.count === 0 ? (
-                  <p className="text-body-s text-ink-2">
-                    Ancora nessuna recensione.
-                  </p>
-                ) : (
-                  <>
-                    <div className="grid gap-6 rounded-md bg-subtle p-5 md:grid-cols-[140px_1fr_1fr]">
-                      <div className="flex flex-col items-start gap-1">
-                        <span className="font-display text-display-l">
-                          {formatRating(p.rating.average)}
-                        </span>
-                        <Stars value={p.rating.average} />
-                        <span className="text-caption text-ink-2">
-                          {p.rating.count} recensioni
-                        </span>
-                      </div>
-                      <ul
-                        className="flex flex-col gap-1.5"
-                        aria-label="Distribuzione delle stelle"
-                      >
-                        {([5, 4, 3, 2, 1] as const).map((star) => {
-                          const n = p.rating.distribution[star];
-                          return (
-                            <li
-                              key={star}
-                              className="flex items-center gap-2 text-caption"
-                            >
-                              <span className="w-3">{star}</span>
-                              <span className="h-2 flex-1 overflow-hidden rounded-full bg-surface">
-                                <span
-                                  className="block h-full bg-star"
-                                  style={{
-                                    width: `${(n / p.rating.count) * 100}%`,
-                                  }}
-                                />
-                              </span>
-                              <span className="w-8 text-right text-ink-2">
-                                {n}
-                              </span>
-                            </li>
-                          );
-                        })}
-                      </ul>
-                      <dl className="grid grid-cols-[1fr_auto] gap-x-4 gap-y-1.5 text-body-s">
-                        {[
-                          ["Qualità", p.subScores.quality],
-                          ["Puntualità", p.subScores.punctuality],
-                          ["Qualità/prezzo", p.subScores.value],
-                          ["Comunicazione", p.subScores.communication],
-                        ].map(([label, value]) => (
-                          <div key={label as string} className="contents">
-                            <dt className="text-ink-2">{label}</dt>
-                            <dd className="font-semibold">
-                              {formatRating(Number(value))}
-                            </dd>
-                          </div>
-                        ))}
-                      </dl>
-                    </div>
-                    <ul className="flex flex-col divide-y divide-line">
-                      {p.latestReviews.map((r) => (
-                        <li key={r.id} className="flex flex-col gap-2 py-4">
-                          <div className="flex flex-wrap items-center gap-2 text-body-s">
-                            <Stars value={r.rating} size={14} />
-                            <span className="font-semibold">
-                              {r.authorName}
-                            </span>
-                            <span className="text-ink-2">
-                              {dateFmt.format(r.createdAt)}
-                            </span>
-                            <span className="inline-flex items-center gap-1 text-caption font-semibold text-primary">
-                              <BadgeCheck className="size-3.5" aria-hidden />{" "}
-                              Recensione verificata
-                            </span>
-                          </div>
-                          <p className="text-body">{r.text}</p>
-                          {r.partnerReply && (
-                            <div className="rounded-md bg-subtle p-3 text-body-s">
-                              <p className="font-semibold">
-                                Risposta di {p.displayName}
-                              </p>
-                              <p className="text-ink-2">{r.partnerReply}</p>
-                            </div>
-                          )}
-                        </li>
-                      ))}
-                    </ul>
-                    <p className="text-caption text-ink-2">
-                      Può recensire solo chi ha inviato una richiesta verificata
-                      a questo partner.{" "}
-                      <Link
-                        href="/come-funziona#recensioni"
-                        className="font-semibold text-primary underline"
-                      >
-                        Come verifichiamo le recensioni
-                      </Link>
-                    </p>
-                  </>
-                )}
-              </section>
-            )}
           </div>
 
           <aside className="flex flex-col gap-6 lg:sticky lg:top-24 lg:self-start">
