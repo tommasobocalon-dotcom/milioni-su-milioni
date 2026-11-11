@@ -54,11 +54,12 @@ export default function HowItWorksPage() {
         <h2 className="font-display text-h2">Contenuti sponsorizzati</h2>
         <p className="text-body">
           Il riquadro grande in cima e le aziende con un boost attivo sono posti a pagamento: li riconosci dalla scritta
-          &quot;Sponsorizzato&quot;. Il boost nella ricerca vale per la categoria e la provincia dell&apos;azienda e dura da 24 a 72 ore.
+          &quot;Sponsorizzato&quot;. Il boost nella ricerca vale per la categoria e la provincia dell&apos;azienda e dura 24 o 48 ore.
           Con un pacchetto a pagamento di 7 o 30 giorni l&apos;azienda mette il suo logo nella fascia &quot;Aziende in evidenza&quot; della
-          Home, dove i loghi scorrono in un ordine che cambia a ogni visita. Un&apos;azienda
-          può anche pagare per comparire per 30 giorni in una provincia vicina alla sua, e per mettere un lavoro in evidenza nella
-          pagina Ispirazione, anche lì con la scritta &quot;Sponsorizzato&quot;.
+          Home, dove i loghi scorrono in un ordine che cambia a ogni visita. Un&apos;azienda può anche pagare per comparire nelle
+          ricerche di altri comuni del Veneto oltre alla sua zona, 30 giorni per ogni comune scelto: lì segue lo stesso ordine
+          delle altre aziende, in base al piano. I lavori in evidenza nella pagina Ispirazione portano anch&apos;essi la scritta
+          &quot;Sponsorizzato&quot;.
         </p>
       </section>
 

@@ -55,7 +55,7 @@ const toItem = (r: Row, sponsored: boolean): ShowcaseItem => ({
 });
 
 /**
- * Pagina "Ispirazione": in cima i lavori messi in evidenza con i crediti (sempre "Sponsorizzato"),
+ * Pagina "Ispirazione": in cima i lavori messi in evidenza a pagamento (sempre "Sponsorizzato"),
  * sotto gli altri lavori con foto delle aziende attive, dai più recenti.
  */
 export async function getShowcase(now: Date): Promise<{ featured: ShowcaseItem[]; latest: ShowcaseItem[] }> {
