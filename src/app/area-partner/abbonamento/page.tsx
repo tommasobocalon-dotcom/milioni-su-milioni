@@ -51,23 +51,18 @@ async function Chooser({
   current?: { code: string; period: "monthly" | "yearly"; partnerId: string };
 }) {
   const all = await getPlansWithPromo();
-  // Nel cambio piano la promo vale solo salendo e una volta per azienda (stessa regola di createPlanChangeSession).
-  const now = all.find((p) => p.code === current?.code);
+  // Nel cambio piano la promo vale una volta per azienda (stessa regola di createPlanChangeSession), mai sul piano attuale.
   const used = current ? await changePromoUsed(current.partnerId) : false;
-  const listOf = (p: { monthlyPriceCents: number; yearlyPriceCents: number }, period: "monthly" | "yearly") =>
-    period === "yearly" ? p.yearlyPriceCents : p.monthlyPriceCents;
+  const isCurrent = (code: string, period: "monthly" | "yearly") => current?.code === code && current.period === period;
   const plans = all.map((p) => ({
     code: p.code,
     name: p.name,
     monthlyPriceCents: p.monthlyPriceCents,
     yearlyPriceCents: p.yearlyPriceCents,
-    promo:
-      current && now
-        ? {
-            monthly: changePromo(listOf(now, current.period), listOf(p, "monthly"), p.promo.monthly, used),
-            yearly: changePromo(listOf(now, current.period), listOf(p, "yearly"), p.promo.yearly, used),
-          }
-        : p.promo,
+    promo: {
+      monthly: isCurrent(p.code, "monthly") ? null : changePromo(p.promo.monthly, used),
+      yearly: isCurrent(p.code, "yearly") ? null : changePromo(p.promo.yearly, used),
+    },
     features: planFeatures(p.code),
   }));
   return <PlanChooser plans={plans} demo={demo} owner={owner} trial={trial} current={current} />;
@@ -200,9 +195,9 @@ async function Subscription({ payment, welcome }: { payment: "received" | "start
               Cambia piano
             </h2>
             <p className="text-body-s text-ink-2">
-              Sali di piano: è attivo da subito. Con la promo il nuovo periodo parte oggi e paghi il prezzo in promo meno i giorni non usati
-              del piano attuale; senza promo paghi solo la differenza per i giorni che restano. Scendi di piano: il cambio parte dal prossimo
-              rinnovo, così non perdi ciò che hai già pagato.
+              Con la promo, salendo o scendendo, il nuovo piano è attivo da subito: il periodo parte oggi e paghi il prezzo in promo meno i
+              giorni non usati del piano attuale. La promo vale per un solo cambio. Senza promo: salendo paghi solo la differenza per i giorni
+              che restano, scendendo il cambio parte dal prossimo rinnovo, così non perdi ciò che hai già pagato.
             </p>
           </div>
           <Chooser owner={owner} demo={demo} trial={false} current={{ code: sub.planCode, period: sub.period, partnerId: partner.id }} />

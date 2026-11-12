@@ -96,13 +96,15 @@ describe("promo dei piani (soci, 11/11/2026)", () => {
 describe("promo nel cambio piano (soci, 11/11/2026)", () => {
   const promo = { payNowCents: 7900, listCents: 19900, giftHomeDays: 0 };
 
-  it("vale salendo di piano o passando all'annuale, una volta sola", () => {
-    expect(changePromo(8900, 19900, promo, false)).toEqual(promo);
-    expect(changePromo(8900, 19900, promo, true)).toBeNull();
+  it("vale salendo e scendendo di piano", () => {
+    expect(changePromo(promo, false)).toEqual(promo);
   });
 
-  it("non vale scendendo né restando allo stesso prezzo", () => {
-    expect(changePromo(19900, 8900, promo, false)).toBeNull();
-    expect(changePromo(8900, 8900, promo, false)).toBeNull();
+  it("vale una volta sola per azienda", () => {
+    expect(changePromo(promo, true)).toBeNull();
+  });
+
+  it("niente promo se il piano non ne ha", () => {
+    expect(changePromo(null, false)).toBeNull();
   });
 });

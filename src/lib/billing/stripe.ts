@@ -1,6 +1,6 @@
 import "server-only";
 import { revalidateTag } from "next/cache";
-import { and, eq, inArray, isNotNull, isNull, or, sql } from "drizzle-orm";
+import { and, eq, inArray, isNotNull, isNull, or } from "drizzle-orm";
 import Stripe from "stripe";
 import { db } from "@/lib/db/client";
 import { municipalities, partners, plans, stripeProcessed, subscriptions } from "@/lib/db/schema";
@@ -233,18 +233,17 @@ async function portalConfiguration(): Promise<{ configuration?: string }> {
 /**
  * Cambio piano o periodo durante l'abbonamento: apre la pagina di conferma del portale Stripe, che mostra l'importo.
  * Regole nel portale (stripe:setup): salendo di piano si paga subito la differenza per i giorni che restano,
- * scendendo il cambio vale dal prossimo rinnovo. Il webhook allinea poi il piano nel database.
+ * scendendo il cambio vale dal prossimo rinnovo. Con la promo ancora da usare (salendo o scendendo) il cambio è
+ * invece immediato, con `changePlanWithPromo`. Il webhook allinea poi il piano nel database.
  */
 export async function createPlanChangeSession(partnerId: string, planCode: string, period: "monthly" | "yearly"): Promise<string> {
   const [row] = await db
     .select({
       customer: partners.stripeCustomerId,
       subscriptionId: subscriptions.stripeSubscriptionId,
-      currentListCents: sql<number>`case when ${subscriptions.period} = 'yearly' then ${plans.yearlyPriceCents} else ${plans.monthlyPriceCents} end`,
     })
     .from(subscriptions)
     .innerJoin(partners, eq(partners.id, subscriptions.partnerId))
-    .innerJoin(plans, eq(plans.id, subscriptions.planId))
     .where(and(eq(subscriptions.partnerId, partnerId), eq(subscriptions.status, "active"), isNotNull(subscriptions.stripeSubscriptionId)));
   if (!row?.customer || !row.subscriptionId) throw new BillingError("Nessun abbonamento attivo da cambiare");
   const [plan] = await db.select().from(plans).where(eq(plans.code, planCode));
@@ -254,8 +253,7 @@ export async function createPlanChangeSession(partnerId: string, planCode: strin
   const item = (await stripe().subscriptions.retrieve(row.subscriptionId)).items.data[0];
   if (!item) throw new Error(`Abbonamento Stripe ${row.subscriptionId} senza voci`);
   if (item.price.id === price) throw new BillingError("È già il tuo piano");
-  const targetListCents = period === "yearly" ? plan.yearlyPriceCents : plan.monthlyPriceCents;
-  const promo = changePromo(row.currentListCents, targetListCents, planPromo(plan, period, new Date(), launchDate()), await changePromoUsed(partnerId));
+  const promo = changePromo(planPromo(plan, period, new Date(), launchDate()), await changePromoUsed(partnerId));
   if (promo) {
     await changePlanWithPromo(partnerId, row.subscriptionId, item.id, price, plan.code, period, promo);
     return `${appUrl()}/area-partner/abbonamento?pagamento=cambio`;

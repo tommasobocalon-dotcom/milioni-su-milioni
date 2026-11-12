@@ -96,9 +96,9 @@ export function planPromo(
 }
 
 /**
- * Promo per chi cambia piano (soci, 11/11/2026): la stessa del primo abbonamento, ma solo salendo (listino più alto
- * di quello che si paga adesso) e una volta per azienda, altrimenti si potrebbe scendere e risalire per riaverla.
+ * Promo per chi cambia piano (12/11/2026): la stessa del primo abbonamento, salendo o scendendo, ma una volta per
+ * azienda, altrimenti si potrebbe cambiare avanti e indietro per riaverla.
  */
-export function changePromo(currentListCents: number, targetListCents: number, promo: PlanPromo | null, alreadyUsed: boolean): PlanPromo | null {
-  return !alreadyUsed && targetListCents > currentListCents ? promo : null;
+export function changePromo(promo: PlanPromo | null, alreadyUsed: boolean): PlanPromo | null {
+  return alreadyUsed ? null : promo;
 }
