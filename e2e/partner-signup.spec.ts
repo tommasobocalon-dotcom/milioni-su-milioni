@@ -36,9 +36,11 @@ test("un'azienda si registra, la scheda resta nascosta fino all'attivazione del 
   await expect(page).toHaveURL(/\/area-partner\/abbonamento\?benvenuto=1$/);
   await expect(page.getByText("Scheda creata.")).toBeVisible();
 
-  // Prima del pagamento la scheda non è pubblica.
+  // Prima del pagamento la scheda non è pubblica, né da sola né nei risultati di Trova professionista.
   const profile = "/professionisti/treviso/idraulico/idraulica-verdi-treviso";
+  const results = "/trova-professionista?categoria=idraulico&dove=Treviso";
   expect(await (await request.get(profile)).text()).not.toContain("Idraulica Verdi");
+  expect(await (await request.get(results)).text()).not.toContain("Idraulica Verdi");
 
   // Attivazione di prova (senza Stripe, solo in sviluppo): piano attivo, sponsorizzazioni sbloccate, scheda pubblica.
   await page.getByRole("button", { name: "Scegli Normal (prova senza pagare)" }).click();
@@ -49,8 +51,47 @@ test("un'azienda si registra, la scheda resta nascosta fino all'attivazione del 
   await expect(page.getByText("Disponibile con i piani Normal e Premium")).toHaveCount(0);
   await page.goto(profile);
   await expect(page.getByRole("heading", { level: 1, name: "Idraulica Verdi" })).toBeVisible();
+  await page.goto(results);
+  await expect(page.getByText("Idraulica Verdi").first()).toBeVisible();
 
   // Chi è già partner non riparte dalla registrazione.
   await page.goto("/registrazione-partner");
   await expect(page).toHaveURL(/\/area-partner\/abbonamento$/);
+});
+
+/** Partita IVA valida (cifra di controllo giusta) e diversa a ogni giro: una partita IVA vale una sola scheda. */
+function newVatNumber() {
+  const digits = String(Date.now()).slice(-10).split("").map(Number);
+  const sum = digits.reduce((acc, d, i) => acc + (i % 2 === 0 ? d : d * 2 > 9 ? d * 2 - 9 : d * 2), 0);
+  return digits.join("") + ((10 - (sum % 10)) % 10);
+}
+
+test("un'agenzia appena registrata compare in Trova casa solo dopo l'attivazione del piano", async ({ page, request }) => {
+  const results = "/trova-casa?dove=Vicenza";
+  await page.goto("/accedi/azienda?next=/registrazione-partner");
+  await page.getByLabel(/^Nome e cognome/).fill("Paolo Neri");
+  await page.getByRole("textbox", { name: /^Email/ }).fill(`nuova.agenzia.${Date.now()}@example.com`);
+  await page.getByLabel(/^Password/).fill("password-di-prova-2026");
+  await page.getByRole("button", { name: "Continua con i dati dell'attività" }).click();
+  await expect(page).toHaveURL(/\/registrazione-partner$/);
+  await page.getByLabel(/^Cosa fai/).selectOption({ label: "Agenzia immobiliare" });
+  await page.getByLabel(/^Nome sulla scheda/).fill("Immobiliare Berica Prova");
+  await page.getByLabel(/^Presentazione in una frase/).fill("Compravendite e affitti a Vicenza e provincia");
+  await page.getByLabel(/^Comune della sede/).selectOption({ label: "Vicenza" });
+  await page.getByLabel(/^Telefono/).fill("0444 555 123");
+  await page.getByLabel(/^Indirizzo della sede/).fill("Corso Palladio 1");
+  await page.getByLabel(/^Ragione sociale/).fill("Immobiliare Berica Prova S.r.l.");
+  await page.getByLabel(/^Partita IVA/).fill(newVatNumber());
+  await page.getByLabel(/^Codice destinatario SDI/).fill("M5UXCR1");
+  await page.getByLabel(/^Accetto i termini/).check();
+  await page.getByRole("button", { name: "Continua: scegli il piano" }).click();
+  await expect(page).toHaveURL(/\/area-partner\/abbonamento\?benvenuto=1$/);
+
+  // Registrata ma senza piano: non compare tra le agenzie.
+  expect(await (await request.get(results)).text()).not.toContain("Immobiliare Berica Prova");
+
+  await page.getByRole("button", { name: "Scegli Normal (prova senza pagare)" }).click();
+  await expect(page.getByRole("heading", { level: 1, name: "Il tuo abbonamento" })).toBeVisible();
+  await page.goto(results);
+  await expect(page.getByText("Immobiliare Berica Prova").first()).toBeVisible();
 });
