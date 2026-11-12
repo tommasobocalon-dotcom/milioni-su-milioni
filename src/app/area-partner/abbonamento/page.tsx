@@ -7,7 +7,7 @@ import { PlanChooser } from "@/components/partner/plan-chooser";
 import { PartnerSkeleton } from "@/components/partner/skeleton";
 import { ButtonLink } from "@/components/ui/button";
 import { requirePartner } from "@/lib/auth/session";
-import { changePromoUsed, stripeConfigured } from "@/lib/billing/stripe";
+import { changePromoUsed, pendingPlanChange, stripeConfigured } from "@/lib/billing/stripe";
 import { getSubscription, hadStripeSubscription } from "@/lib/data/partner-area";
 import { getPlansWithPromo } from "@/lib/data/plans";
 import { demoMode } from "@/lib/demo-mode";
@@ -128,6 +128,9 @@ async function Subscription({ payment, welcome }: { payment: "received" | "start
 
   // 3. Abbonamento pagato: piano, prossimo rinnovo, pagamenti e fatture.
   const yearly = sub.period === "yearly";
+  // Discesa programmata nel portale: il database cambia solo al rinnovo, qui si dice subito. Se Stripe non risponde, niente avviso.
+  const pending = stripeOn && sub.stripeSubscriptionId ? await pendingPlanChange(sub.stripeSubscriptionId).catch(() => null) : null;
+  const pendingName = pending && (await getPlansWithPromo()).find((p) => p.code === pending.planCode)?.name;
   const portal = stripeOn && sub.stripeSubscriptionId && (
     <CheckoutButton action={openBillingPortal} variant="secondary" className="self-start" disabled={!owner}>
       Apri pagamenti e fatture
@@ -137,6 +140,14 @@ async function Subscription({ payment, welcome }: { payment: "received" | "start
     <div className="flex flex-col gap-6">
       <PartnerPageHeader title="Il tuo abbonamento" partnerName={partner.displayName} logoUrl={partner.logoUrl} planCode={sub.planCode} />
       {notice}
+      {pending && pendingName && (
+        <p role="status" className="rounded-lg bg-subtle p-4 text-body-s">
+          <strong>
+            Dal {dateFmt.format(pending.from)} passi a {pendingName} {pending.period === "yearly" ? "annuale" : "mensile"}.
+          </strong>{" "}
+          Fino ad allora resti in {sub.planName}, già pagato. Se scegli un altro piano qui sotto vale quello, al posto di questo cambio.
+        </p>
+      )}
       {sub.status === "suspended" && (
         <section role="alert" className="flex flex-col gap-3 rounded-lg border border-error bg-surface p-5">
           <p className="text-body font-semibold">Account sospeso: l&apos;ultimo pagamento non è andato a buon fine.</p>

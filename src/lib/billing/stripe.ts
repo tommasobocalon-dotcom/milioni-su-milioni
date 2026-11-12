@@ -181,6 +181,12 @@ export async function createSubscriptionCheckout(payer: Payer, planCode: string,
       ),
     );
   if (open) throw new BillingError("Hai già un abbonamento: cambia piano o metodo di pagamento dal portale");
+  // Anche Stripe, non solo il database: se il webhook non è ancora arrivato un secondo Checkout creava un secondo
+  // abbonamento e un doppio addebito (successo a un'azienda di prova il 5/11/2026).
+  const customer = await customerFor(payer);
+  const live = await stripe().subscriptions.list({ customer, status: "all", limit: 20 });
+  if (live.data.some((s) => ["active", "trialing", "past_due", "unpaid", "incomplete"].includes(s.status)))
+    throw new BillingError("Hai già un abbonamento: cambia piano o metodo di pagamento dal portale");
   // Prova gratuita una sola volta per azienda: chi ha già avuto un abbonamento Stripe paga da subito.
   const [past] = await db
     .select({ id: subscriptions.id })
@@ -191,7 +197,7 @@ export async function createSubscriptionCheckout(payer: Payer, planCode: string,
   const promo = planPromo(plan, period, new Date(), launchDate());
   const session = await stripe().checkout.sessions.create({
     mode: "subscription",
-    customer: await customerFor(payer),
+    customer,
     locale: "it",
     allowed_payment_method_types: PAYMENT_METHODS,
     line_items: [{ price, quantity: 1 }],
@@ -250,7 +256,11 @@ export async function createPlanChangeSession(partnerId: string, planCode: strin
   if (!plan) throw new BillingError("Piano non valido");
   const price = await planPrice(plan, period);
   if (!price) throw new BillingError("Il piano non è ancora collegato a Stripe (npm run stripe:setup)");
-  const item = (await stripe().subscriptions.retrieve(row.subscriptionId)).items.data[0];
+  const current = await stripe().subscriptions.retrieve(row.subscriptionId);
+  // Una discesa già programmata (piano di Stripe) bloccherebbe il cambio o lo annullerebbe al rinnovo: si toglie,
+  // vale il cambio di adesso. Senza, chi scendeva e poi risaliva in promo tornava giù al rinnovo (12/11/2026).
+  if (current.schedule) await stripe().subscriptionSchedules.release(typeof current.schedule === "string" ? current.schedule : current.schedule.id);
+  const item = current.items.data[0];
   if (!item) throw new Error(`Abbonamento Stripe ${row.subscriptionId} senza voci`);
   if (item.price.id === price) throw new BillingError("È già il tuo piano");
   const promo = changePromo(planPromo(plan, period, new Date(), launchDate()), await changePromoUsed(partnerId));
@@ -278,6 +288,19 @@ const changePromoKey = (partnerId: string) => `change-promo:${partnerId}`;
 export async function changePromoUsed(partnerId: string): Promise<boolean> {
   const [row] = await db.select({ key: stripeProcessed.key }).from(stripeProcessed).where(eq(stripeProcessed.key, changePromoKey(partnerId)));
   return Boolean(row);
+}
+
+/**
+ * Cambio di piano già programmato in Stripe (discesa dal prossimo rinnovo, scelta nel portale): piano e data in cui
+ * parte, o null. Il database lo scopre solo al rinnovo, così la pagina abbonamento lo dice prima.
+ */
+export async function pendingPlanChange(subscriptionId: string): Promise<{ planCode: string; period: "monthly" | "yearly"; from: Date } | null> {
+  const sub = await stripe().subscriptions.retrieve(subscriptionId, { expand: ["schedule.phases.items.price"] });
+  if (!sub.schedule || typeof sub.schedule === "string") return null;
+  const next = sub.schedule.phases.find((ph) => ph.start_date * 1000 > Date.now());
+  const price = next?.items[0]?.price;
+  const plan = price && typeof price !== "string" && "lookup_key" in price ? planFromLookupKey(price.lookup_key) : null;
+  return next && plan ? { planCode: plan.code, period: plan.period, from: new Date(next.start_date * 1000) } : null;
 }
 
 /**
