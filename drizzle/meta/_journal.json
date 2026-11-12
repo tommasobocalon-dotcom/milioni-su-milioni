@@ -148,6 +148,13 @@
       "when": 1794522642749,
       "tag": "0020_progetti_foto",
       "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1794526242749,
+      "tag": "0021_lavori_esempio",
+      "breakpoints": true
     }
   ]
 }
