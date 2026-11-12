@@ -19,7 +19,8 @@
     "db:migrate": "tsx scripts/db-migrate.ts",
     "db:seed": "tsx scripts/db-seed.ts",
     "db:reset": "tsx scripts/db-reset.ts",
-    "stripe:setup": "tsx --env-file-if-exists=.env.local scripts/stripe-setup.ts"
+    "stripe:setup": "tsx --env-file-if-exists=.env.local scripts/stripe-setup.ts",
+    "test:stripe": "node --env-file=.env.vercel ./node_modules/.bin/vitest run src/lib/billing/stripe.sandbox.test.ts"
   },
   "dependencies": {
     "@fontsource-variable/dm-sans": "^5.2.5",
