@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Suspense } from "react";
 import { BellLink, UnreadBell } from "@/components/partner/bell";
 import { BoostLock } from "@/components/partner/boost-lock";
+import { CompanySwitcher } from "@/components/partner/company-switcher";
 import { PartnerSidebar } from "@/components/partner/sidebar";
 import { PartnerTabs } from "@/components/partner/tabs";
 import { EmailVerifyBanner } from "@/components/site/email-verify-banner";
@@ -28,6 +29,9 @@ export default function PartnerLayout({ children }: LayoutProps<"/area-partner">
           <div className="mb-6 empty:hidden">
             <EmailVerifyBanner audience="business" />
           </div>
+        </Suspense>
+        <Suspense fallback={null}>
+          <CompanySwitcher />
         </Suspense>
         {/* L'URL è un dato della richiesta: le schede arrivano dentro un Suspense. */}
         <Suspense fallback={null}>

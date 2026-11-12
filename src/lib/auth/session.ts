@@ -60,6 +60,7 @@ export async function destroySession(audience: Audience = "client") {
   const token = store.get(COOKIE[audience])?.value;
   if (token) await db.delete(sessions).where(eq(sessions.id, hash(token)));
   store.delete(COOKIE[audience]);
+  if (audience === "business") store.delete(COMPANY_COOKIE);
 }
 
 export type SessionUser = { id: string; name: string; email: string; role: "client" | "partner" | "sales" | "admin" };
@@ -107,6 +108,27 @@ export async function requireAdmin(): Promise<SessionUser> {
 }
 
 
+/** Azienda scelta nell'Area Partner da chi ne ha più di una. */
+export const COMPANY_COOKIE = "geco_azienda";
+
+/** Aziende dell'account, in ordine fisso: la prima registrata per prima. */
+export async function partnersOfUser(userId: string) {
+  return db
+    .select({
+      memberRole: partnerMembers.role,
+      id: partners.id,
+      slug: partners.slug,
+      displayName: partners.displayName,
+      logoUrl: partners.logoUrl,
+      type: partners.type,
+      accountStatus: partners.accountStatus,
+    })
+    .from(partnerMembers)
+    .innerJoin(partners, eq(partners.id, partnerMembers.partnerId))
+    .where(eq(partnerMembers.userId, userId))
+    .orderBy(partners.createdAt, partners.id);
+}
+
 export type PartnerSession = {
   user: SessionUser;
   partner: { id: string; slug: string; displayName: string; logoUrl: string | null; type: "agency" | "technician" | "artisan" | "b2b"; accountStatus: string };
@@ -124,20 +146,11 @@ export type PartnerSession = {
 export async function requirePartner(opts: { allowSuspended?: boolean } = {}): Promise<PartnerSession> {
   const user = await getSessionUser("business");
   if (!user) redirect("/accedi/azienda");
-  const [m] = await db
-    .select({
-      memberRole: partnerMembers.role,
-      id: partners.id,
-      slug: partners.slug,
-      displayName: partners.displayName,
-      logoUrl: partners.logoUrl,
-      type: partners.type,
-      accountStatus: partners.accountStatus,
-    })
-    .from(partnerMembers)
-    .innerJoin(partners, eq(partners.id, partnerMembers.partnerId))
-    .where(eq(partnerMembers.userId, user.id))
-    .limit(1);
+  // Un account può avere più aziende: vale quella scelta (cookie), altrimenti sempre la stessa, la prima registrata.
+  // Senza un ordine fisso Postgres ne restituiva una a caso e pagine e azioni finivano su aziende diverse (12/11/2026).
+  const all = await partnersOfUser(user.id);
+  const chosen = (await cookies()).get(COMPANY_COOKIE)?.value;
+  const m = all.find((p) => p.id === chosen) ?? all[0];
   if (!m) redirect("/area-cliente");
   const { memberRole, ...partner } = m;
   if (partner.accountStatus === "suspended" && !opts.allowSuspended) redirect("/area-partner/abbonamento");

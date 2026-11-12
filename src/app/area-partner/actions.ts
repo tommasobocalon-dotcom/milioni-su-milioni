@@ -5,9 +5,10 @@ import { videoEmbedUrl } from "@/lib/domain/extras";
 import { canBoost, PREMIUM_WEIGHT } from "@/lib/domain/ranking";
 import { randomUUID } from "node:crypto";
 import { revalidatePath, updateTag } from "next/cache";
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { z } from "zod";
-import { requirePartner } from "@/lib/auth/session";
+import { COMPANY_COOKIE, partnersOfUser, requirePartner } from "@/lib/auth/session";
 import { ipRateLimited } from "@/lib/security/ip-limit";
 import { putImage } from "@/lib/storage";
 import { BillingError, createAreaExtensionCheckout, createHomeSponsorCheckout, createSearchBoostCheckout, createPlanChangeSession, createPortalSession, createSubscriptionCheckout, stripeConfigured } from "@/lib/billing/stripe";
@@ -533,4 +534,13 @@ export async function replySupportTicket(number: number, _prev: ActionState, for
   revalidatePath(`/area-partner/assistenza/${number}`);
   revalidatePath("/area-partner/assistenza");
   return { ok: "Messaggio inviato: ti rispondiamo qui e per email" };
+}
+
+/** Chi ha più aziende sceglie quale gestire: solo tra le sue, controllate sul database. */
+export async function switchCompany(formData: FormData) {
+  const { user } = await requirePartner({ allowSuspended: true });
+  const id = Id.safeParse(formData.get("partnerId"));
+  if (!id.success || !(await partnersOfUser(user.id)).some((p) => p.id === id.data)) return;
+  (await cookies()).set(COMPANY_COOKIE, id.data, { httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: "lax", path: "/" });
+  redirect("/area-partner");
 }
