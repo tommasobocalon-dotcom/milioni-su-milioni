@@ -43,7 +43,8 @@ const nextConfig: NextConfig = {
   cacheComponents: true,
   partialPrefetching: true,
   // Foto profilo fino a 2 MB più il margine del multipart.
-  experimental: { serverActions: { bodySizeLimit: "2.1mb" } },
+  // 8 foto di un progetto, ridotte nel browser (PortfolioForm): stanno sotto il limite di 4,5 MB delle richieste su Vercel.
+  experimental: { serverActions: { bodySizeLimit: "4mb" } },
   turbopack: {
     rules: {
       "*.css": {

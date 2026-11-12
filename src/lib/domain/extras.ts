@@ -36,3 +36,12 @@ export function videoEmbedUrl(link: string): string | null {
   }
   return null;
 }
+
+/** Foto di un progetto in Ispirazione e nella scheda (12/11/2026): da 2 a 8. */
+export const PROJECT_PHOTOS = { min: 2, max: 8 } as const;
+
+export function projectPhotosError(count: number): string | null {
+  if (count < PROJECT_PHOTOS.min) return `Carica almeno ${PROJECT_PHOTOS.min} foto del lavoro`;
+  if (count > PROJECT_PHOTOS.max) return `Al massimo ${PROJECT_PHOTOS.max} foto per progetto`;
+  return null;
+}

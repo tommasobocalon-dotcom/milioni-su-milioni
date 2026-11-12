@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
-import Image from "next/image";
 import Link from "next/link";
 import { Suspense } from "react";
 import { connection } from "next/server";
+import { ProjectPhotos } from "@/components/site/project-photos";
 import { Badge } from "@/components/ui/badge";
 import { getShowcase, type ShowcaseItem } from "@/lib/data/showcase";
 
@@ -18,6 +18,13 @@ export default function InspirationPage() {
         <h1 className="font-display text-h1 md:text-display-l">Ispirazione</h1>
         <p className="text-body-l text-ink-2">
           Lavori fatti da chi trovi su geco. Se ti piace un progetto, apri la scheda dell&apos;azienda e chiedi un contatto.
+        </p>
+        <p className="text-body-s text-ink-2">
+          Sei un&apos;azienda?{" "}
+          <Link href="/area-partner/scheda" className="font-semibold text-primary hover:underline">
+            Pubblica i tuoi lavori
+          </Link>{" "}
+          dall&apos;Area Partner: fino a 5 con il piano Base, 25 con il Normal, senza limiti con il Premium.
         </p>
       </header>
       <Suspense fallback={<div className="h-96 animate-pulse rounded-lg bg-muted" aria-busy="true" />}>
@@ -66,19 +73,17 @@ async function Showcase() {
 function ShowcaseCard({ item, large }: { item: ShowcaseItem; large?: boolean }) {
   return (
     <li className="flex flex-col gap-3">
-      <Link href={item.href} className="group relative block aspect-[4/3] overflow-hidden rounded-lg bg-muted">
-        <Image
-          src={item.imageUrl}
-          alt={item.title}
-          fill
+      <div className="relative aspect-[4/3] overflow-hidden rounded-lg bg-muted">
+        <ProjectPhotos
+          photos={item.photos}
+          title={item.title}
           sizes={large ? "(min-width: 768px) 50vw, 100vw" : "(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"}
-          className="object-cover transition-transform duration-300 group-hover:scale-[1.02] motion-reduce:transition-none"
         />
-      </Link>
+      </div>
       {item.sponsored && <Badge kind="sponsored" className="self-start" />}
       <div className="flex flex-col gap-1">
         <h3 className={large ? "text-h3 font-semibold" : "text-h4 font-semibold"}>{item.title}</h3>
-        {large && item.description && <p className="text-body-s text-ink-2">{item.description}</p>}
+        {item.description && <p className={large ? "text-body-s text-ink-2" : "line-clamp-3 text-body-s text-ink-2"}>{item.description}</p>}
         <p className="text-body-s text-ink-2">
           <Link href={item.href} className="font-semibold text-primary hover:underline">
             {item.partnerName}

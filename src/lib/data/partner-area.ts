@@ -189,6 +189,7 @@ export async function getPortfolio(partnerId: string) {
       rooms: portfolioItems.rooms,
       status: portfolioItems.status,
       imageUrl: portfolioItems.imageUrl,
+      photos: portfolioItems.photos,
       hasBeforeAfter: portfolioItems.hasBeforeAfter,
     })
     .from(portfolioItems)

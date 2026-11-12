@@ -9,6 +9,7 @@ export type ShowcaseItem = {
   title: string;
   description: string | null;
   imageUrl: string;
+  photos: string[];
   partnerName: string;
   categoryName: string;
   place: string | null;
@@ -21,6 +22,7 @@ const columns = {
   title: portfolioItems.title,
   description: portfolioItems.description,
   imageUrl: portfolioItems.imageUrl,
+  photos: portfolioItems.photos,
   partnerName: partners.displayName,
   partnerSlug: partners.slug,
   partnerType: partners.type,
@@ -47,6 +49,7 @@ const toItem = (r: Row, sponsored: boolean): ShowcaseItem => ({
   title: r.title,
   description: r.description,
   imageUrl: r.imageUrl!,
+  photos: r.photos.length ? r.photos : [r.imageUrl!],
   partnerName: r.partnerName,
   categoryName: r.categoryName,
   place: r.place,

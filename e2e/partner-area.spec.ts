@@ -172,15 +172,19 @@ test("campanella, profilo, boost, statistiche, assistenza e lavori svolti", asyn
   // Lavori svolti (nella scheda): aggiungo un lavoro con foto, lo vedo nel profilo pubblico con i dati aziendali, lo elimino.
   await page.goto("/area-partner/scheda");
   await page.getByLabel(/^Titolo/).fill("Bagno rifatto a Mestre");
-  await page.getByLabel("Foto", { exact: true }).setInputFiles({ name: "lavoro.png", mimeType: "image/png", buffer: png });
-  await page.getByLabel("Descrizione").fill("Demolizione, impianti nuovi e piatto doccia filo pavimento.");
-  await page.getByRole("button", { name: "Aggiungi" }).click();
-  await expect(page.getByText("Aggiunto al portfolio")).toBeVisible();
+  // Un lavoro vuole da 2 a 8 foto (12/11/2026).
+  await page.getByLabel(/^Foto/).setInputFiles([
+    { name: "lavoro-1.png", mimeType: "image/png", buffer: png },
+    { name: "lavoro-2.png", mimeType: "image/png", buffer: png },
+  ]);
+  await page.getByLabel(/^Descrizione/).fill("Demolizione, impianti nuovi e piatto doccia filo pavimento.");
+  await page.getByRole("button", { name: "Pubblica il lavoro" }).click();
+  await expect(page.getByText("Lavoro pubblicato nella tua scheda e in Ispirazione")).toBeVisible();
   const portfolio = page.getByRole("region", { name: "Elementi del portfolio" });
   await expect(portfolio.getByRole("img", { name: "Bagno rifatto a Mestre" })).toBeVisible();
   await page.getByRole("link", { name: /Vedi la scheda pubblica/ }).evaluate((a) => a.removeAttribute("target"));
   await page.getByRole("link", { name: /Vedi la scheda pubblica/ }).click();
-  await expect(page.getByRole("img", { name: "Bagno rifatto a Mestre" })).toBeVisible();
+  await expect(page.getByRole("img", { name: "Bagno rifatto a Mestre, foto 1 di 2" })).toBeVisible();
   await expect(page.getByText("P. IVA 01234567890")).toBeVisible();
   await expect(page.getByText("Sede legale: Via Piave 12, 30171 Venezia (VE)")).toBeVisible();
   await page.goto("/area-partner/scheda");

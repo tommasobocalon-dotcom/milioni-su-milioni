@@ -1,4 +1,3 @@
-import Image from "next/image";
 import {
   CalendarDays,
   Home,
@@ -17,6 +16,7 @@ import {
   PRICE_UNIT_LABEL,
   type PriceUnit,
 } from "@/lib/domain/format";
+import { ProjectPhotos } from "@/components/site/project-photos";
 import { videoEmbedUrl } from "@/lib/domain/extras";
 
 /** Profilo pubblico del partner (PRD §5.4), stesso impianto per agenzie e professionisti. */
@@ -215,12 +215,10 @@ export function ProfileView({ p }: { p: PartnerProfile }) {
                             className="absolute inset-0 size-full"
                           />
                         ) : item.imageUrl ? (
-                          <Image
-                            src={item.imageUrl}
-                            alt={item.title}
-                            fill
+                          <ProjectPhotos
+                            photos={item.photos.length ? item.photos : [item.imageUrl]}
+                            title={item.title}
                             sizes="(min-width: 1280px) 30vw, (min-width: 640px) 45vw, 100vw"
-                            className="object-cover"
                           />
                         ) : item.kind === "property" ? (
                           <Home className="size-8" aria-hidden />

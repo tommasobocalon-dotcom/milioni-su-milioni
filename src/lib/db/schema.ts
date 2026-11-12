@@ -346,7 +346,10 @@ export const portfolioItems = pgTable(
     sqm: integer("sqm"),
     rooms: smallint("rooms"),
     status: propertyStatus("status"),
+    /** Copertina: la prima di `photos` (resta per le pagine che mostrano una sola foto). */
     imageUrl: text("image_url"),
+    /** Foto del progetto, da 2 a 8 per i nuovi (12/11/2026); i vecchi ne hanno al massimo una. */
+    photos: text("photos").array().notNull().default([]),
     hasBeforeAfter: boolean("has_before_after").notNull().default(false),
     /** Link YouTube o Vimeo, solo piano Premium (documento del 4/11/2026). */
     videoUrl: text("video_url"),

@@ -54,6 +54,7 @@ export async function PortfolioManager({ partnerId, isAgency }: { partnerId: str
                     <ImageIcon className="size-8" aria-hidden />
                   )}
                 </div>
+                {item.photos.length > 1 && <p className="text-caption text-ink-2">{item.photos.length} foto</p>}
                 <p className="text-body-s font-semibold">
                   {item.title}
                   {item.priceCents !== null && ` · ${formatEuro(item.priceCents)}${item.contract === "rent" ? "/mese" : ""}`}

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { neighbourProvinces, videoEmbedUrl } from "./extras";
+import { neighbourProvinces, PROJECT_PHOTOS, projectPhotosError, videoEmbedUrl } from "./extras";
 
 describe("neighbourProvinces", () => {
   it("dà le province venete confinanti", () => {
@@ -33,5 +33,16 @@ describe("videoEmbedUrl", () => {
     expect(videoEmbedUrl("javascript:alert(1)")).toBeNull();
     expect(videoEmbedUrl("https://www.youtube.com/watch?v=<script>")).toBeNull();
     expect(videoEmbedUrl("non un link")).toBeNull();
+  });
+});
+
+describe("projectPhotosError", () => {
+  it("vuole da 2 a 8 foto per progetto", () => {
+    expect(PROJECT_PHOTOS).toEqual({ min: 2, max: 8 });
+    expect(projectPhotosError(0)).toBe("Carica almeno 2 foto del lavoro");
+    expect(projectPhotosError(1)).toBe("Carica almeno 2 foto del lavoro");
+    expect(projectPhotosError(2)).toBeNull();
+    expect(projectPhotosError(8)).toBeNull();
+    expect(projectPhotosError(9)).toBe("Al massimo 8 foto per progetto");
   });
 });

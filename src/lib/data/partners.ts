@@ -98,6 +98,7 @@ export async function getPartnerProfile(slug: string) {
         description: portfolioItems.description,
         status: portfolioItems.status,
         imageUrl: portfolioItems.imageUrl,
+        photos: portfolioItems.photos,
         videoUrl: portfolioItems.videoUrl,
       })
       .from(portfolioItems)

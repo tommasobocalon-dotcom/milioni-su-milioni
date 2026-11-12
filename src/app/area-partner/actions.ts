@@ -1,7 +1,7 @@
 "use server";
 
 import { and, count, eq, isNotNull, max } from "drizzle-orm";
-import { videoEmbedUrl } from "@/lib/domain/extras";
+import { projectPhotosError, videoEmbedUrl } from "@/lib/domain/extras";
 import { canBoost, PREMIUM_WEIGHT } from "@/lib/domain/ranking";
 import { randomUUID } from "node:crypto";
 import { revalidatePath, updateTag } from "next/cache";
@@ -131,7 +131,7 @@ async function sniffImage(file: File): Promise<"jpg" | "png" | "webp" | null> {
  * Valida e salva un'immagine caricata. Nessun file: null; file non valido: messaggio d'errore.
  * ponytail: disco locale in public/uploads; in produzione Supabase Storage (su Vercel il disco è di sola lettura).
  */
-async function saveImage(folder: "partners" | "avatars" | "portfolio", partnerId: string, file: FormDataEntryValue | null): Promise<{ url: string } | { error: string } | null> {
+async function saveImage(folder: "partners" | "avatars", partnerId: string, file: FormDataEntryValue | null): Promise<{ url: string } | { error: string } | null> {
   if (!(file instanceof File) || file.size === 0) return null;
   if (file.size > IMAGE_MAX_BYTES) return { error: "La foto può pesare al massimo 2 MB" };
   const ext = await sniffImage(file);
@@ -197,8 +197,8 @@ const optionalInt = (limit: number) =>
   z.preprocess((v) => (v === "" || v === null ? undefined : v), z.coerce.number().int().min(0).max(limit).optional());
 
 const PortfolioSchema = z.object({
-  title: z.string().trim().min(3, "Dai un titolo all'elemento").max(120),
-  description: z.string().trim().max(1000).optional(),
+  title: z.string().trim().min(3, "Dai un titolo al lavoro").max(120),
+  description: z.string().trim().min(10, "Scrivi una breve descrizione del lavoro").max(300, "La descrizione può avere al massimo 300 caratteri"),
   municipalityId: optionalInt(1_000_000),
   // Solo immobili (agenzie)
   contract: z.enum(["sale", "rent"]).optional(),
@@ -229,13 +229,26 @@ export async function addPortfolioItem(_prev: ActionState, formData: FormData): 
     .innerJoin(plans, eq(plans.id, subscriptions.planId))
     .where(and(eq(subscriptions.partnerId, partner.id), eq(subscriptions.status, "active")));
   const [{ n }] = await db.select({ n: count() }).from(portfolioItems).where(eq(portfolioItems.partnerId, partner.id));
-  if (plan?.maxItems != null && n >= plan.maxItems) {
+  if (!plan) return { error: "Attiva un piano per pubblicare i tuoi lavori" };
+  if (plan.maxItems != null && n >= plan.maxItems) {
     return { error: `Il piano ${plan.name} include fino a ${plan.maxItems} progetti: elimina un progetto o cambia piano` };
   }
-  if (d.videoUrl && (!plan || plan.weight < PREMIUM_WEIGHT)) return { error: "I video sono inclusi nel piano Premium" };
+  if (d.videoUrl && plan.weight < PREMIUM_WEIGHT) return { error: "I video sono inclusi nel piano Premium" };
 
-  const image = await saveImage("portfolio", partner.id, formData.get("image"));
-  if (image && "error" in image) return image;
+  // Da 2 a 8 foto: prima si controllano tutte, poi si salvano, così un file sbagliato non lascia foto a metà.
+  const files = formData.getAll("photos").filter((f): f is File => f instanceof File && f.size > 0);
+  const countError = projectPhotosError(files.length);
+  if (countError) return { error: countError };
+  const checked: { file: File; ext: "jpg" | "png" | "webp" }[] = [];
+  for (const file of files) {
+    if (file.size > IMAGE_MAX_BYTES) return { error: `"${file.name}" pesa più di 2 MB` };
+    const ext = await sniffImage(file);
+    if (!ext) return { error: `"${file.name}" non è una foto JPG, PNG o WebP` };
+    checked.push({ file, ext });
+  }
+  const photos = await Promise.all(
+    checked.map(async ({ file, ext }) => (await putImage(`portfolio/${partner.id}-${randomUUID()}.${ext}`, Buffer.from(await file.arrayBuffer()), ext)).url),
+  );
 
   const [{ last }] = await db.select({ last: max(portfolioItems.sortOrder) }).from(portfolioItems).where(eq(portfolioItems.partnerId, partner.id));
   await db.insert(portfolioItems).values({
@@ -250,13 +263,14 @@ export async function addPortfolioItem(_prev: ActionState, formData: FormData): 
     rooms: isProperty ? (d.rooms ?? null) : null,
     status: isProperty ? "available" : null,
     hasBeforeAfter: !isProperty && d.hasBeforeAfter === "on",
-    imageUrl: image?.url ?? null,
+    imageUrl: photos[0],
+    photos,
     videoUrl: d.videoUrl || null,
     sortOrder: (last ?? -1) + 1,
   });
   updateTag(`partner:${partner.slug}`);
   revalidatePath("/area-partner/scheda");
-  return { ok: "Aggiunto al portfolio" };
+  return { ok: "Lavoro pubblicato nella tua scheda e in Ispirazione" };
 }
 
 const PropertyStatusSchema = z.enum(["available", "negotiating", "sold"]);
