@@ -1,6 +1,7 @@
 "use server";
 
 import { getAnySessionUser } from "@/lib/auth/session";
+import { isFollowablePartner, isOwnPartner, setFollow } from "@/lib/data/follows";
 import { getShowcaseItem, setLike } from "@/lib/data/showcase";
 import { ipRateLimited } from "@/lib/security/ip-limit";
 
@@ -20,4 +21,21 @@ export async function likeWork(itemId: string, liked: boolean): Promise<LikeResu
   if (!item) return { ok: false, reason: "missing" };
   const count = await setLike(user.id, item.id, liked);
   return { ok: true, liked, count };
+}
+
+export type FollowResult = { ok: true; following: boolean; count: number } | { ok: false; reason: "login" | "missing" | "limit" | "own" };
+
+/**
+ * "Segui" su un'azienda. Come per il mi piace vale l'account della sessione, da cliente o da azienda. L'azienda deve
+ * essere attiva; la propria non si segue, così il conto dei follower resta vero.
+ */
+export async function followPartner(partnerId: string, following: boolean): Promise<FollowResult> {
+  const user = await getAnySessionUser();
+  if (!user) return { ok: false, reason: "login" };
+  if (typeof partnerId !== "string" || typeof following !== "boolean") return { ok: false, reason: "missing" };
+  if (await ipRateLimited("segui", 30, 1)) return { ok: false, reason: "limit" };
+  if (!(await isFollowablePartner(partnerId))) return { ok: false, reason: "missing" };
+  if (following && (await isOwnPartner(user.id, partnerId))) return { ok: false, reason: "own" };
+  const count = await setFollow(user.id, partnerId, following);
+  return { ok: true, following, count };
 }

@@ -16,6 +16,8 @@ import {
   PRICE_UNIT_LABEL,
   type PriceUnit,
 } from "@/lib/domain/format";
+import { Suspense } from "react";
+import { PartnerFollow } from "@/components/site/partner-follow";
 import { ProjectPhotos } from "@/components/site/project-photos";
 import { videoEmbedUrl } from "@/lib/domain/extras";
 
@@ -82,6 +84,10 @@ export function ProfileView({ p }: { p: PartnerProfile }) {
               )}
             </div>
           </div>
+          {/* "Segui" legge la sessione: sta in un Suspense suo, il resto della scheda resta in cache. */}
+          <Suspense fallback={<div className="h-9 w-40" aria-hidden />}>
+            <PartnerFollow partnerId={p.id} partnerName={p.displayName} returnTo={p.href} className="md:pb-1" />
+          </Suspense>
         </header>
 
         <nav

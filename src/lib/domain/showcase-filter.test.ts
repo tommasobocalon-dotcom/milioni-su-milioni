@@ -33,4 +33,20 @@ describe("parseShowcaseFilter", () => {
       expect(parseShowcaseFilter(params, pros)).toEqual(f);
     }
   });
+
+  it("\"Seguiti\": solo i lavori delle aziende che si seguono, da solo o insieme agli altri filtri", () => {
+    expect(parseShowcaseFilter({ seguiti: "1" }, pros)).toEqual({ following: true });
+    expect(parseShowcaseFilter({ seguiti: "1", tipo: "agenzie", operazione: "vendita" }, pros)).toEqual({ type: "agency", contract: "sale", following: true });
+    expect(parseShowcaseFilter({ seguiti: "no" }, pros)).toEqual({});
+    expect(parseShowcaseFilter({ seguiti: ["1", "1"] }, pros)).toEqual({ following: true });
+  });
+
+  it("showcaseHref conserva \"Seguiti\" accanto agli altri filtri", () => {
+    expect(showcaseHref({ following: true })).toBe("/ispirazione?seguiti=1");
+    expect(showcaseHref({ type: "pro", categorySlug: "idraulico", following: true })).toBe("/ispirazione?tipo=professionisti&categoria=idraulico&seguiti=1");
+    for (const f of [{ following: true }, { type: "pro", following: true }, { type: "agency", contract: "rent", following: true }] as const) {
+      const params = Object.fromEntries(new URL(showcaseHref(f), "http://x").searchParams);
+      expect(parseShowcaseFilter(params, pros)).toEqual(f);
+    }
+  });
 });

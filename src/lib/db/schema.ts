@@ -291,6 +291,24 @@ export const partnerMembers = pgTable(
   (t) => [primaryKey({ columns: [t.partnerId, t.userId] })],
 );
 
+/**
+ * Chi segue un'azienda (13/11/2026): un account, cliente o azienda, vede i suoi nuovi lavori nella scheda "Seguiti"
+ * di Ispirazione. Uno per account e per azienda.
+ */
+export const partnerFollows = pgTable(
+  "partner_follows",
+  {
+    partnerId: uuid("partner_id")
+      .notNull()
+      .references(() => partners.id, { onDelete: "cascade" }),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    createdAt: createdAt(),
+  },
+  (t) => [primaryKey({ columns: [t.partnerId, t.userId] }), index("partner_follows_user_idx").on(t.userId)],
+);
+
 /** Zone servite: un comune oppure un'intera provincia. */
 export const serviceAreas = pgTable(
   "service_areas",

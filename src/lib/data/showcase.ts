@@ -1,7 +1,7 @@
 import "server-only";
 import { and, desc, eq, gt, inArray, isNotNull, lte, ne, notInArray, sql, type SQL } from "drizzle-orm";
 import { db } from "@/lib/db/client";
-import { categories, municipalities, partners, portfolioItems, portfolioLikes, provinces, showcaseFeatures } from "@/lib/db/schema";
+import { categories, municipalities, partnerFollows, partners, portfolioItems, portfolioLikes, provinces, showcaseFeatures } from "@/lib/db/schema";
 import type { ShowcaseFilter } from "@/lib/domain/showcase-filter";
 import { profileHref } from "./search";
 
@@ -11,6 +11,7 @@ export type ShowcaseItem = {
   description: string | null;
   imageUrl: string;
   photos: string[];
+  partnerId: string;
   partnerName: string;
   partnerSlug: string;
   partnerLogoUrl: string | null;
@@ -28,6 +29,7 @@ const columns = {
   description: portfolioItems.description,
   imageUrl: portfolioItems.imageUrl,
   photos: portfolioItems.photos,
+  partnerId: partners.id,
   partnerName: partners.displayName,
   partnerSlug: partners.slug,
   partnerLogoUrl: partners.logoUrl,
@@ -57,6 +59,7 @@ const toItem = (r: Row, sponsored: boolean): ShowcaseItem => ({
   description: r.description,
   imageUrl: r.imageUrl!,
   photos: r.photos.length ? r.photos : [r.imageUrl!],
+  partnerId: r.partnerId,
   partnerName: r.partnerName,
   partnerSlug: r.partnerSlug,
   partnerLogoUrl: r.partnerLogoUrl,
@@ -70,9 +73,15 @@ const toItem = (r: Row, sponsored: boolean): ShowcaseItem => ({
 /**
  * Pagina "Ispirazione": in cima i lavori messi in evidenza a pagamento (sempre "Sponsorizzato"),
  * sotto gli altri lavori con foto delle aziende attive, dai più recenti; `filter` dai filtri della pagina.
+ * Con `filter.following` restano solo le aziende seguite da `viewerId`.
  */
-export async function getShowcase(now: Date, filter: ShowcaseFilter = {}): Promise<{ featured: ShowcaseItem[]; latest: ShowcaseItem[] }> {
+export async function getShowcase(now: Date, filter: ShowcaseFilter = {}, viewerId?: string | null): Promise<{ featured: ShowcaseItem[]; latest: ShowcaseItem[] }> {
+  // Scheda "Seguiti" senza accesso: non c'è nessuno di cui guardare le aziende seguite.
+  if (filter.following && !viewerId) return { featured: [], latest: [] };
   const conditions: SQL[] = [eq(partners.accountStatus, "active"), isNotNull(portfolioItems.imageUrl)];
+  if (filter.following && viewerId) {
+    conditions.push(sql`exists (select 1 from ${partnerFollows} where ${partnerFollows.partnerId} = ${partners.id} and ${partnerFollows.userId} = ${viewerId})`);
+  }
   if (filter.type === "pro") conditions.push(ne(partners.type, "agency"));
   if (filter.type === "agency") conditions.push(eq(partners.type, "agency"));
   if (filter.categorySlug) conditions.push(eq(categories.slug, filter.categorySlug));

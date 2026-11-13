@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { ArrowLeft } from "lucide-react";
 import { LikeButton } from "@/components/site/like-button";
+import { PartnerFollow } from "@/components/site/partner-follow";
 import { ProjectGallery } from "@/components/site/project-gallery";
 import { ButtonLink } from "@/components/ui/button";
 import { getAnySessionUser } from "@/lib/auth/session";
@@ -62,6 +63,9 @@ async function Work({ id }: { id: string }) {
             <h2 className="text-h3 font-semibold">{item.partnerName}</h2>
             <p className="text-body-s text-ink-2">{where}</p>
           </div>
+          <Suspense fallback={<div className="h-9" aria-hidden />}>
+            <PartnerFollow partnerId={item.partnerId} partnerName={item.partnerName} returnTo={`/ispirazione/${item.id}`} />
+          </Suspense>
           <p className="text-body-s">Ti piace questo lavoro? Chiedi all&apos;azienda un preventivo per il tuo: è gratis e senza impegno.</p>
           <ButtonLink href={`/richiesta/${item.partnerSlug}`}>Richiedi contatto</ButtonLink>
           <ButtonLink href={item.href} variant="secondary">

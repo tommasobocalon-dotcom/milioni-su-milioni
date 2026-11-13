@@ -4,12 +4,14 @@ import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { Suspense } from "react";
 import { connection } from "next/server";
+import { FollowButton } from "@/components/site/follow-button";
 import { LikeButton } from "@/components/site/like-button";
 import { Badge } from "@/components/ui/badge";
 import { ChipLink } from "@/components/ui/chip";
 import { LogoPartner } from "@/components/ui/logo-partner";
 import { getAnySessionUser } from "@/lib/auth/session";
 import { getCategories } from "@/lib/data/catalog";
+import { getFollowedPartnerIds } from "@/lib/data/follows";
 import { getLikedIds, getShowcase, type ShowcaseItem } from "@/lib/data/showcase";
 import { likeLoginHref } from "@/lib/domain/likes";
 import { parseShowcaseFilter, showcaseHref } from "@/lib/domain/showcase-filter";
@@ -62,22 +64,24 @@ async function readFilter(searchParams: Search) {
 /** Filtri come link: Tutti / Professionisti / Agenzie, poi il tipo di professionista o l'operazione dell'agenzia. */
 async function Filters({ searchParams }: { searchParams: Search }) {
   const { filter, pros } = await readFilter(searchParams);
+  // I filtri per tipo non fanno uscire dalla scheda "Seguiti".
+  const keep = { following: filter.following };
   const sub =
     filter.type === "pro"
-      ? pros.map((c) => ({ label: c.pluralName, href: showcaseHref({ type: "pro", categorySlug: c.slug }), on: filter.categorySlug === c.slug }))
+      ? pros.map((c) => ({ label: c.pluralName, href: showcaseHref({ ...keep, type: "pro", categorySlug: c.slug }), on: filter.categorySlug === c.slug }))
       : filter.type === "agency"
         ? [
-            { label: "In vendita", href: showcaseHref({ type: "agency", contract: "sale" }), on: filter.contract === "sale" },
-            { label: "In affitto", href: showcaseHref({ type: "agency", contract: "rent" }), on: filter.contract === "rent" },
+            { label: "In vendita", href: showcaseHref({ ...keep, type: "agency", contract: "sale" }), on: filter.contract === "sale" },
+            { label: "In affitto", href: showcaseHref({ ...keep, type: "agency", contract: "rent" }), on: filter.contract === "rent" },
           ]
         : [];
   return (
     <nav aria-label="Filtra i lavori" className="flex flex-col gap-3">
       <ul className="flex flex-wrap gap-2">
         {[
-          { label: "Tutti", href: showcaseHref({}), on: !filter.type },
-          { label: "Professionisti", href: showcaseHref({ type: "pro" }), on: filter.type === "pro" },
-          { label: "Agenzie", href: showcaseHref({ type: "agency" }), on: filter.type === "agency" },
+          { label: "Tutti", href: showcaseHref({ ...keep }), on: !filter.type },
+          { label: "Professionisti", href: showcaseHref({ ...keep, type: "pro" }), on: filter.type === "pro" },
+          { label: "Agenzie", href: showcaseHref({ ...keep, type: "agency" }), on: filter.type === "agency" },
         ].map((f) => (
           <li key={f.label}>
             <ChipLink href={f.href} selected={f.on} scroll={false}>
@@ -104,46 +108,86 @@ async function Filters({ searchParams }: { searchParams: Search }) {
 async function Showcase({ searchParams }: { searchParams: Search }) {
   await connection();
   const { filter } = await readFilter(searchParams);
-  const [{ featured, latest }, user] = await Promise.all([getShowcase(new Date(), filter), getAnySessionUser()]);
-  if (featured.length + latest.length === 0) {
-    return filter.type ? (
-      <p className="rounded-lg bg-subtle p-8 text-center text-body">
-        Ancora nessun lavoro con questo filtro.{" "}
-        <Link href="/ispirazione" className="font-semibold text-primary underline underline-offset-2 hover:text-primary-hover">
-          Vedi tutti i lavori
+  const user = await getAnySessionUser();
+  const { featured, latest } = await getShowcase(new Date(), filter, user?.id);
+  const here = showcaseHref(filter);
+  const byType = { type: filter.type, categorySlug: filter.categorySlug, contract: filter.contract };
+  const tabs = (
+    <nav aria-label="Quali lavori vedere" className="flex gap-6 border-b border-line text-body font-semibold">
+      {[
+        { label: "Tutti i lavori", href: showcaseHref(byType), on: !filter.following },
+        { label: "Seguiti", href: showcaseHref({ ...byType, following: true }), on: !!filter.following },
+      ].map((t) => (
+        <Link
+          key={t.label}
+          href={t.href}
+          scroll={false}
+          aria-current={t.on ? "page" : undefined}
+          className={t.on ? "-mb-px border-b-2 border-primary pb-3 text-primary" : "-mb-px border-b-2 border-transparent pb-3 text-ink-2 hover:text-ink"}
+        >
+          {t.label}
         </Link>
-      </p>
-    ) : (
-      <p className="rounded-lg bg-subtle p-8 text-center text-body">Le aziende stanno caricando i primi lavori: torna presto.</p>
+      ))}
+    </nav>
+  );
+
+  if (featured.length + latest.length === 0) {
+    return (
+      <div className="mx-auto flex w-full max-w-xl flex-col gap-8">
+        {tabs}
+        <p className="rounded-lg bg-subtle p-8 text-center text-body">
+          {filter.following && !user ? (
+            <>
+              Per vedere i lavori delle aziende che segui devi prima entrare.{" "}
+              <Link href={likeLoginHref(here)} className="font-semibold text-primary underline underline-offset-2 hover:text-primary-hover">
+                Accedi
+              </Link>
+            </>
+          ) : filter.following ? (
+            <>
+              Qui trovi i lavori delle aziende che segui. Tocca &ldquo;Segui&rdquo; su un lavoro che ti piace e torna qui.{" "}
+              <Link href={showcaseHref(byType)} className="font-semibold text-primary underline underline-offset-2 hover:text-primary-hover">
+                Vedi tutti i lavori
+              </Link>
+            </>
+          ) : filter.type ? (
+            <>
+              Ancora nessun lavoro con questo filtro.{" "}
+              <Link href="/ispirazione" className="font-semibold text-primary underline underline-offset-2 hover:text-primary-hover">
+                Vedi tutti i lavori
+              </Link>
+            </>
+          ) : (
+            "Le aziende stanno caricando i primi lavori: torna presto."
+          )}
+        </p>
+      </div>
     );
   }
-  const liked = user ? await getLikedIds(user.id, [...featured, ...latest].map((i) => i.id)) : new Set<string>();
+  const all = [...featured, ...latest];
+  const [liked, followed] = user
+    ? await Promise.all([getLikedIds(user.id, all.map((i) => i.id)), getFollowedPartnerIds(user.id, all.map((i) => i.partnerId))])
+    : [new Set<string>(), new Set<string>()];
   // Chi non ha fatto l'accesso passa dal login e torna a questa pagina, con gli stessi filtri.
-  const viewer = { signedIn: !!user, loginHref: likeLoginHref(showcaseHref(filter)) };
+  const viewer = { signedIn: !!user, loginHref: likeLoginHref(here) };
+  const post = (item: ShowcaseItem) => <FeedPost key={item.id} item={item} liked={liked.has(item.id)} following={followed.has(item.partnerId)} viewer={viewer} />;
   return (
-    <div className="mx-auto flex w-full max-w-xl flex-col gap-10">
+    <div className="mx-auto flex w-full max-w-xl flex-col gap-8">
+      {tabs}
       {featured.length > 0 && (
         <section aria-labelledby="in-evidenza" className="flex flex-col gap-4">
           <h2 id="in-evidenza" className="text-h3 font-semibold">
             In evidenza
           </h2>
-          <ul className="flex flex-col gap-8">
-            {featured.map((item) => (
-              <FeedPost key={item.id} item={item} liked={liked.has(item.id)} viewer={viewer} />
-            ))}
-          </ul>
+          <ul className="flex flex-col gap-8">{featured.map(post)}</ul>
         </section>
       )}
       {latest.length > 0 && (
         <section aria-labelledby="ultimi-lavori" className="flex flex-col gap-4">
           <h2 id="ultimi-lavori" className="text-h3 font-semibold">
-            Ultimi lavori
+            {filter.following ? "Dalle aziende che segui" : "Ultimi lavori"}
           </h2>
-          <ul className="flex flex-col gap-8">
-            {latest.map((item) => (
-              <FeedPost key={item.id} item={item} liked={liked.has(item.id)} viewer={viewer} />
-            ))}
-          </ul>
+          <ul className="flex flex-col gap-8">{latest.map(post)}</ul>
         </section>
       )}
     </div>
@@ -151,11 +195,11 @@ async function Showcase({ searchParams }: { searchParams: Search }) {
 }
 
 /**
- * Un lavoro nel feed (13/11/2026): in testa l'azienda, poi la foto principale, il "mi piace" e il testo. Tutto il
- * riquadro porta alla pagina del lavoro (link del titolo allargato con ::after); azienda e "mi piace" restano
- * cliccabili a parte, sopra. Nel feed una sola foto: tutte le altre sono nella pagina del lavoro.
+ * Un lavoro nel feed (13/11/2026): in testa l'azienda con "Segui", poi la foto principale, il "mi piace" e il testo.
+ * Tutto il riquadro porta alla pagina del lavoro (link del titolo allargato con ::after); azienda, "Segui" e
+ * "mi piace" restano cliccabili a parte, sopra. Nel feed una sola foto: tutte le altre sono nella pagina del lavoro.
  */
-function FeedPost({ item, liked, viewer }: { item: ShowcaseItem; liked: boolean; viewer: { signedIn: boolean; loginHref: string } }) {
+function FeedPost({ item, liked, following, viewer }: { item: ShowcaseItem; liked: boolean; following: boolean; viewer: { signedIn: boolean; loginHref: string } }) {
   return (
     <li className="group relative flex flex-col overflow-hidden rounded-lg border border-line bg-surface transition-colors hover:border-primary">
       <div className="flex items-center gap-3 p-4">
@@ -163,7 +207,15 @@ function FeedPost({ item, liked, viewer }: { item: ShowcaseItem; liked: boolean;
           <LogoPartner name={item.partnerName} src={item.partnerLogoUrl} size={40} className="rounded-full" />
           <span className="truncate text-body font-semibold text-ink">{item.partnerName}</span>
         </Link>
-        {item.sponsored && <Badge kind="sponsored" className="ml-auto shrink-0" />}
+        <FollowButton
+          partnerId={item.partnerId}
+          partnerName={item.partnerName}
+          following={following}
+          count={0}
+          signedIn={viewer.signedIn}
+          loginHref={viewer.loginHref}
+          className="ml-auto shrink-0"
+        />
       </div>
       <div className="relative aspect-[4/3] overflow-hidden bg-muted">
         <Image
@@ -186,6 +238,7 @@ function FeedPost({ item, liked, viewer }: { item: ShowcaseItem; liked: boolean;
         </span>
       </div>
       <div className="flex flex-col gap-1.5 px-4 pt-1 pb-5">
+        {item.sponsored && <Badge kind="sponsored" className="self-start" />}
         <p className="text-caption font-bold tracking-wide text-ink-2 uppercase">
           {item.categoryName}
           {item.place && ` · ${item.place}`}
