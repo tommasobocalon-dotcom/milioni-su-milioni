@@ -2,7 +2,6 @@ import { Suspense } from "react";
 import { ExternalLink } from "lucide-react";
 import { ComingSoon } from "@/components/partner/coming-soon";
 import { PartnerPageHeader } from "@/components/partner/page-header";
-import { PortfolioManager } from "@/components/partner/portfolio-manager";
 import { PartnerSkeleton } from "@/components/partner/skeleton";
 import { ButtonLink } from "@/components/ui/button";
 import { Chip } from "@/components/ui/chip";
@@ -49,7 +48,12 @@ async function Profile() {
           <span className="font-semibold">Zone servite:</span> {p.areas.join(", ")}
         </p>
       </section>
-      <PortfolioManager partnerId={partner.id} isAgency={partner.type === "agency"} />
+      <section className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-line bg-surface p-6">
+        <p className="text-body">Le foto dei tuoi lavori con la descrizione si pubblicano in Lavori e foto.</p>
+        <ButtonLink href="/area-partner/lavori" size="s">
+          Vai a Lavori e foto
+        </ButtonLink>
+      </section>
       <ComingSoon
         title="Prossimamente"
         items={[

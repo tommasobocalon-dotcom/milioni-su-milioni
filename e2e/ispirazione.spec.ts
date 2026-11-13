@@ -69,7 +69,7 @@ async function login(page: Page) {
 async function choose(page: Page, slug: Slug) {
   await page.getByLabel("Azienda", { exact: true }).selectOption({ label: COMPANIES[slug].name });
   await Promise.all([page.waitForResponse((r) => r.request().method() === "POST"), page.getByRole("button", { name: "Gestisci questa" }).click()]);
-  await page.goto("/area-partner/scheda");
+  await page.goto("/area-partner/lavori");
   await expect(page.getByLabel("Azienda", { exact: true }).locator("option[selected]")).toHaveText(COMPANIES[slug].name);
 }
 
@@ -92,9 +92,9 @@ const formError = (page: Page) => page.locator("form").getByRole("alert");
 
 test("solo le aziende pubblicano: da fuori l'Area Partner chiede l'accesso aziende", async ({ page }) => {
   await page.goto("/ispirazione");
-  await expect(page.getByRole("link", { name: "Pubblica i tuoi lavori" })).toHaveAttribute("href", "/area-partner/scheda");
+  await expect(page.getByRole("link", { name: "Pubblica i tuoi lavori" })).toHaveAttribute("href", "/area-partner/lavori");
   await expect(page.getByLabel(/^Foto/)).toHaveCount(0);
-  await page.goto("/area-partner/scheda");
+  await page.goto("/area-partner/lavori");
   await expect(page).toHaveURL(/\/accedi\/azienda/);
 });
 
@@ -127,13 +127,23 @@ test("un lavoro vuole da 2 a 8 foto, un titolo e una breve descrizione", async (
   await page.goto("/ispirazione");
   const card = page.getByRole("listitem").filter({ has: page.getByRole("heading", { name: "Bagno rifatto a Noale" }) });
   await expect(card.getByText("8 foto")).toBeVisible();
-  await expect(card.getByRole("img")).toHaveCount(8);
+  // Nel riquadro solo la foto principale (13/11/2026); tutte le foto nella pagina del lavoro.
+  await expect(card.getByRole("img")).toHaveCount(1);
   await expect(card.getByText(/Demolizione, impianto idraulico nuovo/)).toBeVisible();
   await expect(card.getByRole("link", { name: "Rossi Impianti" })).toBeVisible();
-  // Le foto si scorrono di lato.
-  const strip = card.getByRole("region", { name: /Bagno rifatto a Noale: 8 foto/ });
-  await strip.evaluate((el) => el.scrollBy({ left: el.clientWidth }));
+
+  await card.getByRole("link", { name: "Bagno rifatto a Noale" }).click();
+  await expect(page).toHaveURL(/\/ispirazione\/[0-9a-f-]{36}$/);
+  await expect(page.getByRole("heading", { level: 1, name: "Bagno rifatto a Noale" })).toBeVisible();
+  await expect(page.getByRole("region", { name: "Il lavoro" }).getByText(/Demolizione, impianto idraulico nuovo/)).toBeVisible();
+  // Le foto si scorrono di lato, anche con le frecce.
+  const strip = page.getByRole("region", { name: /Bagno rifatto a Noale: 8 foto/ });
+  await expect(strip.getByRole("img")).toHaveCount(8);
+  await page.getByRole("button", { name: "Foto successiva" }).click();
   await expect.poll(() => strip.evaluate((el) => el.scrollLeft)).toBeGreaterThan(0);
+  await expect(page.getByRole("button", { name: "Mostra la foto 2" })).toHaveAttribute("aria-current", "true");
+  // Niente prezzi: si chiede il contatto all'azienda.
+  await expect(page.getByRole("link", { name: "Richiedi contatto" })).toHaveAttribute("href", "/richiesta/rossi-impianti");
 });
 
 test("piano Base: al massimo 5 progetti", async ({ page }) => {

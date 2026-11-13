@@ -269,7 +269,7 @@ export async function addPortfolioItem(_prev: ActionState, formData: FormData): 
     sortOrder: (last ?? -1) + 1,
   });
   updateTag(`partner:${partner.slug}`);
-  revalidatePath("/area-partner/scheda");
+  revalidatePath("/area-partner/lavori");
   return { ok: "Lavoro pubblicato nella tua scheda e in Ispirazione" };
 }
 
@@ -284,7 +284,7 @@ export async function setPortfolioStatus(itemId: string, formData: FormData) {
     .set({ status: status.data })
     .where(and(eq(portfolioItems.id, itemId), eq(portfolioItems.partnerId, partner.id), eq(portfolioItems.kind, "property")));
   updateTag(`partner:${partner.slug}`);
-  revalidatePath("/area-partner/scheda");
+  revalidatePath("/area-partner/lavori");
 }
 
 export async function deletePortfolioItem(itemId: string) {
@@ -292,7 +292,7 @@ export async function deletePortfolioItem(itemId: string) {
   if (!Id.safeParse(itemId).success) return;
   await db.delete(portfolioItems).where(and(eq(portfolioItems.id, itemId), eq(portfolioItems.partnerId, partner.id)));
   updateTag(`partner:${partner.slug}`);
-  revalidatePath("/area-partner/scheda");
+  revalidatePath("/area-partner/lavori");
 }
 
 const PriceItemSchema = z.object({

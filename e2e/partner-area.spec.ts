@@ -169,8 +169,9 @@ test("campanella, profilo, boost, statistiche, assistenza e lavori svolti", asyn
   await expect(page.getByRole("heading", { level: 1, name: "Aiuto" })).toBeVisible();
   await expect(page.getByRole("region", { name: "Contatti" }).getByRole("link")).toHaveCount(3);
 
-  // Lavori svolti (nella scheda): aggiungo un lavoro con foto, lo vedo nel profilo pubblico con i dati aziendali, lo elimino.
-  await page.goto("/area-partner/scheda");
+  // Lavori e foto (voce del menu dal 13/11/2026): aggiungo un lavoro con foto, lo vedo nel profilo pubblico con i dati aziendali, lo elimino.
+  await page.getByRole("link", { name: "Lavori e foto" }).first().click();
+  await expect(page.getByRole("heading", { level: 1, name: "Lavori e foto" })).toBeVisible();
   await page.getByLabel(/^Titolo/).fill("Bagno rifatto a Mestre");
   // Un lavoro vuole da 2 a 8 foto (12/11/2026).
   await page.getByLabel(/^Foto/).setInputFiles([
@@ -187,7 +188,7 @@ test("campanella, profilo, boost, statistiche, assistenza e lavori svolti", asyn
   await expect(page.getByRole("img", { name: "Bagno rifatto a Mestre, foto 1 di 2" })).toBeVisible();
   await expect(page.getByText("P. IVA 01234567890")).toBeVisible();
   await expect(page.getByText("Sede legale: Via Piave 12, 30171 Venezia (VE)")).toBeVisible();
-  await page.goto("/area-partner/scheda");
+  await page.goto("/area-partner/lavori");
   await page.getByRole("button", { name: "Elimina Bagno rifatto a Mestre" }).click();
   await expect(portfolio.getByText("Bagno rifatto a Mestre")).toHaveCount(0);
 });

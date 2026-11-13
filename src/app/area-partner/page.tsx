@@ -34,7 +34,7 @@ function nextStep(newLeads: number, completeness: number) {
     return {
       title: `La tua scheda è completa al ${completeness}%`,
       text: "Aggiungi prezzi e foto dei tuoi lavori: le schede complete compaiono più in alto.",
-      href: "/area-partner/scheda",
+      href: "/area-partner/lavori",
       cta: "Completa la scheda",
     };
   return {

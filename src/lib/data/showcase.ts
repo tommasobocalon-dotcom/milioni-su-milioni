@@ -11,6 +11,7 @@ export type ShowcaseItem = {
   imageUrl: string;
   photos: string[];
   partnerName: string;
+  partnerSlug: string;
   categoryName: string;
   place: string | null;
   href: string;
@@ -51,6 +52,7 @@ const toItem = (r: Row, sponsored: boolean): ShowcaseItem => ({
   imageUrl: r.imageUrl!,
   photos: r.photos.length ? r.photos : [r.imageUrl!],
   partnerName: r.partnerName,
+  partnerSlug: r.partnerSlug,
   categoryName: r.categoryName,
   place: r.place,
   href: profileHref({ partnerType: r.partnerType, provinceSlug: r.provinceSlug, categorySlug: r.categorySlug, slug: r.partnerSlug }),
@@ -73,4 +75,11 @@ export async function getShowcase(now: Date): Promise<{ featured: ShowcaseItem[]
     .orderBy(desc(portfolioItems.createdAt))
     .limit(24);
   return { featured, latest: latestRows.map((r) => toItem(r, false)) };
+}
+
+/** Un lavoro di Ispirazione per la sua pagina; null se non esiste o se l'azienda non è attiva. */
+export async function getShowcaseItem(id: string): Promise<ShowcaseItem | null> {
+  if (!/^[0-9a-f-]{36}$/i.test(id)) return null;
+  const [row] = await base().where(and(eq(portfolioItems.id, id), eq(partners.accountStatus, "active"), isNotNull(portfolioItems.imageUrl)));
+  return row ? toItem(row, false) : null;
 }

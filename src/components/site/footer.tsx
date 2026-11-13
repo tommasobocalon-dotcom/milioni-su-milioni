@@ -64,7 +64,7 @@ export function SiteFooter() {
           </nav>
         ))}
       </div>
-      <div className="bg-bosco-900">
+      <div className="border-t border-bosco-700">
         <div className="container-page flex flex-col gap-3 py-5 text-body-s md:flex-row md:items-start md:justify-between md:gap-8">
           <p>© 2026 GecoItalia · Veneto, Italia</p>
         </div>
