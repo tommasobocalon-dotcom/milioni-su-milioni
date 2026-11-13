@@ -1,7 +1,7 @@
 import "server-only";
-import { and, desc, eq, gt, isNotNull, lte, ne, notInArray, type SQL } from "drizzle-orm";
+import { and, desc, eq, gt, inArray, isNotNull, lte, ne, notInArray, sql, type SQL } from "drizzle-orm";
 import { db } from "@/lib/db/client";
-import { categories, municipalities, partners, portfolioItems, provinces, showcaseFeatures } from "@/lib/db/schema";
+import { categories, municipalities, partners, portfolioItems, portfolioLikes, provinces, showcaseFeatures } from "@/lib/db/schema";
 import type { ShowcaseFilter } from "@/lib/domain/showcase-filter";
 import { profileHref } from "./search";
 
@@ -13,10 +13,13 @@ export type ShowcaseItem = {
   photos: string[];
   partnerName: string;
   partnerSlug: string;
+  partnerLogoUrl: string | null;
   categoryName: string;
   place: string | null;
   href: string;
   sponsored: boolean;
+  /** Quanti account hanno messo "mi piace" al lavoro. */
+  likes: number;
 };
 
 const columns = {
@@ -27,11 +30,13 @@ const columns = {
   photos: portfolioItems.photos,
   partnerName: partners.displayName,
   partnerSlug: partners.slug,
+  partnerLogoUrl: partners.logoUrl,
   partnerType: partners.type,
   categoryName: categories.name,
   categorySlug: categories.slug,
   provinceSlug: provinces.slug,
   place: municipalities.name,
+  likes: sql<number>`(select count(*)::int from ${portfolioLikes} where ${portfolioLikes.portfolioItemId} = ${portfolioItems.id})`,
 };
 
 function base() {
@@ -54,10 +59,12 @@ const toItem = (r: Row, sponsored: boolean): ShowcaseItem => ({
   photos: r.photos.length ? r.photos : [r.imageUrl!],
   partnerName: r.partnerName,
   partnerSlug: r.partnerSlug,
+  partnerLogoUrl: r.partnerLogoUrl,
   categoryName: r.categoryName,
   place: r.place,
   href: profileHref({ partnerType: r.partnerType, provinceSlug: r.provinceSlug, categorySlug: r.categorySlug, slug: r.partnerSlug }),
   sponsored,
+  likes: r.likes,
 });
 
 /**
@@ -88,4 +95,25 @@ export async function getShowcaseItem(id: string): Promise<ShowcaseItem | null> 
   if (!/^[0-9a-f-]{36}$/i.test(id)) return null;
   const [row] = await base().where(and(eq(portfolioItems.id, id), eq(partners.accountStatus, "active"), isNotNull(portfolioItems.imageUrl)));
   return row ? toItem(row, false) : null;
+}
+
+/** Tra questi lavori, quelli a cui l'account ha già messo "mi piace". */
+export async function getLikedIds(userId: string, itemIds: string[]): Promise<Set<string>> {
+  if (itemIds.length === 0) return new Set();
+  const rows = await db
+    .select({ id: portfolioLikes.portfolioItemId })
+    .from(portfolioLikes)
+    .where(and(eq(portfolioLikes.userId, userId), inArray(portfolioLikes.portfolioItemId, itemIds)));
+  return new Set(rows.map((r) => r.id));
+}
+
+/**
+ * Mette o toglie il "mi piace" dell'account e restituisce il conto aggiornato. Dice lo stato voluto, non "inverti":
+ * così due clic ravvicinati o una richiesta ripetuta non lo ribaltano.
+ */
+export async function setLike(userId: string, itemId: string, liked: boolean): Promise<number> {
+  if (liked) await db.insert(portfolioLikes).values({ portfolioItemId: itemId, userId }).onConflictDoNothing();
+  else await db.delete(portfolioLikes).where(and(eq(portfolioLikes.portfolioItemId, itemId), eq(portfolioLikes.userId, userId)));
+  const [row] = await db.select({ n: sql<number>`count(*)::int` }).from(portfolioLikes).where(eq(portfolioLikes.portfolioItemId, itemId));
+  return row?.n ?? 0;
 }

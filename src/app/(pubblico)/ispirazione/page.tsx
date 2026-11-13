@@ -4,10 +4,14 @@ import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { Suspense } from "react";
 import { connection } from "next/server";
+import { LikeButton } from "@/components/site/like-button";
 import { Badge } from "@/components/ui/badge";
 import { ChipLink } from "@/components/ui/chip";
+import { LogoPartner } from "@/components/ui/logo-partner";
+import { getAnySessionUser } from "@/lib/auth/session";
 import { getCategories } from "@/lib/data/catalog";
-import { getShowcase, type ShowcaseItem } from "@/lib/data/showcase";
+import { getLikedIds, getShowcase, type ShowcaseItem } from "@/lib/data/showcase";
+import { likeLoginHref } from "@/lib/domain/likes";
 import { parseShowcaseFilter, showcaseHref } from "@/lib/domain/showcase-filter";
 
 export const metadata: Metadata = {
@@ -23,7 +27,7 @@ export default function InspirationPage({ searchParams }: PageProps<"/ispirazion
           <div className="flex max-w-2xl flex-col gap-3">
             <h1 className="font-display text-h1 md:text-display-l">Ispirazione</h1>
             <p className="text-body-l text-on-brand-muted">
-              Lavori fatti da chi trovi su geco. Apri un progetto per vedere tutte le foto e, se ti piace, chiedi un contatto all&apos;azienda.
+              Lavori fatti da chi trovi su geco. Scorri, metti mi piace a quelli che ti convincono e apri un progetto per vedere tutte le foto e chiedere un contatto all&apos;azienda.
             </p>
           </div>
           <Suspense fallback={<div className="h-20" aria-hidden />}>
@@ -39,7 +43,7 @@ export default function InspirationPage({ searchParams }: PageProps<"/ispirazion
         </div>
       </section>
       <div className="container-page flex flex-col gap-10 py-10 md:py-14">
-        <Suspense fallback={<div className="h-96 animate-pulse rounded-lg bg-muted" aria-busy="true" />}>
+        <Suspense fallback={<div className="mx-auto h-[36rem] w-full max-w-xl animate-pulse rounded-lg bg-muted" aria-busy="true" />}>
           <Showcase searchParams={searchParams} />
         </Suspense>
       </div>
@@ -100,12 +104,12 @@ async function Filters({ searchParams }: { searchParams: Search }) {
 async function Showcase({ searchParams }: { searchParams: Search }) {
   await connection();
   const { filter } = await readFilter(searchParams);
-  const { featured, latest } = await getShowcase(new Date(), filter);
+  const [{ featured, latest }, user] = await Promise.all([getShowcase(new Date(), filter), getAnySessionUser()]);
   if (featured.length + latest.length === 0) {
     return filter.type ? (
       <p className="rounded-lg bg-subtle p-8 text-center text-body">
         Ancora nessun lavoro con questo filtro.{" "}
-        <Link href="/ispirazione" className="font-semibold text-on-brand underline underline-offset-2 hover:text-salvia-200">
+        <Link href="/ispirazione" className="font-semibold text-primary underline underline-offset-2 hover:text-primary-hover">
           Vedi tutti i lavori
         </Link>
       </p>
@@ -113,16 +117,19 @@ async function Showcase({ searchParams }: { searchParams: Search }) {
       <p className="rounded-lg bg-subtle p-8 text-center text-body">Le aziende stanno caricando i primi lavori: torna presto.</p>
     );
   }
+  const liked = user ? await getLikedIds(user.id, [...featured, ...latest].map((i) => i.id)) : new Set<string>();
+  // Chi non ha fatto l'accesso passa dal login e torna a questa pagina, con gli stessi filtri.
+  const viewer = { signedIn: !!user, loginHref: likeLoginHref(showcaseHref(filter)) };
   return (
-    <>
+    <div className="mx-auto flex w-full max-w-xl flex-col gap-10">
       {featured.length > 0 && (
         <section aria-labelledby="in-evidenza" className="flex flex-col gap-4">
           <h2 id="in-evidenza" className="text-h3 font-semibold">
             In evidenza
           </h2>
-          <ul className="grid gap-6 md:grid-cols-2">
+          <ul className="flex flex-col gap-8">
             {featured.map((item) => (
-              <ShowcaseCard key={item.id} item={item} large />
+              <FeedPost key={item.id} item={item} liked={liked.has(item.id)} viewer={viewer} />
             ))}
           </ul>
         </section>
@@ -132,58 +139,63 @@ async function Showcase({ searchParams }: { searchParams: Search }) {
           <h2 id="ultimi-lavori" className="text-h3 font-semibold">
             Ultimi lavori
           </h2>
-          <ul className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          <ul className="flex flex-col gap-8">
             {latest.map((item) => (
-              <ShowcaseCard key={item.id} item={item} />
+              <FeedPost key={item.id} item={item} liked={liked.has(item.id)} viewer={viewer} />
             ))}
           </ul>
         </section>
       )}
-    </>
+    </div>
   );
 }
 
 /**
- * Riquadro di un lavoro: solo la foto principale, tutto il riquadro porta alla pagina del lavoro (link del titolo
- * allargato con ::after); il nome dell'azienda resta un link a parte, sopra.
+ * Un lavoro nel feed (13/11/2026): in testa l'azienda, poi la foto principale, il "mi piace" e il testo. Tutto il
+ * riquadro porta alla pagina del lavoro (link del titolo allargato con ::after); azienda e "mi piace" restano
+ * cliccabili a parte, sopra. Nel feed una sola foto: tutte le altre sono nella pagina del lavoro.
  */
-function ShowcaseCard({ item, large }: { item: ShowcaseItem; large?: boolean }) {
+function FeedPost({ item, liked, viewer }: { item: ShowcaseItem; liked: boolean; viewer: { signedIn: boolean; loginHref: string } }) {
   return (
     <li className="group relative flex flex-col overflow-hidden rounded-lg border border-line bg-surface transition-colors hover:border-primary">
+      <div className="flex items-center gap-3 p-4">
+        <Link href={item.href} className="relative z-10 flex min-w-0 items-center gap-3 rounded-md hover:underline">
+          <LogoPartner name={item.partnerName} src={item.partnerLogoUrl} size={40} className="rounded-full" />
+          <span className="truncate text-body font-semibold text-ink">{item.partnerName}</span>
+        </Link>
+        {item.sponsored && <Badge kind="sponsored" className="ml-auto shrink-0" />}
+      </div>
       <div className="relative aspect-[4/3] overflow-hidden bg-muted">
         <Image
           src={item.photos[0]}
           alt={item.title}
           fill
-          sizes={large ? "(min-width: 768px) 50vw, 100vw" : "(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"}
+          sizes="(min-width: 640px) 576px, 100vw"
           className="object-cover transition-transform duration-500 motion-safe:group-hover:scale-105"
         />
         {item.photos.length > 1 && (
-          <span className="pointer-events-none absolute right-2 bottom-2 rounded-full bg-ink/75 px-2 py-0.5 text-caption font-semibold text-on-brand">
+          <span className="pointer-events-none absolute right-3 bottom-3 rounded-full bg-ink/75 px-2.5 py-0.5 text-caption font-semibold text-on-brand">
             {item.photos.length} foto
           </span>
         )}
       </div>
-      <div className="flex flex-1 flex-col gap-2 p-5">
-        {item.sponsored && <Badge kind="sponsored" className="self-start" />}
+      <div className="flex items-center justify-between gap-3 px-2 pt-2 pr-4">
+        <LikeButton itemId={item.id} liked={liked} count={item.likes} signedIn={viewer.signedIn} loginHref={viewer.loginHref} />
+        <span aria-hidden className="inline-flex items-center gap-1 text-body-s font-semibold text-primary">
+          Scopri <ArrowRight className="size-4 transition-transform motion-safe:group-hover:translate-x-0.5" />
+        </span>
+      </div>
+      <div className="flex flex-col gap-1.5 px-4 pt-1 pb-5">
         <p className="text-caption font-bold tracking-wide text-ink-2 uppercase">
           {item.categoryName}
           {item.place && ` · ${item.place}`}
         </p>
-        <h3 className={large ? "text-h3 font-semibold" : "text-h4 font-semibold"}>
+        <h3 className="text-h4 font-semibold">
           <Link href={`/ispirazione/${item.id}`} className="after:absolute after:inset-0 focus-visible:outline-none after:focus-visible:rounded-lg after:focus-visible:outline-2 after:focus-visible:outline-primary">
             {item.title}
           </Link>
         </h3>
-        {item.description && <p className="line-clamp-2 text-body-s text-ink-2">{item.description}</p>}
-        <div className="mt-auto flex items-center justify-between gap-3 border-t border-bosco-700 pt-3 text-body-s">
-          <Link href={item.href} className="relative z-10 font-semibold text-ink hover:text-primary hover:underline">
-            {item.partnerName}
-          </Link>
-          <span aria-hidden className="inline-flex items-center gap-1 font-semibold text-primary">
-            Scopri <ArrowRight className="size-4 transition-transform motion-safe:group-hover:translate-x-0.5" />
-          </span>
-        </div>
+        {item.description && <p className="line-clamp-3 text-body-s text-ink-2">{item.description}</p>}
       </div>
     </li>
   );

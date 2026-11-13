@@ -359,6 +359,24 @@ export const portfolioItems = pgTable(
   (t) => [index("portfolio_partner_idx").on(t.partnerId)],
 );
 
+/**
+ * "Mi piace" sui lavori di Ispirazione (13/11/2026): uno per account e per lavoro. Li mettono clienti e aziende che
+ * hanno fatto l'accesso. Non sono recensioni né voti.
+ */
+export const portfolioLikes = pgTable(
+  "portfolio_likes",
+  {
+    portfolioItemId: uuid("portfolio_item_id")
+      .notNull()
+      .references(() => portfolioItems.id, { onDelete: "cascade" }),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    createdAt: createdAt(),
+  },
+  (t) => [primaryKey({ columns: [t.portfolioItemId, t.userId] }), index("portfolio_likes_user_idx").on(t.userId)],
+);
+
 // ---------------------------------------------------------------------------
 // Lead (richieste di contatto)
 // ---------------------------------------------------------------------------

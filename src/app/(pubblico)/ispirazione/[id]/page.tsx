@@ -3,9 +3,12 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { ArrowLeft } from "lucide-react";
+import { LikeButton } from "@/components/site/like-button";
 import { ProjectGallery } from "@/components/site/project-gallery";
 import { ButtonLink } from "@/components/ui/button";
-import { getShowcaseItem } from "@/lib/data/showcase";
+import { getAnySessionUser } from "@/lib/auth/session";
+import { getLikedIds, getShowcaseItem } from "@/lib/data/showcase";
+import { likeLoginHref } from "@/lib/domain/likes";
 
 export async function generateMetadata({ params }: PageProps<"/ispirazione/[id]">): Promise<Metadata> {
   const item = await getShowcaseItem((await params).id);
@@ -27,6 +30,8 @@ export default function WorkPage({ params }: PageProps<"/ispirazione/[id]">) {
 async function Work({ id }: { id: string }) {
   const item = await getShowcaseItem(id);
   if (!item) notFound();
+  const user = await getAnySessionUser();
+  const liked = user ? (await getLikedIds(user.id, [item.id])).has(item.id) : false;
   const where = [item.categoryName, item.place].filter(Boolean).join(" · ");
   return (
     <div className="container-page flex flex-col gap-8 py-8 md:py-12">
@@ -40,6 +45,7 @@ async function Work({ id }: { id: string }) {
         <article className="flex flex-col gap-4">
           <p className="text-caption font-bold tracking-wide text-ink-2 uppercase">{where}</p>
           <h1 className="font-display text-h1 md:text-display-l">{item.title}</h1>
+          <LikeButton itemId={item.id} liked={liked} count={item.likes} signedIn={!!user} loginHref={likeLoginHref(`/ispirazione/${item.id}`)} className="-ml-2.5" />
           {item.description && (
             <section aria-labelledby="descrizione" className="flex flex-col gap-2 border-t border-line pt-6">
               <h2 id="descrizione" className="text-h4 font-semibold">
