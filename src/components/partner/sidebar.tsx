@@ -3,17 +3,18 @@
 import { Suspense } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Building2, CreditCard, House, Images, Inbox, LifeBuoy, LogOut, Rocket, UserRound } from "lucide-react";
+import { Building2, CreditCard, House, Images, Inbox, LifeBuoy, LogOut, MessageCircle, Rocket, UserRound } from "lucide-react";
 import { logoutBusiness } from "@/app/accedi/actions";
 import { Wordmark } from "@/components/site/wordmark";
 import { cn } from "@/lib/utils";
 
-/** Menu a 8 voci (abbonamento e boost separati, richiesta del cliente 10/11/2026; "Lavori e foto" a sé dal 13/11/2026): le pagine collegate stanno sotto la stessa voce (schede in `PartnerTabs`). */
+/** Menu a 9 voci (abbonamento e boost separati, richiesta del cliente 10/11/2026; "Lavori e foto" e "Commenti" a sé dal 13/11/2026): le pagine collegate stanno sotto la stessa voce (schede in `PartnerTabs`). */
 const NAV = [
   { href: "/area-partner", label: "Home", icon: House, also: ["/area-partner/statistiche", "/area-partner/notifiche"] },
   { href: "/area-partner/lead", label: "Richieste clienti", icon: Inbox, also: [] },
   { href: "/area-partner/scheda", label: "La mia attività", icon: Building2, also: ["/area-partner/listino"] },
   { href: "/area-partner/lavori", label: "Lavori e foto", icon: Images, also: [] },
+  { href: "/area-partner/commenti", label: "Commenti", icon: MessageCircle, also: [] },
   { href: "/area-partner/profilo", label: "Profilo", icon: UserRound, also: [] },
   { href: "/area-partner/abbonamento", label: "Abbonamento", icon: CreditCard, also: [] },
   { href: "/area-partner/sponsorizzazioni", label: "Boost e sponsorizzazioni", icon: Rocket, also: [] },

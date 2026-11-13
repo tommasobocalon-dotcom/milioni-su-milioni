@@ -248,6 +248,8 @@ export const partners = pgTable(
     completeness: smallint("completeness").notNull().default(0),
     /** Cliente Stripe del partner, creato al primo pagamento. */
     stripeCustomerId: text("stripe_customer_id").unique(),
+    /** Parole o frasi scelte dall'azienda: un commento che le contiene aspetta la sua approvazione (13/11/2026). */
+    hiddenWords: text("hidden_words").array().notNull().default([]),
     /** Storico: scheda Google Maps per le recensioni Google, tolte dal sito l'11/11/2026. Il codice non la usa più. */
     googlePlaceId: text("google_place_id"),
     createdAt: createdAt(),
@@ -393,6 +395,72 @@ export const portfolioLikes = pgTable(
     createdAt: createdAt(),
   },
   (t) => [primaryKey({ columns: [t.portfolioItemId, t.userId] }), index("portfolio_likes_user_idx").on(t.userId)],
+);
+
+/**
+ * Commenti sotto i lavori di Ispirazione (13/11/2026). Stati: visibile; in attesa dell'approvazione dell'azienda
+ * (parola dell'elenco, autore limitato, troppe segnalazioni); nascosto dall'azienda; tolto dalla piattaforma.
+ */
+export const commentStatus = pgEnum("comment_status", ["visible", "pending", "hidden", "removed"]);
+
+export const portfolioComments = pgTable(
+  "portfolio_comments",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    portfolioItemId: uuid("portfolio_item_id")
+      .notNull()
+      .references(() => portfolioItems.id, { onDelete: "cascade" }),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    body: text("body").notNull(),
+    status: commentStatus("status").notNull().default("visible"),
+    createdAt: createdAt(),
+  },
+  (t) => [index("portfolio_comments_item_idx").on(t.portfolioItemId, t.createdAt), index("portfolio_comments_user_idx").on(t.userId, t.createdAt)],
+);
+
+export const commentReportReason = pgEnum("comment_report_reason", ["spam", "offensive", "illegal", "personal_data", "other"]);
+
+/** Segnalazione di un commento: una per account e per commento. Chi è segnalato non sa mai da chi. */
+export const commentReports = pgTable(
+  "comment_reports",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    commentId: uuid("comment_id")
+      .notNull()
+      .references(() => portfolioComments.id, { onDelete: "cascade" }),
+    reporterId: uuid("reporter_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    reason: commentReportReason("reason").notNull(),
+    note: text("note"),
+    /** open finché il gestionale non decide; accepted = commento tolto; rejected = segnalazione respinta. */
+    status: text("status").$type<"open" | "accepted" | "rejected">().notNull().default("open"),
+    createdAt: createdAt(),
+  },
+  (t) => [uniqueIndex("comment_reports_once_idx").on(t.commentId, t.reporterId), index("comment_reports_status_idx").on(t.status)],
+);
+
+/**
+ * Persone che un'azienda ha bloccato o limitato sotto i suoi lavori. Bloccato: non commenta più i suoi lavori, non
+ * la segue, i suoi commenti lì non si vedono. Limitato: i suoi commenti si vedono solo dopo l'approvazione.
+ */
+export const blockMode = pgEnum("block_mode", ["blocked", "limited"]);
+
+export const partnerBlocks = pgTable(
+  "partner_blocks",
+  {
+    partnerId: uuid("partner_id")
+      .notNull()
+      .references(() => partners.id, { onDelete: "cascade" }),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    mode: blockMode("mode").notNull(),
+    createdAt: createdAt(),
+  },
+  (t) => [primaryKey({ columns: [t.partnerId, t.userId] })],
 );
 
 // ---------------------------------------------------------------------------

@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, MessageCircle } from "lucide-react";
 import { Suspense } from "react";
 import { connection } from "next/server";
 import { FollowButton } from "@/components/site/follow-button";
@@ -13,6 +13,7 @@ import { getAnySessionUser } from "@/lib/auth/session";
 import { getCategories } from "@/lib/data/catalog";
 import { getFollowedPartnerIds } from "@/lib/data/follows";
 import { getLikedIds, getShowcase, type ShowcaseItem } from "@/lib/data/showcase";
+import { commentsLabel } from "@/lib/domain/comments";
 import { likeLoginHref } from "@/lib/domain/likes";
 import { parseShowcaseFilter, showcaseHref } from "@/lib/domain/showcase-filter";
 
@@ -232,7 +233,16 @@ function FeedPost({ item, liked, following, viewer }: { item: ShowcaseItem; like
         )}
       </div>
       <div className="flex items-center justify-between gap-3 px-2 pt-2 pr-4">
-        <LikeButton itemId={item.id} liked={liked} count={item.likes} signedIn={viewer.signedIn} loginHref={viewer.loginHref} />
+        <div className="flex min-w-0 flex-wrap items-center gap-x-3">
+          <LikeButton itemId={item.id} liked={liked} count={item.likes} signedIn={viewer.signedIn} loginHref={viewer.loginHref} />
+          <Link
+            href={`/ispirazione/${item.id}#commenti`}
+            className="relative z-10 inline-flex h-11 items-center gap-1.5 rounded-full px-2.5 text-body-s font-semibold text-ink hover:bg-subtle"
+          >
+            <MessageCircle className="size-6" aria-hidden />
+            {commentsLabel(item.comments)}
+          </Link>
+        </div>
         <span aria-hidden className="inline-flex items-center gap-1 text-body-s font-semibold text-primary">
           Scopri <ArrowRight className="size-4 transition-transform motion-safe:group-hover:translate-x-0.5" />
         </span>

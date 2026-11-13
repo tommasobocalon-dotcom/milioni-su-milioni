@@ -14,6 +14,7 @@ const MESSAGES = {
   missing: "Questa azienda non è più disponibile.",
   login: "Accedi per seguire le aziende.",
   own: "Questa è la tua azienda: non serve seguirla.",
+  blocked: "Non puoi seguire questa azienda.",
   network: "Non siamo riusciti a salvare: riprova.",
 } as const;
 

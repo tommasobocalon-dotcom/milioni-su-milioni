@@ -3,6 +3,7 @@ import { and, desc, eq, gt, inArray, isNotNull, lte, ne, notInArray, sql, type S
 import { db } from "@/lib/db/client";
 import { categories, municipalities, partnerFollows, partners, portfolioItems, portfolioLikes, provinces, showcaseFeatures } from "@/lib/db/schema";
 import type { ShowcaseFilter } from "@/lib/domain/showcase-filter";
+import { publicCommentCount } from "./comments";
 import { profileHref } from "./search";
 
 export type ShowcaseItem = {
@@ -21,6 +22,8 @@ export type ShowcaseItem = {
   sponsored: boolean;
   /** Quanti account hanno messo "mi piace" al lavoro. */
   likes: number;
+  /** Quanti commenti pubblici ha il lavoro. */
+  comments: number;
 };
 
 const columns = {
@@ -39,6 +42,7 @@ const columns = {
   provinceSlug: provinces.slug,
   place: municipalities.name,
   likes: sql<number>`(select count(*)::int from ${portfolioLikes} where ${portfolioLikes.portfolioItemId} = ${portfolioItems.id})`,
+  comments: publicCommentCount,
 };
 
 function base() {
@@ -68,6 +72,7 @@ const toItem = (r: Row, sponsored: boolean): ShowcaseItem => ({
   href: profileHref({ partnerType: r.partnerType, provinceSlug: r.provinceSlug, categorySlug: r.categorySlug, slug: r.partnerSlug }),
   sponsored,
   likes: r.likes,
+  comments: r.comments,
 });
 
 /**

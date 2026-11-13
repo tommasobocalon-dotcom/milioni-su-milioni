@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { ArrowLeft } from "lucide-react";
+import { CommentSection } from "@/components/site/comments";
 import { LikeButton } from "@/components/site/like-button";
 import { PartnerFollow } from "@/components/site/partner-follow";
 import { ProjectGallery } from "@/components/site/project-gallery";
@@ -55,6 +56,9 @@ async function Work({ id }: { id: string }) {
               <p className="max-w-prose text-body-l whitespace-pre-line text-ink-2">{item.description}</p>
             </section>
           )}
+          <Suspense fallback={<div className="h-40 animate-pulse rounded-lg bg-muted" aria-busy="true" />}>
+            <CommentSection itemId={item.id} partnerId={item.partnerId} partnerName={item.partnerName} />
+          </Suspense>
         </article>
 
         <aside className="flex flex-col gap-4 self-start rounded-lg border border-line bg-surface p-6 lg:sticky lg:top-24">
