@@ -5,41 +5,113 @@ import { ArrowRight } from "lucide-react";
 import { Suspense } from "react";
 import { connection } from "next/server";
 import { Badge } from "@/components/ui/badge";
+import { ChipLink } from "@/components/ui/chip";
+import { getCategories } from "@/lib/data/catalog";
 import { getShowcase, type ShowcaseItem } from "@/lib/data/showcase";
+import { parseShowcaseFilter, showcaseHref } from "@/lib/domain/showcase-filter";
 
 export const metadata: Metadata = {
   title: "Ispirazione",
   description: "Lavori veri di artigiani, tecnici e agenzie del Veneto: bagni, cucine, facciate, case. Idee per il tuo progetto.",
 };
 
-export default function InspirationPage() {
+export default function InspirationPage({ searchParams }: PageProps<"/ispirazione">) {
   return (
-    <div className="container-page flex flex-col gap-10 py-10 md:py-14">
-      <header className="flex max-w-2xl flex-col gap-2">
-        <h1 className="font-display text-h1 md:text-display-l">Ispirazione</h1>
-        <p className="text-body-l text-ink-2">
-          Lavori fatti da chi trovi su geco. Apri un progetto per vedere tutte le foto e, se ti piace, chiedi un contatto all&apos;azienda.
-        </p>
-        <p className="text-body-s text-ink-2">
-          Sei un&apos;azienda?{" "}
-          <Link href="/area-partner/lavori" className="font-semibold text-primary hover:underline">
-            Pubblica i tuoi lavori
-          </Link>{" "}
-          dall&apos;Area Partner: fino a 5 con il piano Base, 25 con il Normal, senza limiti con il Premium.
-        </p>
-      </header>
-      <Suspense fallback={<div className="h-96 animate-pulse rounded-lg bg-muted" aria-busy="true" />}>
-        <Showcase />
-      </Suspense>
-    </div>
+    <>
+      <section className="bg-brand text-on-brand">
+        <div className="container-page flex flex-col gap-6 py-10 md:py-14">
+          <div className="flex max-w-2xl flex-col gap-3">
+            <h1 className="font-display text-h1 md:text-display-l">Ispirazione</h1>
+            <p className="text-body-l text-on-brand-muted">
+              Lavori fatti da chi trovi su geco. Apri un progetto per vedere tutte le foto e, se ti piace, chiedi un contatto all&apos;azienda.
+            </p>
+          </div>
+          <Suspense fallback={<div className="h-20" aria-hidden />}>
+            <Filters searchParams={searchParams} />
+          </Suspense>
+          <p className="text-body-s text-on-brand-muted">
+            Sei un&apos;azienda?{" "}
+            <Link href="/area-partner/lavori" className="font-semibold text-on-brand underline underline-offset-2 hover:text-salvia-200">
+              Pubblica i tuoi lavori
+            </Link>{" "}
+            dall&apos;Area Partner: fino a 5 con il piano Base, 25 con il Normal, senza limiti con il Premium.
+          </p>
+        </div>
+      </section>
+      <div className="container-page flex flex-col gap-10 py-10 md:py-14">
+        <Suspense fallback={<div className="h-96 animate-pulse rounded-lg bg-muted" aria-busy="true" />}>
+          <Showcase searchParams={searchParams} />
+        </Suspense>
+      </div>
+    </>
   );
 }
 
-async function Showcase() {
+type Search = PageProps<"/ispirazione">["searchParams"];
+
+async function readFilter(searchParams: Search) {
+  const [params, categories] = await Promise.all([searchParams, getCategories()]);
+  const pros = categories.filter((c) => c.partnerType !== "agency");
+  return { filter: parseShowcaseFilter(params, pros.map((c) => c.slug)), pros };
+}
+
+/** Filtri come link: Tutti / Professionisti / Agenzie, poi il tipo di professionista o l'operazione dell'agenzia. */
+async function Filters({ searchParams }: { searchParams: Search }) {
+  const { filter, pros } = await readFilter(searchParams);
+  const sub =
+    filter.type === "pro"
+      ? pros.map((c) => ({ label: c.pluralName, href: showcaseHref({ type: "pro", categorySlug: c.slug }), on: filter.categorySlug === c.slug }))
+      : filter.type === "agency"
+        ? [
+            { label: "In vendita", href: showcaseHref({ type: "agency", contract: "sale" }), on: filter.contract === "sale" },
+            { label: "In affitto", href: showcaseHref({ type: "agency", contract: "rent" }), on: filter.contract === "rent" },
+          ]
+        : [];
+  return (
+    <nav aria-label="Filtra i lavori" className="flex flex-col gap-3">
+      <ul className="flex flex-wrap gap-2">
+        {[
+          { label: "Tutti", href: showcaseHref({}), on: !filter.type },
+          { label: "Professionisti", href: showcaseHref({ type: "pro" }), on: filter.type === "pro" },
+          { label: "Agenzie", href: showcaseHref({ type: "agency" }), on: filter.type === "agency" },
+        ].map((f) => (
+          <li key={f.label}>
+            <ChipLink href={f.href} selected={f.on} scroll={false}>
+              {f.label}
+            </ChipLink>
+          </li>
+        ))}
+      </ul>
+      {sub.length > 0 && (
+        <ul aria-label={filter.type === "pro" ? "Tipo di professionista" : "Operazione"} className="flex flex-wrap gap-2 border-t border-bosco-700 pt-3">
+          {sub.map((f) => (
+            <li key={f.label}>
+              <ChipLink href={f.href} selected={f.on} scroll={false}>
+                {f.label}
+              </ChipLink>
+            </li>
+          ))}
+        </ul>
+      )}
+    </nav>
+  );
+}
+
+async function Showcase({ searchParams }: { searchParams: Search }) {
   await connection();
-  const { featured, latest } = await getShowcase(new Date());
+  const { filter } = await readFilter(searchParams);
+  const { featured, latest } = await getShowcase(new Date(), filter);
   if (featured.length + latest.length === 0) {
-    return <p className="rounded-lg bg-subtle p-8 text-center text-body">Le aziende stanno caricando i primi lavori: torna presto.</p>;
+    return filter.type ? (
+      <p className="rounded-lg bg-subtle p-8 text-center text-body">
+        Ancora nessun lavoro con questo filtro.{" "}
+        <Link href="/ispirazione" className="font-semibold text-on-brand underline underline-offset-2 hover:text-salvia-200">
+          Vedi tutti i lavori
+        </Link>
+      </p>
+    ) : (
+      <p className="rounded-lg bg-subtle p-8 text-center text-body">Le aziende stanno caricando i primi lavori: torna presto.</p>
+    );
   }
   return (
     <>
@@ -104,7 +176,7 @@ function ShowcaseCard({ item, large }: { item: ShowcaseItem; large?: boolean }) 
           </Link>
         </h3>
         {item.description && <p className="line-clamp-2 text-body-s text-ink-2">{item.description}</p>}
-        <div className="mt-auto flex items-center justify-between gap-3 border-t border-line pt-3 text-body-s">
+        <div className="mt-auto flex items-center justify-between gap-3 border-t border-bosco-700 pt-3 text-body-s">
           <Link href={item.href} className="relative z-10 font-semibold text-ink hover:text-primary hover:underline">
             {item.partnerName}
           </Link>

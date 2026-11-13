@@ -1,7 +1,8 @@
 import "server-only";
-import { and, desc, eq, gt, isNotNull, lte, notInArray } from "drizzle-orm";
+import { and, desc, eq, gt, isNotNull, lte, ne, notInArray, type SQL } from "drizzle-orm";
 import { db } from "@/lib/db/client";
 import { categories, municipalities, partners, portfolioItems, provinces, showcaseFeatures } from "@/lib/db/schema";
+import type { ShowcaseFilter } from "@/lib/domain/showcase-filter";
 import { profileHref } from "./search";
 
 export type ShowcaseItem = {
@@ -61,10 +62,15 @@ const toItem = (r: Row, sponsored: boolean): ShowcaseItem => ({
 
 /**
  * Pagina "Ispirazione": in cima i lavori messi in evidenza a pagamento (sempre "Sponsorizzato"),
- * sotto gli altri lavori con foto delle aziende attive, dai più recenti.
+ * sotto gli altri lavori con foto delle aziende attive, dai più recenti; `filter` dai filtri della pagina.
  */
-export async function getShowcase(now: Date): Promise<{ featured: ShowcaseItem[]; latest: ShowcaseItem[] }> {
-  const active = and(eq(partners.accountStatus, "active"), isNotNull(portfolioItems.imageUrl));
+export async function getShowcase(now: Date, filter: ShowcaseFilter = {}): Promise<{ featured: ShowcaseItem[]; latest: ShowcaseItem[] }> {
+  const conditions: SQL[] = [eq(partners.accountStatus, "active"), isNotNull(portfolioItems.imageUrl)];
+  if (filter.type === "pro") conditions.push(ne(partners.type, "agency"));
+  if (filter.type === "agency") conditions.push(eq(partners.type, "agency"));
+  if (filter.categorySlug) conditions.push(eq(categories.slug, filter.categorySlug));
+  if (filter.contract) conditions.push(eq(portfolioItems.contract, filter.contract));
+  const active = and(...conditions);
   const featuredRows = await base()
     .innerJoin(showcaseFeatures, eq(showcaseFeatures.portfolioItemId, portfolioItems.id))
     .where(and(active, lte(showcaseFeatures.startsAt, now), gt(showcaseFeatures.endsAt, now)))

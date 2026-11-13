@@ -48,7 +48,8 @@
   --color-page: var(--color-crema-50);
   --color-surface: #ffffff;
   --color-subtle: var(--color-salvia-100);
-  --color-muted: var(--color-crema-100);
+  /* Sagome di caricamento e sfondi delle foto: salvia, non crema (giallino), richiesta del cliente 13/11/2026. */
+  --color-muted: var(--color-salvia-100);
   --color-brand: var(--color-bosco-800);
   --color-brand-soft: var(--color-salvia-200);
   --color-tertiary: var(--color-lavanda-100);

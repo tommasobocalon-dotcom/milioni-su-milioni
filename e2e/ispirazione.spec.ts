@@ -206,6 +206,21 @@ test("un'agenzia pubblica un immobile con le foto e compare in Ispirazione", asy
   const card = page.getByRole("listitem").filter({ has: page.getByRole("heading", { name: "Trilocale luminoso in centro" }) });
   await expect(card.getByText("3 foto")).toBeVisible();
   await expect(card.getByRole("link", { name: "Casa Veneta Immobiliare" })).toBeVisible();
+
+  // Filtri (13/11/2026): agenzie per operazione, professionisti per tipo.
+  const filters = page.getByRole("navigation", { name: "Filtra i lavori" });
+  const trilocale = page.getByRole("heading", { name: "Trilocale luminoso in centro" });
+  await filters.getByRole("link", { name: "Agenzie" }).click();
+  await expect(page).toHaveURL(/tipo=agenzie/);
+  await expect(trilocale).toBeVisible();
+  await filters.getByRole("link", { name: "In affitto" }).click();
+  await expect(page.getByText("Ancora nessun lavoro con questo filtro.")).toBeVisible();
+  await expect(trilocale).toHaveCount(0);
+  await filters.getByRole("link", { name: "In vendita" }).click();
+  await expect(trilocale).toBeVisible();
+  await filters.getByRole("link", { name: "Professionisti" }).click();
+  await expect(filters.getByRole("link", { name: "Idraulici" })).toBeVisible();
+  await expect(trilocale).toHaveCount(0);
 });
 
 test("senza un piano attivo non si pubblica", async ({ page }) => {
