@@ -17,6 +17,7 @@ import {
   type PriceUnit,
 } from "@/lib/domain/format";
 import { ProjectPhotos } from "@/components/site/project-photos";
+import { cn } from "@/lib/utils";
 import { videoEmbedUrl } from "@/lib/domain/extras";
 
 /** Profilo pubblico del partner (PRD §5.4), stesso impianto per agenzie e professionisti. */
@@ -61,7 +62,8 @@ export function ProfileView({ p }: { p: PartnerProfile }) {
             <div className="flex flex-wrap items-center gap-2">
               <h1 className="font-display text-h1">{p.displayName}</h1>
               {p.verified && <Badge kind="verified" />}
-              {plan && <Badge kind={plan} />}
+              {/* Partner Elite lilla come in Trova professionista, non giallo (13/11/2026). */}
+              {plan && <Badge kind={plan} className={cn(plan === "premium" && "bg-lavanda-300 [&>svg]:text-ambra-500")} />}
             </div>
             <p className="text-body text-ink-2">
               {p.categoryName} · {p.tagline} · {p.municipalityName} (

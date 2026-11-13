@@ -79,7 +79,7 @@ export function ProjectGallery({ photos, title }: { photos: string[]; title: str
   );
 }
 
-function ArrowButton({ side, disabled, onClick }: { side: "left" | "right"; disabled: boolean; onClick: () => void }) {
+export function ArrowButton({ side, disabled, onClick }: { side: "left" | "right"; disabled: boolean; onClick: () => void }) {
   const Icon = side === "left" ? ChevronLeft : ChevronRight;
   return (
     <button

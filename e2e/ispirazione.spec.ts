@@ -127,12 +127,16 @@ test("un lavoro vuole da 2 a 8 foto, un titolo e una breve descrizione", async (
   await page.goto("/ispirazione");
   const card = page.getByRole("listitem").filter({ has: page.getByRole("heading", { name: "Bagno rifatto a Noale" }) });
   await expect(card.getByText("8 foto")).toBeVisible();
-  // Nel riquadro solo la foto principale (13/11/2026); tutte le foto nella pagina del lavoro.
-  await expect(card.getByRole("img")).toHaveCount(1);
+  // Nel riquadro tutte le foto, da scorrere di lato con le frecce senza aprire il lavoro (13/11/2026).
+  const cardStrip = card.getByRole("region", { name: /Bagno rifatto a Noale: 8 foto/ });
+  await expect(cardStrip.getByRole("img")).toHaveCount(8);
+  await card.getByRole("button", { name: "Foto successiva" }).click();
+  await expect.poll(() => cardStrip.evaluate((el) => el.scrollLeft)).toBeGreaterThan(0);
+  await expect(page).toHaveURL(/\/ispirazione$/);
   await expect(card.getByText(/Demolizione, impianto idraulico nuovo/)).toBeVisible();
   await expect(card.getByRole("link", { name: "Rossi Impianti" })).toBeVisible();
 
-  await card.getByRole("link", { name: "Bagno rifatto a Noale" }).click();
+  await card.getByRole("link", { name: "Bagno rifatto a Noale", exact: true }).click();
   await expect(page).toHaveURL(/\/ispirazione\/[0-9a-f-]{36}$/);
   await expect(page.getByRole("heading", { level: 1, name: "Bagno rifatto a Noale" })).toBeVisible();
   await expect(page.getByRole("region", { name: "Il lavoro" }).getByText(/Demolizione, impianto idraulico nuovo/)).toBeVisible();

@@ -1,11 +1,11 @@
 import type { Metadata } from "next";
-import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { Suspense } from "react";
 import { connection } from "next/server";
 import { Badge } from "@/components/ui/badge";
 import { ChipLink } from "@/components/ui/chip";
+import { ProjectPhotos } from "@/components/site/project-photos";
 import { getCategories } from "@/lib/data/catalog";
 import { getShowcase, type ShowcaseItem } from "@/lib/data/showcase";
 import { parseShowcaseFilter, showcaseHref } from "@/lib/domain/showcase-filter";
@@ -144,25 +144,20 @@ async function Showcase({ searchParams }: { searchParams: Search }) {
 }
 
 /**
- * Riquadro di un lavoro: solo la foto principale, tutto il riquadro porta alla pagina del lavoro (link del titolo
- * allargato con ::after); il nome dell'azienda resta un link a parte, sopra.
+ * Riquadro di un lavoro: foto che si scorrono di lato (13/11/2026), il resto del riquadro porta alla pagina del lavoro
+ * (link del titolo allargato con ::after); il nome dell'azienda resta un link a parte, sopra.
  */
 function ShowcaseCard({ item, large }: { item: ShowcaseItem; large?: boolean }) {
   return (
     <li className="group relative flex flex-col overflow-hidden rounded-lg border border-line bg-surface transition-colors hover:border-primary">
-      <div className="relative aspect-[4/3] overflow-hidden bg-muted">
-        <Image
-          src={item.photos[0]}
-          alt={item.title}
-          fill
+      {/* Sopra il link allargato del titolo, così le foto si scorrono; ogni foto apre comunque il lavoro. */}
+      <div className="relative z-10 aspect-[4/3] overflow-hidden bg-muted">
+        <ProjectPhotos
+          photos={item.photos}
+          title={item.title}
+          href={`/ispirazione/${item.id}`}
           sizes={large ? "(min-width: 768px) 50vw, 100vw" : "(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"}
-          className="object-cover transition-transform duration-500 motion-safe:group-hover:scale-105"
         />
-        {item.photos.length > 1 && (
-          <span className="pointer-events-none absolute right-2 bottom-2 rounded-full bg-ink/75 px-2 py-0.5 text-caption font-semibold text-on-brand">
-            {item.photos.length} foto
-          </span>
-        )}
       </div>
       <div className="flex flex-1 flex-col gap-2 p-5">
         {item.sponsored && <Badge kind="sponsored" className="self-start" />}
