@@ -16,8 +16,10 @@ import {
   setCommentStatus,
 } from "@/lib/data/comments";
 import { isOwnPartner } from "@/lib/data/follows";
+import { getSanction } from "@/lib/data/moderation";
 import { cleanComment, commentError, initialCommentStatus, REPORT_REASONS, tooManyComments, type ReportReason } from "@/lib/domain/comments";
 import { BASE_HIDDEN_WORDS } from "@/lib/domain/hidden-words";
+import { commentBan } from "@/lib/domain/moderation";
 import { ipRateLimited } from "@/lib/security/ip-limit";
 
 /**
@@ -37,6 +39,9 @@ export async function postComment(itemId: string, _prev: FormState, formData: Fo
   const user = await getAnySessionUser();
   if (!user) return { error: "Accedi per commentare." };
   if (!(await isEmailVerified(user.id))) return { error: "Per commentare conferma prima la tua email: trovi il link nell'Area cliente." };
+  // Commenti fermi o bloccati dopo più violazioni (scala in src/lib/domain/moderation.ts).
+  const ban = commentBan(await getSanction(user.id));
+  if (ban) return { error: ban };
   const body = cleanComment(formData.get("body"));
   const invalid = commentError(body);
   if (invalid) return { error: invalid };

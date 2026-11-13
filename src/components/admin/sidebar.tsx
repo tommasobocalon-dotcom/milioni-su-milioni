@@ -3,7 +3,7 @@
 import { Suspense } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Flag, Globe, LayoutDashboard, LifeBuoy, LogOut, ScrollText, Store } from "lucide-react";
+import { Flag, Globe, LayoutDashboard, LifeBuoy, LogOut, MessageSquareWarning, ScrollText, Store } from "lucide-react";
 import { logoutAdmin } from "@/app/admin/actions";
 import { Wordmark } from "@/components/site/wordmark";
 import { cn } from "@/lib/utils";
@@ -13,6 +13,7 @@ const NAV = [
   { href: "/admin/assistenza", label: "Assistenza", icon: LifeBuoy, badge: true },
   { href: "/admin/partner", label: "Partner", icon: Store },
   { href: "/admin/segnalazioni", label: "Segnalazioni lead", icon: Flag },
+  { href: "/admin/commenti", label: "Commenti segnalati", icon: MessageSquareWarning },
   { href: "/admin/registro", label: "Registro attività", icon: ScrollText },
 ];
 

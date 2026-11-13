@@ -1,11 +1,12 @@
 import Link from "next/link";
 import { Suspense } from "react";
-import { ArrowRight, BadgeCheck, Rocket, Euro, Flag, Inbox, LifeBuoy, Store } from "lucide-react";
+import { ArrowRight, BadgeCheck, Rocket, Euro, Flag, Inbox, LifeBuoy, MessageSquareWarning, Store } from "lucide-react";
 import { connection } from "next/server";
 import { AccountStatusPill, AdminPageHeader, AdminSkeleton, ago, dateOnly, Empty, Panel, TicketStatusPill } from "@/components/admin/ui";
 import { Kpi } from "@/components/partner/kpi";
 import { requireAdmin } from "@/lib/auth/session";
 import { getAdminOverview } from "@/lib/data/admin";
+import { countOpenCommentReports } from "@/lib/data/moderation";
 import { formatEuro } from "@/lib/domain/format";
 
 export const metadata = { title: "Panoramica" };
@@ -22,11 +23,12 @@ async function Overview() {
   const admin = await requireAdmin();
   await connection();
   const now = new Date();
-  const o = await getAdminOverview(now);
+  const [o, reportedComments] = await Promise.all([getAdminOverview(now), countOpenCommentReports()]);
   const active = o.partnersBy.active ?? 0;
   const todo = [
     { n: o.ticketsToAnswer, label: ["richiesta di assistenza da rispondere", "richieste di assistenza da rispondere"], href: "/admin/assistenza?stato=open", icon: LifeBuoy },
     { n: o.openReports, label: ["lead segnalato da decidere", "lead segnalati da decidere"], href: "/admin/segnalazioni", icon: Flag },
+    { n: reportedComments, label: ["commento segnalato da guardare", "commenti segnalati da guardare"], href: "/admin/commenti", icon: MessageSquareWarning },
     { n: o.toVerify, label: ["partner da verificare", "partner da verificare"], href: "/admin/partner?filtro=da-verificare", icon: BadgeCheck },
   ].filter((t) => t.n > 0);
 

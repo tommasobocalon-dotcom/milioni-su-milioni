@@ -176,6 +176,13 @@
       "when": 1794578881222,
       "tag": "0024_commenti",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1794581503862,
+      "tag": "0025_sanzioni_commenti",
+      "breakpoints": true
     }
   ]
 }

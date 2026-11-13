@@ -13,6 +13,10 @@ import { accountStatusFrom } from "@/lib/domain/billing";
 import { REPORT_REASONS } from "@/lib/domain/lead-rules";
 import { MESSAGE_MAX, TICKET_STATUSES } from "@/lib/domain/support";
 
+import { getStrikeNotice, markStrikeNotified, rejectCommentReports, removeComment, revokeStrike } from "@/lib/data/moderation";
+import { cleanComment, REPORT_REASONS as COMMENT_REPORT_REASONS, type ReportReason } from "@/lib/domain/comments";
+import { strikeEmail } from "@/lib/domain/moderation";
+import { DeliveryError, sendEmail } from "@/lib/notify";
 import { replyToTicket } from "@/lib/support/service";
 import type { FormState } from "@/components/ui/message-form";
 
@@ -191,4 +195,92 @@ export async function resolveLeadReportAction(leadId: string, formData: FormData
   });
   revalidatePath("/admin", "layout");
   revalidatePath("/area-partner", "layout");
+}
+
+// --- Commenti segnalati (Ispirazione) ------------------------------------------
+
+const appUrl = () => process.env.APP_URL ?? "http://localhost:3000";
+const supportEmail = () => process.env.SUPPORT_EMAIL?.trim() || "assistenza@gecoitalia.it";
+const CommentReason = z.enum(COMMENT_REPORT_REASONS.map((r) => r.value));
+
+/**
+ * Email all'autore con cosa è stato tolto, il motivo, cosa comporta e come contestare. Segna sulla violazione
+ * quando è partita. Restituisce l'errore di invio, se c'è: dal gestionale si può rimandare.
+ */
+async function sendStrikeEmail(strikeId: string): Promise<string | null> {
+  const s = await getStrikeNotice(strikeId);
+  if (!s) return "violazione non trovata";
+  const mail = strikeEmail({
+    name: s.name,
+    body: s.body,
+    reasonLabel: COMMENT_REPORT_REASONS.find((r) => r.value === s.reason)?.label ?? s.reason,
+    workTitle: s.workTitle ?? "non più disponibile",
+    sanction: s.sanction,
+    appUrl: appUrl(),
+  });
+  try {
+    await sendEmail(s.email, mail.subject, mail.text, { replyTo: supportEmail() });
+  } catch (e) {
+    if (!(e instanceof DeliveryError)) throw e;
+    return e.message;
+  }
+  await markStrikeNotified(strikeId);
+  return null;
+}
+
+/**
+ * Toglie un commento contrario alle regole. L'autore prende una violazione (scala in src/lib/domain/moderation.ts)
+ * e viene avvisato per email. Se l'email non parte il commento resta tolto e nel gestionale compare "Rimanda l'email".
+ */
+export async function removeCommentAction(commentId: string, _prev: FormState, formData: FormData): Promise<FormState> {
+  const admin = await requireAdmin();
+  const reason = CommentReason.safeParse(formData.get("reason"));
+  if (!Id.safeParse(commentId).success || !reason.success) return { error: "Scegli il motivo" };
+  const note = cleanComment(formData.get("note")).slice(0, 500) || null;
+  const removed = await removeComment(commentId, admin, reason.data as ReportReason, note);
+  if (!removed) return { error: "Il commento non c'è più o era già stato tolto" };
+  await sendStrikeEmail(removed.strikeId);
+  revalidatePath("/admin", "layout");
+  revalidatePath(`/ispirazione/${removed.itemId}`);
+  return { ok: "Commento tolto" };
+}
+
+/** Rimanda all'autore l'email di una violazione, quando il primo invio non è riuscito. */
+export async function resendStrikeEmailAction(strikeId: string): Promise<FormState> {
+  await requireAdmin();
+  if (!Id.safeParse(strikeId).success) return { error: "Violazione non valida" };
+  const error = await sendStrikeEmail(strikeId);
+  revalidatePath("/admin", "layout");
+  return error ? { error: `Email non partita: ${error}` } : { ok: "Email inviata" };
+}
+
+/** Le segnalazioni non reggono: si chiudono come respinte e il commento resta com'è. */
+export async function rejectCommentReportsAction(commentId: string) {
+  const admin = await requireAdmin();
+  if (!Id.safeParse(commentId).success) return;
+  const itemId = await rejectCommentReports(commentId, admin);
+  revalidatePath("/admin", "layout");
+  if (itemId) revalidatePath(`/ispirazione/${itemId}`);
+}
+
+/** Contestazione accolta: la violazione non conta più, il commento torna visibile e la persona viene avvisata. */
+export async function revokeStrikeAction(strikeId: string) {
+  const admin = await requireAdmin();
+  if (!Id.safeParse(strikeId).success) return;
+  const revoked = await revokeStrike(strikeId, admin);
+  if (!revoked) return;
+  revalidatePath("/admin", "layout");
+  if (revoked.itemId) revalidatePath(`/ispirazione/${revoked.itemId}`);
+  const first = revoked.name.trim().split(/\s+/)[0] ?? "";
+  try {
+    await sendEmail(
+      revoked.email,
+      "Abbiamo rivisto la decisione sul tuo commento",
+      `Ciao ${first},\n\nabbiamo riguardato il commento che avevamo tolto: avevi ragione. La violazione non conta più${revoked.restored ? " e il commento è di nuovo visibile" : ""}.\n\nScusa per il disguido.\n\nIl team di GecoItalia`,
+      { replyTo: supportEmail() },
+    );
+  } catch (e) {
+    // L'annullamento vale comunque: l'email è una cortesia e si vede dal registro se non è partita.
+    if (!(e instanceof DeliveryError)) throw e;
+  }
 }

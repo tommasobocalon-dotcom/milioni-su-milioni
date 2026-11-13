@@ -443,6 +443,33 @@ export const commentReports = pgTable(
 );
 
 /**
+ * Violazioni: un commento tolto dal gestionale perché contrario alle regole (13/11/2026). Da quelle non annullate
+ * si legge la sanzione (src/lib/domain/moderation.ts). Il testo del commento resta qui, per poter riguardare la
+ * decisione se viene contestata.
+ */
+export const userStrikes = pgTable(
+  "user_strikes",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    commentId: uuid("comment_id").references(() => portfolioComments.id, { onDelete: "set null" }),
+    reason: commentReportReason("reason").notNull(),
+    commentBody: text("comment_body").notNull(),
+    note: text("note"),
+    /** Email dell'amministratore che ha deciso. */
+    decidedBy: text("decided_by").notNull(),
+    createdAt: createdAt(),
+    /** Quando è partita l'email con il motivo; null se l'invio non è riuscito (si rimanda dal gestionale). */
+    notifiedAt: timestamp("notified_at", { withTimezone: true }),
+    /** Contestazione accolta: la violazione non conta più. */
+    revokedAt: timestamp("revoked_at", { withTimezone: true }),
+  },
+  (t) => [index("user_strikes_user_idx").on(t.userId)],
+);
+
+/**
  * Persone che un'azienda ha bloccato o limitato sotto i suoi lavori. Bloccato: non commenta più i suoi lavori, non
  * la segue, i suoi commenti lì non si vedono. Limitato: i suoi commenti si vedono solo dopo l'approvazione.
  */

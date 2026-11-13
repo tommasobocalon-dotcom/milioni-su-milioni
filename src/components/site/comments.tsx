@@ -6,8 +6,10 @@ import { ReportForm } from "@/components/site/report-form";
 import { getAnySessionUser, getSessionUser } from "@/lib/auth/session";
 import { isEmailVerified, listComments, type CommentView } from "@/lib/data/comments";
 import { isOwnPartner } from "@/lib/data/follows";
+import { getSanction } from "@/lib/data/moderation";
 import { commentsLabel } from "@/lib/domain/comments";
 import { likeLoginHref } from "@/lib/domain/likes";
+import { commentBan } from "@/lib/domain/moderation";
 
 const day = new Intl.DateTimeFormat("it-IT", { day: "numeric", month: "long", year: "numeric", timeZone: "Europe/Rome" });
 
@@ -31,7 +33,7 @@ export async function CommentSection({ itemId, partnerId, partnerName }: { itemI
   const memberships = await Promise.all(sessions.map((u) => isOwnPartner(u.id, partnerId)));
   const moderator = memberships.some(Boolean);
   const { comments, total } = await listComments(itemId, partnerId, { userId: user?.id ?? null, moderator });
-  const verified = user ? await isEmailVerified(user.id) : false;
+  const [verified, ban] = user ? await Promise.all([isEmailVerified(user.id), getSanction(user.id).then(commentBan)]) : [false, null];
   const loginHref = likeLoginHref(`/ispirazione/${itemId}#commenti`);
 
   return (
@@ -65,6 +67,14 @@ export async function CommentSection({ itemId, partnerId, partnerName }: { itemI
           Per commentare conferma prima la tua email: trovi il link nell&apos;
           <Link href="/area-cliente" className="font-semibold text-primary underline underline-offset-2 hover:text-primary-hover">
             Area cliente
+          </Link>
+          .
+        </p>
+      ) : ban ? (
+        <p className="rounded-lg bg-subtle p-4 text-body-s">
+          {ban} Se pensi che ci siamo sbagliati{" "}
+          <Link href="/assistenza" className="font-semibold text-primary underline underline-offset-2 hover:text-primary-hover">
+            scrivi all&apos;assistenza
           </Link>
           .
         </p>

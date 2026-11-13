@@ -50,7 +50,7 @@ export function VerificationPill({ status }: { status: keyof typeof VERIFICATION
 
 export function Panel({ title, children, className, action }: { title?: string; children: React.ReactNode; className?: string; action?: React.ReactNode }) {
   return (
-    <section className={cn("flex flex-col rounded-lg border border-line bg-surface", className)}>
+    <section aria-label={title} className={cn("flex flex-col rounded-lg border border-line bg-surface", className)}>
       {title && (
         <div className="flex items-center justify-between gap-3 border-b border-line px-5 py-4">
           <h2 className="text-h4 font-semibold">{title}</h2>
@@ -80,6 +80,9 @@ export const dateTime = new Intl.DateTimeFormat("it-IT", { day: "numeric", month
 export const dateOnly = new Intl.DateTimeFormat("it-IT", { day: "numeric", month: "short", year: "numeric", timeZone: "Europe/Rome" });
 
 const ACTION_LABEL: Record<string, string> = {
+  "comment.remove": "Commento tolto",
+  "comment.reports_rejected": "Segnalazioni respinte",
+  "comment.strike_revoked": "Violazione annullata",
   "auth.signup": "Registrazione",
   "auth.login_failed": "Password sbagliata",
   "auth.password_reset": "Password reimpostata",
