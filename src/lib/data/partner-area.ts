@@ -251,3 +251,14 @@ export async function getMunicipalityExtensions(partnerId: string, now: Date) {
     .groupBy(municipalities.id, municipalities.name, provinces.code)
     .orderBy(municipalities.name);
 }
+
+/** Comune della sede dell'azienda, con la sigla della provincia. */
+export async function getHomeMunicipality(partnerId: string) {
+  const [row] = await db
+    .select({ name: municipalities.name, provinceCode: provinces.code })
+    .from(partners)
+    .innerJoin(municipalities, eq(municipalities.id, partners.municipalityId))
+    .innerJoin(provinces, eq(provinces.id, municipalities.provinceId))
+    .where(eq(partners.id, partnerId));
+  return row ?? null;
+}
