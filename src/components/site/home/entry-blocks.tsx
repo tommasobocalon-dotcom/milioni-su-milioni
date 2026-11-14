@@ -7,11 +7,19 @@ import { cn } from "@/lib/utils";
 
 type Shortcut = { label: string; href: string };
 
-/** Scorciatoie del lato agenzie: i servizi più cercati da chi compra, vende o affitta. */
+/** Scorciatoie del lato agenzie: comprare, vendere, affittare e gli altri servizi delle agenzie (soci, 14/11/2026). */
 const HOME_SHORTCUTS: Shortcut[] = [
   { label: "Comprare", href: "/trova-casa?servizio=compravendita" },
   { label: "Vendere", href: "/trova-casa?servizio=valutazione" },
   { label: "Affittare", href: "/trova-casa?servizio=affitti" },
+  { label: "Affitti brevi", href: "/trova-casa?servizio=affitti-brevi" },
+  { label: "Gestione affitti", href: "/trova-casa?servizio=gestione-affitti" },
+  { label: "Locali commerciali", href: "/trova-casa?servizio=locazione-commerciale" },
+  { label: "Nuove costruzioni", href: "/trova-casa?servizio=nuove-costruzioni" },
+  { label: "Terreni e rustici", href: "/trova-casa?servizio=terreni" },
+  { label: "Tour virtuali", href: "/trova-casa?servizio=tour-virtuale" },
+  { label: "Verifica documenti", href: "/trova-casa?servizio=verifica-documenti" },
+  { label: "Foto e planimetria", href: "/trova-casa?servizio=foto-planimetria" },
 ];
 
 /**
@@ -21,15 +29,12 @@ const HOME_SHORTCUTS: Shortcut[] = [
 export async function EntryBlocks({ id }: { id: string }) {
   const categories = await getCategories();
 
-  // Le categorie di tecnici e artigiani con più partner attivi, a parità nell'ordine del catalogo.
+  // Tutte le categorie di tecnici e artigiani, nell'ordine del catalogo (soci, 14/11/2026: prima erano le 3 con più partner).
   const proShortcuts: Shortcut[] = categories
     .filter(
       (c) => c.partnerType === "technician" || c.partnerType === "artisan",
     )
-    .map((c, i) => ({ c, i }))
-    .sort((a, b) => b.c.partnerCount - a.c.partnerCount || a.i - b.i)
-    .slice(0, 3)
-    .map(({ c }) => ({
+    .map((c) => ({
       label: c.pluralName,
       href: `/trova-professionista?categoria=${c.slug}`,
     }));
