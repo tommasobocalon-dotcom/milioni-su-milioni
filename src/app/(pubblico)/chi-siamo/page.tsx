@@ -92,14 +92,9 @@ export default function AboutPage() {
               con loro in modo semplice e sicuro.
             </p>
           </div>
-          <figure className="flex flex-col gap-2">
-            <div className="relative aspect-[4/3] overflow-hidden rounded-lg">
-              <Image src={ABOUT_PHOTOS.hero.src} alt={ABOUT_PHOTOS.hero.alt} fill priority sizes="(min-width: 1024px) 45vw, 100vw" className="object-cover" />
-            </div>
-            <figcaption className="text-caption text-on-brand-muted">
-              Foto di {ABOUT_PHOTOS.hero.credit.author}, Pexels
-            </figcaption>
-          </figure>
+          <div className="relative aspect-[4/3] overflow-hidden rounded-lg">
+            <Image src={ABOUT_PHOTOS.hero.src} alt={ABOUT_PHOTOS.hero.alt} fill priority sizes="(min-width: 1024px) 45vw, 100vw" className="object-cover" />
+          </div>
         </div>
       </section>
 
