@@ -3,8 +3,9 @@ import Image from "next/image";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { Lock, MapPin, Scale, ShieldCheck, type LucideIcon } from "lucide-react";
+import { TimelineSteps } from "@/components/site/timeline-steps";
 import { ButtonLink } from "@/components/ui/button";
-import { ABOUT_HERO_PHOTO } from "@/lib/data/category-photos";
+import { ABOUT_PHOTOS } from "@/lib/data/category-photos";
 
 export const metadata: Metadata = {
   title: "Chi siamo",
@@ -16,17 +17,17 @@ const WHAT_WE_DO = [
   {
     title: "Raccogliamo le imprese del territorio",
     text: "Agenzie immobiliari, geometri, architetti, idraulici, elettricisti, imbianchini e imprese di ristrutturazione del Veneto, riuniti in un unico luogo e suddivisi per attività e per zona.",
-    image: { src: "/foto/categorie/agenzie-immobiliari.jpg", alt: "Case affacciate su un canale a Treviso" },
+    image: ABOUT_PHOTOS.businesses,
   },
   {
     title: "Presentiamo ogni impresa in modo completo",
     text: "Ciascuna impresa dispone di una scheda con la descrizione dell'attività, i servizi offerti, i comuni in cui opera, gli orari e i lavori già realizzati, così da poterla conoscere prima di contattarla.",
-    image: { src: "/foto/categorie/architetti.jpg", alt: "Tavole di progetto di un edificio stese su un tavolo" },
+    image: ABOUT_PHOTOS.profile,
   },
   {
     title: "Facilitiamo il primo contatto",
     text: "Una richiesta guidata, compilata in pochi passaggi, consente di spiegare all'impresa di che cosa si ha bisogno e di essere richiamati nella fascia oraria preferita.",
-    image: { src: "/foto/per-i-professionisti-3.jpg", alt: "Professionista che esamina un progetto insieme a una coppia" },
+    image: ABOUT_PHOTOS.contact,
   },
 ];
 
@@ -93,10 +94,10 @@ export default function AboutPage() {
           </div>
           <figure className="flex flex-col gap-2">
             <div className="relative aspect-[4/3] overflow-hidden rounded-lg">
-              <Image src={ABOUT_HERO_PHOTO.src} alt={ABOUT_HERO_PHOTO.alt} fill priority sizes="(min-width: 1024px) 45vw, 100vw" className="object-cover" />
+              <Image src={ABOUT_PHOTOS.hero.src} alt={ABOUT_PHOTOS.hero.alt} fill priority sizes="(min-width: 1024px) 45vw, 100vw" className="object-cover" />
             </div>
             <figcaption className="text-caption text-on-brand-muted">
-              Colli Euganei, provincia di Padova · foto di {ABOUT_HERO_PHOTO.credit.author}, {ABOUT_HERO_PHOTO.credit.license}
+              Foto di {ABOUT_PHOTOS.hero.credit.author}, Pexels
             </figcaption>
           </figure>
         </div>
@@ -105,8 +106,8 @@ export default function AboutPage() {
       <section aria-labelledby="perche" className="container-page grid items-center gap-10 py-16 md:py-20 lg:grid-cols-[5fr_7fr]">
         <div className="relative aspect-[4/3] overflow-hidden rounded-lg">
           <Image
-            src="/foto/home/professionisti-card-v2.jpg"
-            alt="Artigiano al lavoro sulla finestra di un appartamento in ristrutturazione"
+            src={ABOUT_PHOTOS.why.src}
+            alt={ABOUT_PHOTOS.why.alt}
             fill
             sizes="(min-width: 1024px) 40vw, 100vw"
             className="object-cover"
@@ -153,17 +154,7 @@ export default function AboutPage() {
         <h2 id="come-si-utilizza" className="font-display text-h2 md:text-h1">
           Come si utilizza
         </h2>
-        <ol className="grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
-          {STEPS.map((step, i) => (
-            <li key={step.title} className="flex flex-col gap-3 border-t-2 border-primary pt-5">
-              <span className="inline-flex size-9 items-center justify-center rounded-full bg-primary text-body-s font-semibold text-on-brand" aria-hidden>
-                {i + 1}
-              </span>
-              <h3 className="text-h4 font-semibold">{step.title}</h3>
-              <p className="text-body-s text-ink-2">{step.text}</p>
-            </li>
-          ))}
-        </ol>
+        <TimelineSteps steps={STEPS} />
       </section>
 
       <section aria-labelledby="impegni" className="bg-subtle">
@@ -206,11 +197,11 @@ export default function AboutPage() {
         </div>
         <div className="relative mx-auto aspect-square w-full max-w-sm overflow-hidden rounded-lg lg:max-w-none">
           <Image
-            src="/foto/home/agenzia-card.jpg"
-            alt="Professionista sorridente con un computer portatile sotto il braccio"
+            src={ABOUT_PHOTOS.forBusinesses.src}
+            alt={ABOUT_PHOTOS.forBusinesses.alt}
             fill
             sizes="(min-width: 1024px) 35vw, 100vw"
-            className="object-cover object-top"
+            className="object-cover"
           />
         </div>
       </section>

@@ -1,26 +1,74 @@
 [
  {
-  "file": "public/foto/chi-siamo/colli-euganei.jpg",
-  "media": "image",
-  "ref": "commons:166129714",
-  "title": "Parco Regionale dei Colli Euganei 2",
-  "creator": "kallerna",
-  "creatorUrl": null,
-  "date": "2025-05-23",
-  "license": "CC BY-SA 4.0",
-  "licenseCode": "by-sa",
-  "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
-  "creditRequired": true,
-  "page": "https://commons.wikimedia.org/wiki/File:Parco_Regionale_dei_Colli_Euganei_2.jpg",
-  "via": "Wikimedia Commons",
-  "image": "https://thumb.wikimedia.org/wikipedia/commons/thumb/b/bb/Parco_Regionale_dei_Colli_Euganei_2.jpg/1920px-Parco_Regionale_dei_Colli_Euganei_2.jpg",
-  "width": 1920,
-  "height": 1251,
-  "bytes": 959128,
-  "credit": "\"Parco Regionale dei Colli Euganei 2\" by kallerna, CC BY-SA 4.0, via Wikimedia Commons",
-  "notes": [
-   "Share-alike: an altered version (recoloured, combined with other pictures) must be shared under the same licence."
-  ],
-  "saved": "2026-11-11T22:23:54.048Z"
+  "file": "public/foto/chi-siamo/apertura.jpg",
+  "title": "Famiglia con l'agente immobiliare davanti alla nuova casa",
+  "creator": "MART PRODUCTION",
+  "license": "Licenza Pexels",
+  "licenseUrl": "https://www.pexels.com/it-it/license/",
+  "creditRequired": false,
+  "page": "https://www.pexels.com/it-it/foto/uomo-persone-donne-casa-7415046/",
+  "via": "Pexels",
+  "width": 2400,
+  "saved": "2026-11-14T10:18:56.810658Z"
+ },
+ {
+  "file": "public/foto/chi-siamo/perche.jpg",
+  "title": "Coppia che discute di planimetrie",
+  "creator": "Tima Miroshnichenko",
+  "license": "Licenza Pexels",
+  "licenseUrl": "https://www.pexels.com/it-it/license/",
+  "creditRequired": false,
+  "page": "https://www.pexels.com/it-it/foto/uomo-coppia-donna-costruzione-6474498/",
+  "via": "Pexels",
+  "width": 2400,
+  "saved": "2026-11-14T10:18:56.810752Z"
+ },
+ {
+  "file": "public/foto/chi-siamo/imprese-territorio.jpg",
+  "title": "Agente immobiliare e giovane coppia con i caschi in cantiere",
+  "creator": "Pavel Danilyuk",
+  "license": "Licenza Pexels",
+  "licenseUrl": "https://www.pexels.com/it-it/license/",
+  "creditRequired": false,
+  "page": "https://www.pexels.com/it-it/foto/abito-completo-coppia-persone-7937366/",
+  "via": "Pexels",
+  "width": 2400,
+  "saved": "2026-11-14T10:18:56.810753Z"
+ },
+ {
+  "file": "public/foto/chi-siamo/scheda-impresa.jpg",
+  "title": "Due uomini al tavolo guardano il progetto 3D di una casa",
+  "creator": "Grove Brands",
+  "license": "Licenza Pexels",
+  "licenseUrl": "https://www.pexels.com/it-it/license/",
+  "creditRequired": false,
+  "page": "https://www.pexels.com/it-it/foto/case-edificio-laptop-uomini-15764095/",
+  "via": "Pexels",
+  "width": 2400,
+  "saved": "2026-11-14T10:18:56.810754Z"
+ },
+ {
+  "file": "public/foto/chi-siamo/primo-contatto.jpg",
+  "title": "Donna che lavora da remoto nella cucina di casa",
+  "creator": "Vitaly Gariev",
+  "license": "Licenza Pexels",
+  "licenseUrl": "https://www.pexels.com/it-it/license/",
+  "creditRequired": false,
+  "page": "https://www.pexels.com/it-it/foto/donna-che-lavora-da-remoto-nella-cucina-di-casa-36697452/",
+  "via": "Pexels",
+  "width": 2400,
+  "saved": "2026-11-14T10:18:56.810754Z"
+ },
+ {
+  "file": "public/foto/chi-siamo/per-le-imprese.jpg",
+  "title": "Artigiano anziano che incide il legno in laboratorio",
+  "creator": "Pam Crane",
+  "license": "Licenza Pexels",
+  "licenseUrl": "https://www.pexels.com/it-it/license/",
+  "creditRequired": false,
+  "page": "https://www.pexels.com/it-it/foto/anziano-artigiano-che-incide-il-legno-in-laboratorio-30249657/",
+  "via": "Pexels",
+  "width": 2400,
+  "saved": "2026-11-14T10:18:56.810755Z"
  }
 ]

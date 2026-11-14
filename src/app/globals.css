@@ -160,6 +160,39 @@
   }
 }
 
+/*
+ * Barra del tempo di "Come si utilizza" (Chi siamo, TimelineSteps): quando entra nello schermo la linea si disegna
+ * da sola dal primo all'ultimo passo e accende ogni cerchio quando lo raggiunge. Orizzontale da 1024px, verticale
+ * sul telefono. Lo stato di partenza ("ready") lo mette lo script: senza JavaScript o con "riduci movimento" la
+ * barra è già completa.
+ */
+@media (prefers-reduced-motion: no-preference) {
+  .timeline[data-state="on"] .timeline-fill {
+    transition: transform 800ms cubic-bezier(0.65, 0, 0.35, 1) calc(250ms + var(--i) * 900ms);
+  }
+  .timeline[data-state="on"] .timeline-dot {
+    transition:
+      background-color 300ms ease calc(var(--i) * 900ms),
+      color 300ms ease calc(var(--i) * 900ms),
+      border-color 300ms ease calc(var(--i) * 900ms),
+      scale 400ms cubic-bezier(0.34, 1.56, 0.64, 1) calc(var(--i) * 900ms);
+  }
+  .timeline[data-state="ready"] .timeline-fill {
+    transform: scaleY(0);
+  }
+  .timeline[data-state="ready"] .timeline-dot {
+    background-color: var(--color-surface);
+    color: var(--color-ink-2);
+    border-color: var(--color-line);
+    scale: 0.85;
+  }
+  @media (min-width: 1024px) {
+    .timeline[data-state="ready"] .timeline-fill {
+      transform: scaleX(0);
+    }
+  }
+}
+
 @keyframes reveal-up {
   from { opacity: 0; transform: translateY(32px); }
   to { opacity: 1; transform: none; }

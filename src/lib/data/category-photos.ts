@@ -46,9 +46,36 @@ export const CATEGORY_PHOTOS: Record<string, CategoryPhoto> = {
   },
 };
 
-/** Foto del Veneto in apertura della pagina Chi siamo (fonte in public/foto/chi-siamo/credits.json), creditata nel footer. */
-export const ABOUT_HERO_PHOTO: CategoryPhoto = {
-  src: "/foto/chi-siamo/colli-euganei.jpg",
-  alt: "Vigneti e colline boscose dei Colli Euganei, con la pianura veneta sullo sfondo",
-  credit: { title: "Parco Regionale dei Colli Euganei 2", author: "kallerna", license: "CC BY-SA 4.0", licenseUrl: "https://creativecommons.org/licenses/by-sa/4.0/", page: "https://commons.wikimedia.org/wiki/File:Parco_Regionale_dei_Colli_Euganei_2.jpg" },
-};
+/** Foto della pagina Chi siamo, da Pexels (fonti in public/foto/chi-siamo/credits.json), creditate nel footer. */
+export const ABOUT_PHOTOS = {
+  hero: {
+    src: "/foto/chi-siamo/apertura.jpg",
+    alt: "Agente immobiliare sorridente accanto a una famiglia abbracciata davanti alla porta della nuova casa",
+    credit: { title: "Famiglia con l'agente immobiliare davanti alla nuova casa", author: "MART PRODUCTION", license: "Licenza Pexels", licenseUrl: "https://www.pexels.com/it-it/license/", page: "https://www.pexels.com/it-it/foto/uomo-persone-donne-casa-7415046/" },
+  },
+  why: {
+    src: "/foto/chi-siamo/perche.jpg",
+    alt: "Coppia che esamina la planimetria della casa da ristrutturare",
+    credit: { title: "Coppia che discute di planimetrie", author: "Tima Miroshnichenko", license: "Licenza Pexels", licenseUrl: "https://www.pexels.com/it-it/license/", page: "https://www.pexels.com/it-it/foto/uomo-coppia-donna-costruzione-6474498/" },
+  },
+  businesses: {
+    src: "/foto/chi-siamo/imprese-territorio.jpg",
+    alt: "Agente immobiliare con una giovane coppia, tutti con il casco, in un appartamento in ristrutturazione",
+    credit: { title: "Agente immobiliare e giovane coppia con i caschi", author: "Pavel Danilyuk", license: "Licenza Pexels", licenseUrl: "https://www.pexels.com/it-it/license/", page: "https://www.pexels.com/it-it/foto/abito-completo-coppia-persone-7937366/" },
+  },
+  profile: {
+    src: "/foto/chi-siamo/scheda-impresa.jpg",
+    alt: "Professionista che mostra a un cliente il progetto di una casa sul computer",
+    credit: { title: "Progetto 3D di una casa al computer", author: "Grove Brands", license: "Licenza Pexels", licenseUrl: "https://www.pexels.com/it-it/license/", page: "https://www.pexels.com/it-it/foto/case-edificio-laptop-uomini-15764095/" },
+  },
+  contact: {
+    src: "/foto/chi-siamo/primo-contatto.jpg",
+    alt: "Donna al telefono nella cucina di casa, davanti al computer",
+    credit: { title: "Donna che lavora da remoto nella cucina di casa", author: "Vitaly Gariev", license: "Licenza Pexels", licenseUrl: "https://www.pexels.com/it-it/license/", page: "https://www.pexels.com/it-it/foto/donna-che-lavora-da-remoto-nella-cucina-di-casa-36697452/" },
+  },
+  forBusinesses: {
+    src: "/foto/chi-siamo/per-le-imprese.jpg",
+    alt: "Artigiano al banco di lavoro mentre rifinisce un pezzo di legno",
+    credit: { title: "Artigiano che incide il legno in laboratorio", author: "Pam Crane", license: "Licenza Pexels", licenseUrl: "https://www.pexels.com/it-it/license/", page: "https://www.pexels.com/it-it/foto/anziano-artigiano-che-incide-il-legno-in-laboratorio-30249657/" },
+  },
+} satisfies Record<string, CategoryPhoto>;
