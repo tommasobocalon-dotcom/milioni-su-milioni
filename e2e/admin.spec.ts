@@ -181,3 +181,23 @@ test("l'amministratore sospende e riattiva un partner", async ({ page }) => {
   await expect(page.getByRole("cell", { name: /Partner sospeso/ })).toBeVisible();
   await expect(page.getByRole("cell", { name: /Partner riattivato/ })).toBeVisible();
 });
+
+test("dal menu l'amministratore vede richieste, abbonamenti e sponsorizzazioni", async ({ page }) => {
+  await login(page, ADMIN);
+  const nav = page.getByRole("navigation", { name: "Gestionale" });
+
+  await nav.getByRole("link", { name: "Richieste clienti" }).click();
+  await expect(page.getByRole("heading", { level: 1, name: "Richieste dei clienti" })).toBeVisible();
+  await expect(page.getByText("Consegnata").first()).toBeVisible();
+  await page.getByRole("link", { name: /^Codice non confermato/ }).click();
+  await expect(page).toHaveURL(/filtro=da-confermare/);
+
+  await nav.getByRole("link", { name: "Abbonamenti" }).click();
+  await expect(page.getByRole("heading", { level: 1, name: "Abbonamenti" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Rossi Impianti" })).toBeVisible();
+
+  await nav.getByRole("link", { name: "Sponsorizzazioni" }).click();
+  await expect(page.getByRole("heading", { level: 1, name: "Sponsorizzazioni" })).toBeVisible();
+  await page.getByRole("link", { name: "Finite negli ultimi 90 giorni" }).click();
+  await expect(page).toHaveURL(/filtro=finite/);
+});

@@ -10,6 +10,8 @@ import { AccountStatusPill, actionLabel, AdminPageHeader, AdminSkeleton, dateOnl
 import { Button } from "@/components/ui/button";
 import { requireAdmin } from "@/lib/auth/session";
 import { getPartnerAdmin } from "@/lib/data/admin";
+import { sponsorshipState } from "@/lib/domain/admin";
+import { LeadList, SponsorshipList, stripeDashboardUrl } from "@/components/admin/lists";
 
 export const metadata = { title: "Partner" };
 
@@ -40,7 +42,8 @@ async function PartnerDetail({ id }: { id: string }) {
   await requireAdmin();
   if (!z.uuid().safeParse(id).success) notFound();
   await connection();
-  const p = await getPartnerAdmin(id);
+  const now = new Date();
+  const p = await getPartnerAdmin(id, now);
   if (!p) notFound();
 
   return (
@@ -64,8 +67,17 @@ async function PartnerDetail({ id }: { id: string }) {
       <section aria-label="Indicatori" className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {[
           { label: "Piano", value: p.sub ? p.sub.planName : "Nessuno", note: p.sub?.free ? `Base senza pagamento, ${SUB_LABEL[p.sub.status]}` : p.sub ? `${PERIOD_LABEL[p.sub.period]}, ${SUB_LABEL[p.sub.status]}` : "Non ha ancora pagato" },
-          { label: "Piano", value: p.sub?.planName ?? "—", note: p.sub?.free ? "Gratis finché non riceve 3 richieste in un mese" : p.sub ? `Rinnovo il ${dateOnly.format(p.sub.currentPeriodEnd)}` : "" },
+          {
+            label: "Rinnovo",
+            value: p.sub && !p.sub.free ? dateOnly.format(p.sub.currentPeriodEnd) : "—",
+            note: p.sub?.free ? "Gratis: dalla 4ª richiesta del mese arrivano senza contatti" : "",
+          },
           { label: "Lead ricevuti", value: String(p.leads.total), note: `${p.leads.last30} negli ultimi 30 giorni · ${p.leads.reported} segnalati` },
+          {
+            label: "Sponsorizzazioni attive",
+            value: String(p.sponsorships.filter((s) => sponsorshipState(s, now) !== "ended" && sponsorshipState(s, now) !== "scheduled").length),
+            note: `${p.sponsorships.length} in tutto`,
+          },
         ].map((k) => (
           <div key={k.label} className="flex flex-col gap-1 rounded-lg border border-line bg-surface p-5">
             <p className="text-body-s text-ink-2">{k.label}</p>
@@ -88,7 +100,13 @@ async function PartnerDetail({ id }: { id: string }) {
               <Row label="Telefono">{p.phone}</Row>
               <Row label="Email">{p.email && <a href={`mailto:${p.email}`} className="text-primary underline">{p.email}</a>}</Row>
               <Row label="Completezza">{`${p.completeness}%`}</Row>
-              <Row label="Cliente Stripe">{p.stripeCustomerId}</Row>
+              <Row label="Cliente Stripe">
+                {p.stripeCustomerId && (
+                  <a href={stripeDashboardUrl("customers", p.stripeCustomerId)} target="_blank" rel="noreferrer" className="text-primary underline">
+                    {p.stripeCustomerId}
+                  </a>
+                )}
+              </Row>
             </dl>
           </Panel>
 
@@ -106,6 +124,21 @@ async function PartnerDetail({ id }: { id: string }) {
                 </li>
               ))}
             </ul>
+          </Panel>
+
+          <Panel
+            title="Ultime richieste dei clienti"
+            action={
+              <Link href={`/admin/richieste?partner=${p.id}`} className="text-body-s font-semibold text-primary hover:underline">
+                Tutte
+              </Link>
+            }
+          >
+            {p.recentLeads.length === 0 ? <Empty>Nessuna richiesta ricevuta.</Empty> : <LeadList leads={p.recentLeads} now={now} showPartner={false} />}
+          </Panel>
+
+          <Panel title="Sponsorizzazioni">
+            {p.sponsorships.length === 0 ? <Empty>Non ha mai comprato sponsorizzazioni.</Empty> : <SponsorshipList rows={p.sponsorships} now={now} showPartner={false} />}
           </Panel>
 
           <Panel title="Richieste di assistenza">

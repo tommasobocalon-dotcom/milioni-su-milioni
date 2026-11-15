@@ -411,6 +411,7 @@ export const leads = pgTable(
   (t) => [
     index("leads_partner_idx").on(t.partnerId, t.createdAt),
     index("leads_duplicate_idx").on(t.partnerId, t.clientPhone),
+    index("leads_created_idx").on(t.createdAt),
   ],
 );
 
@@ -674,5 +675,5 @@ export const auditLogs = pgTable(
     data: jsonb("data"),
     createdAt: createdAt(),
   },
-  (t) => [index("audit_logs_entity_idx").on(t.entity, t.entityId)],
+  (t) => [index("audit_logs_entity_idx").on(t.entity, t.entityId), index("audit_logs_created_idx").on(t.createdAt)],
 );

@@ -1,6 +1,7 @@
 import "server-only";
 import { createHash, randomBytes } from "node:crypto";
-import { and, eq, gt } from "drizzle-orm";
+import { and, eq, gt, inArray } from "drizzle-orm";
+import { cache } from "react";
 import { cookies } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 import { connection } from "next/server";
@@ -100,12 +101,24 @@ export async function userIsAdmin(userId: string): Promise<boolean> {
  * Backoffice: ogni pagina e azione di /admin passa da qui. Chi non è entrato va al login del gestionale; chi è entrato
  * ma non è amministratore riceve un 404, così il Backoffice non si rivela.
  */
-export async function requireAdmin(): Promise<SessionUser> {
-  const user = await getAnySessionUser();
-  if (!user) redirect("/admin/accedi");
-  if (!(await userIsAdmin(user.id))) notFound();
-  return user;
-}
+export const requireAdmin = cache(async (): Promise<SessionUser> => {
+  // Layout e pagina la chiamano nella stessa richiesta: cache() fa una sola lettura, e la sessione porta già
+  // ruolo ed email confermata, così sul database remoto è un solo viaggio invece di quattro in fila.
+  await connection();
+  const store = await cookies();
+  const tokens = [store.get(COOKIE.client)?.value, store.get(COOKIE.business)?.value].filter((t): t is string => !!t);
+  if (!tokens.length) redirect("/admin/accedi");
+  const rows = await db
+    .select({ id: users.id, name: users.name, email: users.email, role: users.role, verifiedAt: users.emailVerifiedAt, sessionId: sessions.id })
+    .from(sessions)
+    .innerJoin(users, eq(users.id, sessions.userId))
+    .where(and(inArray(sessions.id, tokens.map(hash)), gt(sessions.expiresAt, new Date())));
+  // Come getAnySessionUser(): vale prima l'accesso clienti.
+  const u = rows.find((r) => r.sessionId === hash(tokens[0])) ?? rows[0];
+  if (!u) redirect("/admin/accedi");
+  if (!isAdmin({ role: u.role, email: u.email, emailVerified: !!u.verifiedAt }, parseEmailList(process.env.ADMIN_EMAILS))) notFound();
+  return { id: u.id, name: u.name, email: u.email, role: u.role };
+});
 
 
 /** Azienda scelta nell'Area Partner da chi ne ha più di una. */

@@ -183,6 +183,13 @@
       "when": 1794755322956,
       "tag": "0025_tipi_contratto",
       "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1794768823574,
+      "tag": "0026_indici_gestionale",
+      "breakpoints": true
     }
   ]
 }
