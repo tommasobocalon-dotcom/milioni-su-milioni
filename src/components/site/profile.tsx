@@ -19,6 +19,7 @@ import {
 import { ProjectPhotos } from "@/components/site/project-photos";
 import { cn } from "@/lib/utils";
 import { videoEmbedUrl } from "@/lib/domain/extras";
+import { contractBadge, isMonthlyContract } from "@/lib/domain/property-contract";
 
 /** Profilo pubblico del partner (PRD §5.4), stesso impianto per agenzie e professionisti. */
 export function ProfileView({ p }: { p: PartnerProfile }) {
@@ -234,22 +235,14 @@ export function ProfileView({ p }: { p: PartnerProfile }) {
                         )}
                         {item.contract && (
                           <span className="absolute top-2 left-2 rounded-full bg-surface px-2 py-0.5 text-caption font-semibold">
-                            {item.status === "sold"
-                              ? item.contract === "sale"
-                                ? "Venduto"
-                                : "Affittato"
-                              : item.status === "negotiating"
-                                ? "In trattativa"
-                                : item.contract === "sale"
-                                  ? "In vendita"
-                                  : "In affitto"}
+                            {contractBadge(item.contract, item.status)}
                           </span>
                         )}
                       </div>
                       <p className="text-body-s font-semibold">
                         {item.title}
                         {item.priceCents !== null &&
-                          ` · ${formatEuro(item.priceCents)}${item.contract === "rent" ? "/mese" : ""}`}
+                          ` · ${formatEuro(item.priceCents)}${item.contract && isMonthlyContract(item.contract) ? "/mese" : ""}`}
                       </p>
                       {item.description && (
                         <p className="line-clamp-2 text-caption text-ink-2">

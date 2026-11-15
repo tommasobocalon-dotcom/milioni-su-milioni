@@ -327,7 +327,8 @@ export const partnerServices = pgTable(
 );
 
 export const portfolioKind = pgEnum("portfolio_kind", ["work", "property"]);
-export const propertyContract = pgEnum("property_contract", ["sale", "rent"]);
+/** Elenco e etichette in src/lib/domain/property-contract.ts. */
+export const propertyContract = pgEnum("property_contract", ["sale", "rent", "auction", "rent_to_buy", "bare_ownership", "transitional_rent"]);
 export const propertyStatus = pgEnum("property_status", ["available", "negotiating", "sold"]);
 
 export const portfolioItems = pgTable(

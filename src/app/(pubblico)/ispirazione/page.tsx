@@ -8,6 +8,7 @@ import { ChipLink } from "@/components/ui/chip";
 import { ProjectPhotos } from "@/components/site/project-photos";
 import { getCategories } from "@/lib/data/catalog";
 import { getShowcase, type ShowcaseItem } from "@/lib/data/showcase";
+import { PROPERTY_CONTRACTS } from "@/lib/domain/property-contract";
 import { parseShowcaseFilter, showcaseHref } from "@/lib/domain/showcase-filter";
 
 export const metadata: Metadata = {
@@ -62,10 +63,7 @@ async function Filters({ searchParams }: { searchParams: Search }) {
     filter.type === "pro"
       ? pros.map((c) => ({ label: c.pluralName, href: showcaseHref({ type: "pro", categorySlug: c.slug }), on: filter.categorySlug === c.slug }))
       : filter.type === "agency"
-        ? [
-            { label: "In vendita", href: showcaseHref({ type: "agency", contract: "sale" }), on: filter.contract === "sale" },
-            { label: "In affitto", href: showcaseHref({ type: "agency", contract: "rent" }), on: filter.contract === "rent" },
-          ]
+        ? PROPERTY_CONTRACTS.map((c) => ({ label: c.badge, href: showcaseHref({ type: "agency", contract: c.value }), on: filter.contract === c.value }))
         : [];
   return (
     <nav aria-label="Filtra i lavori" className="flex flex-col gap-3">

@@ -17,6 +17,8 @@ describe("parseShowcaseFilter", () => {
     expect(parseShowcaseFilter({ tipo: "agenzie" }, pros)).toEqual({ type: "agency" });
     expect(parseShowcaseFilter({ tipo: "agenzie", operazione: "vendita" }, pros)).toEqual({ type: "agency", contract: "sale" });
     expect(parseShowcaseFilter({ tipo: "agenzie", operazione: "affitto" }, pros)).toEqual({ type: "agency", contract: "rent" });
+    expect(parseShowcaseFilter({ tipo: "agenzie", operazione: "asta" }, pros)).toEqual({ type: "agency", contract: "auction" });
+    expect(parseShowcaseFilter({ tipo: "agenzie", operazione: "nuda-proprieta" }, pros)).toEqual({ type: "agency", contract: "bare_ownership" });
   });
 
   it("ignora valori sconosciuti e parametri che non c'entrano col tipo", () => {
@@ -28,7 +30,7 @@ describe("parseShowcaseFilter", () => {
   });
 
   it("showcaseHref è l'inverso", () => {
-    for (const f of [{}, { type: "pro" }, { type: "pro", categorySlug: "idraulico" }, { type: "agency" }, { type: "agency", contract: "rent" }] as const) {
+    for (const f of [{}, { type: "pro" }, { type: "pro", categorySlug: "idraulico" }, { type: "agency" }, { type: "agency", contract: "rent" }, { type: "agency", contract: "rent_to_buy" }] as const) {
       const params = Object.fromEntries(new URL(showcaseHref(f), "http://x").searchParams);
       expect(parseShowcaseFilter(params, pros)).toEqual(f);
     }

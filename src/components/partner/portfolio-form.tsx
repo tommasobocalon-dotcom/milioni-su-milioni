@@ -6,6 +6,7 @@ import { addPortfolioItem, type ActionState } from "@/app/area-partner/actions";
 import { Button } from "@/components/ui/button";
 import { Field, Input, Select, Textarea } from "@/components/ui/field";
 import { PROJECT_PHOTOS, projectPhotosError } from "@/lib/domain/extras";
+import { PROPERTY_CONTRACTS } from "@/lib/domain/property-contract";
 
 /**
  * Foto ridotte nel browser (lato lungo 1600 px, JPEG): 8 foto stanno nel limite di una richiesta su Vercel.
@@ -89,11 +90,14 @@ export function PortfolioForm({
         <div className="grid gap-4 sm:grid-cols-4">
           <Field label="Contratto" htmlFor="pf-contract" required>
             <Select id="pf-contract" name="contract" defaultValue="sale" required>
-              <option value="sale">Vendita</option>
-              <option value="rent">Affitto</option>
+              {PROPERTY_CONTRACTS.map((c) => (
+                <option key={c.value} value={c.value}>
+                  {c.label}
+                </option>
+              ))}
             </Select>
           </Field>
-          <Field label="Prezzo (€)" htmlFor="pf-price" help="Al mese per l'affitto">
+          <Field label="Prezzo (€)" htmlFor="pf-price" help="Al mese per gli affitti, base d'asta per l'asta">
             <Input id="pf-price" name="priceEuro" type="number" min={0} inputMode="numeric" />
           </Field>
           <Field label="Metri quadri" htmlFor="pf-sqm">

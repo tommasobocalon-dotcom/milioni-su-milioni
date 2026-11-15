@@ -23,6 +23,7 @@ import { AREA_EXTENSION_OFFER, HOME_SPONSOR_PACKAGES, municipalityIdsFrom, SEARC
 
 import { grantAreaExtensions, grantHomeSponsor, grantSearchBoost, unlockLeads } from "@/lib/leads/service";
 import { freePlanOpen } from "@/lib/domain/free-plan";
+import { PROPERTY_CONTRACT_VALUES } from "@/lib/domain/property-contract";
 import { launchDate } from "@/lib/domain/offers";
 import { LEAD_STATUSES, statusInfo } from "@/lib/leads/status";
 import { MESSAGE_MAX, TICKET_TOPICS } from "@/lib/domain/support";
@@ -203,7 +204,7 @@ const PortfolioSchema = z.object({
   description: z.string().trim().min(10, "Scrivi una breve descrizione del lavoro").max(300, "La descrizione può avere al massimo 300 caratteri"),
   municipalityId: optionalInt(1_000_000),
   // Solo immobili (agenzie)
-  contract: z.enum(["sale", "rent"]).optional(),
+  contract: z.enum(PROPERTY_CONTRACT_VALUES).optional(),
   priceEuro: optionalInt(100_000_000),
   sqm: optionalInt(100_000),
   rooms: optionalInt(100),
@@ -222,7 +223,7 @@ export async function addPortfolioItem(_prev: ActionState, formData: FormData): 
   if (!parsed.success) return { error: parsed.error.issues[0].message };
   const d = parsed.data;
   const isProperty = partner.type === "agency";
-  if (isProperty && !d.contract) return { error: "Scegli vendita o affitto" };
+  if (isProperty && !d.contract) return { error: "Scegli il tipo di contratto" };
 
   // Limiti del piano (documento del 4/11/2026): progetti in bacheca e video solo per Premium.
   const [plan] = await db

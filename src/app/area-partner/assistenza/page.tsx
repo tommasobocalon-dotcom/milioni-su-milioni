@@ -118,9 +118,9 @@ async function Support() {
                 .
               </li>
               <li>
-                Come ordiniamo i risultati:{" "}
-                <Link href="/come-funziona" className="font-semibold text-primary underline">
-                  Come funziona
+                Classifica e posti sponsorizzati:{" "}
+                <Link href="/come-ordiniamo-i-risultati" className="font-semibold text-primary underline">
+                  Come ordiniamo i risultati
                 </Link>
                 .
               </li>

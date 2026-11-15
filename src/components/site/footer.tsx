@@ -27,8 +27,8 @@ const COLUMNS = [
   {
     title: "Trasparenza",
     links: [
-      { href: "/come-funziona#ordinamento", label: "Come ordiniamo i risultati" },
-      { href: "/come-funziona#sponsorizzati", label: "Contenuti sponsorizzati" },
+      { href: "/come-ordiniamo-i-risultati", label: "Come ordiniamo i risultati" },
+      { href: "/come-ordiniamo-i-risultati#sponsorizzati", label: "Contenuti sponsorizzati" },
       { href: "/privacy", label: "Privacy" },
       { href: "/termini", label: "Termini" },
     ],

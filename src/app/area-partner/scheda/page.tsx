@@ -1,6 +1,5 @@
 import { Suspense } from "react";
 import { ExternalLink } from "lucide-react";
-import { ComingSoon } from "@/components/partner/coming-soon";
 import { PartnerPageHeader } from "@/components/partner/page-header";
 import { PartnerSkeleton } from "@/components/partner/skeleton";
 import { ButtonLink } from "@/components/ui/button";
@@ -54,15 +53,6 @@ async function Profile() {
           Vai a Lavori e foto
         </ButtonLink>
       </section>
-      <ComingSoon
-        title="Prossimamente"
-        items={[
-          "copertina (logo, dati aziendali, descrizione, specializzazioni e orari si modificano in Profilo)",
-          "categoria, servizi e zone servite entro i limiti del piano",
-          "indicatore di completezza con i consigli per migliorare la scheda",
-          "collaboratori con accesso limitato",
-        ]}
-      />
     </div>
   );
 }

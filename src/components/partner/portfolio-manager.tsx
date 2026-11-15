@@ -7,6 +7,7 @@ import { getMunicipalities } from "@/lib/data/catalog";
 import { getPortfolio, getSubscription } from "@/lib/data/partner-area";
 import { PREMIUM_WEIGHT } from "@/lib/domain/ranking";
 import { formatEuro } from "@/lib/domain/format";
+import { contractBadge, isMonthlyContract } from "@/lib/domain/property-contract";
 
 const STATUS = [
   { value: "available", label: "Disponibile" },
@@ -54,10 +55,14 @@ export async function PortfolioManager({ partnerId, isAgency }: { partnerId: str
                     <ImageIcon className="size-8" aria-hidden />
                   )}
                 </div>
-                {item.photos.length > 1 && <p className="text-caption text-ink-2">{item.photos.length} foto</p>}
+                {(item.contract || item.photos.length > 1) && (
+                  <p className="text-caption text-ink-2">
+                    {[item.contract && contractBadge(item.contract, null), item.photos.length > 1 && `${item.photos.length} foto`].filter(Boolean).join(" · ")}
+                  </p>
+                )}
                 <p className="text-body-s font-semibold">
                   {item.title}
-                  {item.priceCents !== null && ` · ${formatEuro(item.priceCents)}${item.contract === "rent" ? "/mese" : ""}`}
+                  {item.priceCents !== null && ` · ${formatEuro(item.priceCents)}${item.contract && isMonthlyContract(item.contract) ? "/mese" : ""}`}
                 </p>
                 {item.municipality && (
                   <p className="inline-flex items-center gap-1 text-caption text-ink-2">

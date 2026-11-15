@@ -51,7 +51,7 @@ const COMMITMENTS: { icon: LucideIcon; title: string; body: ReactNode }[] = [
       <>
         I criteri con cui ordiniamo i risultati sono pubblici e i contenuti promozionali sono sempre contrassegnati dalla dicitura
         &quot;Sponsorizzato&quot;.{" "}
-        <Link href="/come-funziona#ordinamento" className="font-semibold text-primary underline">
+        <Link href="/come-ordiniamo-i-risultati" className="font-semibold text-primary underline">
           Come ordiniamo i risultati
         </Link>
       </>

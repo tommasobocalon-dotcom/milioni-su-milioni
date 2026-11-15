@@ -228,7 +228,7 @@ async function ResultsBody({ mode, params, seed }: { mode: "agency" | "pro"; par
                 Come ordiniamo: mostriamo solo chi lavora nella zona cercata, poi prima i piani più alti (Partner Elite, fascia lilla; Partner Pro, fascia verde; poi gli altri)
                 e chi ha comprato più visibilità: la sua fascia è più piena e porta l&apos;etichetta &quot;Sponsorizzato&quot;. Tra aziende dello stesso piano l&apos;ordine cambia a
                 ogni visita.{" "}
-                <Link href="/come-funziona#ordinamento" className="font-semibold text-primary underline">
+                <Link href="/come-ordiniamo-i-risultati" className="font-semibold text-primary underline">
                   Dettagli
                 </Link>
               </span>

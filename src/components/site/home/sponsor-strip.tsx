@@ -51,7 +51,7 @@ export async function SponsorStrip() {
         className="container-page mt-10 flex flex-wrap items-center justify-center gap-x-6 gap-y-3 text-body-s"
       >
         <Link
-          href="/come-funziona#sponsorizzati"
+          href="/come-ordiniamo-i-risultati#sponsorizzati"
           className="font-semibold text-ink-2 underline underline-offset-4 hover:text-ink"
         >
           Come funzionano i contenuti sponsorizzati

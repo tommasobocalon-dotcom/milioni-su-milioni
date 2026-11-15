@@ -227,6 +227,34 @@ test("un'agenzia pubblica un immobile con le foto e compare in Ispirazione", asy
   await expect(trilocale).toHaveCount(0);
 });
 
+test("un'agenzia pubblica un immobile all'asta: etichetta in scheda e filtro suo in Ispirazione", async ({ page }) => {
+  await login(page);
+  await choose(page, "casa-veneta-immobiliare");
+  // Oltre a vendita e affitto (15/11/2026): asta, affitto con riscatto, nuda proprietà, affitto transitorio.
+  const contract = page.getByLabel(/^Contratto/);
+  for (const label of ["Vendita", "Affitto", "Asta", "Affitto con riscatto", "Nuda proprietà", "Affitto transitorio"])
+    await expect(contract.getByRole("option", { name: label, exact: true })).toBeAttached();
+  await contract.selectOption({ label: "Asta" });
+  await page.getByLabel(/^Prezzo/).fill("180000");
+  await publish(page, { title: "Villetta all'asta a Mestre", description: "Asta giudiziaria, villetta a schiera con giardino e garage.", files: photos("casa", 2) });
+  // Con il prezzo la riga dell'elenco è "titolo · prezzo": la base d'asta non è un canone, quindi niente "/mese".
+  await expect(page.getByRole("region", { name: "Elementi del portfolio" }).getByText("Villetta all'asta a Mestre · 180.000 €", { exact: true })).toBeVisible({ timeout: 15_000 });
+  const [row] = await sql<{ contract: string }[]>`select contract from portfolio_items where title = 'Villetta all''asta a Mestre'`;
+  expect(row.contract).toBe("auction");
+
+  await page.goto("/ispirazione?tipo=agenzie");
+  const filters = page.getByRole("navigation", { name: "Filtra i lavori" });
+  const villetta = page.getByRole("heading", { name: "Villetta all'asta a Mestre" });
+  await filters.getByRole("link", { name: "In vendita" }).click();
+  await expect(villetta).toHaveCount(0);
+  await filters.getByRole("link", { name: "All'asta" }).click();
+  await expect(page).toHaveURL(/operazione=asta/);
+  await expect(villetta).toBeVisible();
+
+  await page.getByRole("listitem").filter({ has: villetta }).getByRole("link", { name: "Casa Veneta Immobiliare" }).click();
+  await expect(page.getByText("All'asta", { exact: true }).first()).toBeVisible();
+});
+
 test("senza un piano attivo non si pubblica", async ({ page }) => {
   await sql`update subscriptions set status = 'cancelled' where partner_id = ${ids["termoidraulica-brenta"]}`;
   try {

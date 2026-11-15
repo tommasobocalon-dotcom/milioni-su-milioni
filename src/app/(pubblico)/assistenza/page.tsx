@@ -55,9 +55,9 @@ export default function SupportPage() {
           ))}
         </dl>
         <p className="text-body-s">
-          Come ordiniamo i risultati e cosa è sponsorizzato:{" "}
-          <Link href="/come-funziona" className="font-semibold text-primary underline">
-            Come funziona
+          Con quali criteri ordiniamo i risultati e cosa è sponsorizzato:{" "}
+          <Link href="/come-ordiniamo-i-risultati" className="font-semibold text-primary underline">
+            Come ordiniamo i risultati
           </Link>
           .
         </p>
