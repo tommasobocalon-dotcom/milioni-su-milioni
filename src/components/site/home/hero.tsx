@@ -1,6 +1,5 @@
 import { Lock } from "lucide-react";
 import { getMunicipalities } from "@/lib/data/catalog";
-import { getHomeStats, HOME_STATS_MIN } from "@/lib/data/home";
 import { HERO_SLIDES } from "@/lib/data/home-content";
 import { HeroSearchWatcher } from "@/components/site/header-client";
 import { HeroSearchForm } from "./hero-search-form";
@@ -8,7 +7,7 @@ import { HeroSlides } from "./hero-slides";
 
 /**
  * Hero sul modello di Thumbtack: video a tutto schermo, titolo grande, ricerca in una scheda bianca,
- * riga di fiducia e numeri veri dal database. La ricerca porta a /cerca come prima (PRD §5.1).
+ * riga di fiducia. Niente numeri di partner: all'inizio sono pochi (soci, 15/11/2026). La ricerca porta a /cerca come prima (PRD §5.1).
  */
 export async function Hero({ next }: { next: string }) {
   const places = await getMunicipalities();
@@ -43,31 +42,10 @@ export async function Hero({ next }: { next: string }) {
               <Lock className="size-[18px] shrink-0" aria-hidden />
               Nessuna chiamata finché non sei tu a chiederla.
             </p>
-            <HeroStats />
             <HeroSearchWatcher />
           </div>
         </div>
       </HeroSlides>
     </section>
-  );
-}
-
-/** Partner verificati e tipi di professionisti: si mostrano solo sopra una soglia minima (dati reali). */
-async function HeroStats() {
-  const s = await getHomeStats();
-  if (s.partners < HOME_STATS_MIN.partners) return null;
-  const items = [
-    { value: s.partners.toLocaleString("it-IT"), label: "partner verificati" },
-    { value: s.categories.toLocaleString("it-IT"), label: "tipi di professionisti" },
-  ];
-  return (
-    <dl className="hero-rise mt-4 flex flex-wrap gap-6 [animation-delay:320ms]">
-      {items.map((it) => (
-        <div key={it.label} className="flex flex-col-reverse">
-          <dt className="mt-2 text-body-s">{it.label}</dt>
-          <dd className="font-display text-[1.75rem] leading-[1.1] tracking-[-0.02em]">{it.value}</dd>
-        </div>
-      ))}
-    </dl>
   );
 }

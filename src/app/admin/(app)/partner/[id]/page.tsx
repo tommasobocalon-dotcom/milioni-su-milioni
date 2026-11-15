@@ -63,8 +63,8 @@ async function PartnerDetail({ id }: { id: string }) {
 
       <section aria-label="Indicatori" className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {[
-          { label: "Piano", value: p.sub ? p.sub.planName : "Nessuno", note: p.sub ? `${PERIOD_LABEL[p.sub.period]}, ${SUB_LABEL[p.sub.status]}` : "Non ha ancora pagato" },
-          { label: "Piano", value: p.sub?.planName ?? "—", note: p.sub ? `Rinnovo il ${dateOnly.format(p.sub.currentPeriodEnd)}` : "" },
+          { label: "Piano", value: p.sub ? p.sub.planName : "Nessuno", note: p.sub?.free ? `Base senza pagamento, ${SUB_LABEL[p.sub.status]}` : p.sub ? `${PERIOD_LABEL[p.sub.period]}, ${SUB_LABEL[p.sub.status]}` : "Non ha ancora pagato" },
+          { label: "Piano", value: p.sub?.planName ?? "—", note: p.sub?.free ? "Gratis finché non riceve 3 richieste in un mese" : p.sub ? `Rinnovo il ${dateOnly.format(p.sub.currentPeriodEnd)}` : "" },
           { label: "Lead ricevuti", value: String(p.leads.total), note: `${p.leads.last30} negli ultimi 30 giorni · ${p.leads.reported} segnalati` },
         ].map((k) => (
           <div key={k.label} className="flex flex-col gap-1 rounded-lg border border-line bg-surface p-5">

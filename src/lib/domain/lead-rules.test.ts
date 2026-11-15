@@ -17,6 +17,18 @@ describe("decideLeadCharge", () => {
   it("sends the client to alternatives when the account is not active", () => {
     expect(decideLeadCharge({ ...base, accountActive: false })).toEqual({ kind: "redirect" });
   });
+
+  it("delivers to a free plan while it still has free leads this month", () => {
+    expect(decideLeadCharge({ ...base, freeLeadsLeft: 1 })).toEqual({ kind: "quota" });
+  });
+
+  it("locks the contacts once the free plan has used its 3 leads this month (soci, 15/11/2026)", () => {
+    expect(decideLeadCharge({ ...base, freeLeadsLeft: 0 })).toEqual({ kind: "locked" });
+  });
+
+  it("still cancels duplicates on a free plan without using a free lead", () => {
+    expect(decideLeadCharge({ ...base, isDuplicate: true, freeLeadsLeft: 0 })).toEqual({ kind: "duplicate" });
+  });
 });
 
 describe("isDuplicateLead", () => {

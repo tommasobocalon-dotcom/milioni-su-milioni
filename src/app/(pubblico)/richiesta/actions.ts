@@ -9,10 +9,10 @@ import { findPlace } from "@/lib/data/catalog";
 import { getRequestContext } from "@/lib/data/partners";
 import { db } from "@/lib/db/client";
 import { leads, partners } from "@/lib/db/schema";
-import { maskPhone, normalizeEmail, normalizeItalianPhone } from "@/lib/domain/otp";
+import { maskEmail, normalizeEmail, normalizeItalianPhone } from "@/lib/domain/otp";
 import { confirmLead, createPendingLead } from "@/lib/leads/service";
 import { AGENCY_REQUEST_TYPES, CALLBACK_SLOTS, OTHER_REQUEST, TIMINGS } from "@/lib/leads/options";
-import { DeliveryError, sendEmail, sendSms, showDevCodes } from "@/lib/notify";
+import { DeliveryError, sendEmail, showDevCodes } from "@/lib/notify";
 
 const RequestSchema = z.object({
   partnerSlug: z.string().min(1).max(120),
@@ -37,7 +37,7 @@ const RequestSchema = z.object({
 export type LeadRequestInput = z.input<typeof RequestSchema>;
 
 export type SubmitResult =
-  | { ok: true; leadId: string; maskedPhone: string; devCode?: string }
+  | { ok: true; leadId: string; maskedEmail: string; devCode?: string }
   | { ok: false; error: string; field?: string };
 
 export async function submitLeadRequest(input: LeadRequestInput): Promise<SubmitResult> {
@@ -79,6 +79,7 @@ export async function submitLeadRequest(input: LeadRequestInput): Promise<Submit
     answers.push({ key: q.key, label: q.label, value });
   }
 
+  const email = normalizeEmail(data.email);
   const leadId = await createPendingLead({
     partnerId: ctx.partner.id,
     categoryId: ctx.partner.categoryId,
@@ -90,28 +91,37 @@ export async function submitLeadRequest(input: LeadRequestInput): Promise<Submit
     timing: data.timing,
     callbackSlot: data.callbackSlot,
     clientName: data.name,
-    clientEmail: normalizeEmail(data.email),
+    clientEmail: email,
     clientPhone: phone,
     privacyConsent: true,
     marketingConsent: data.marketing,
   });
 
   try {
-    const { code } = await issueOtp({ purpose: "lead", channel: "sms", target: phone, leadId });
-    await sendSms(phone, `Il tuo codice per confermare la richiesta a ${ctx.partner.displayName} è ${code}. Scade tra 10 minuti.`);
-    return { ok: true, leadId, maskedPhone: maskPhone(phone), devCode: showDevCodes() ? code : undefined };
+    const { code } = await issueOtp({ purpose: "lead", channel: "email", target: email, leadId });
+    await sendCode(email, ctx.partner.displayName, code);
+    return { ok: true, leadId, maskedEmail: maskEmail(email), devCode: showDevCodes() ? code : undefined };
   } catch (e) {
     if (e instanceof OtpRateLimitError) return { ok: false, error: e.message };
-    if (e instanceof DeliveryError) return smsFailed(e);
+    if (e instanceof DeliveryError) return codeFailed(e);
     throw e;
   }
 }
 
-const SMS_FAILED = "Non riusciamo a inviare l'SMS in questo momento. Riprova tra qualche minuto.";
+/** Il codice di verifica della richiesta arriva per email (dal 14/11/2026 niente più SMS). */
+function sendCode(email: string, partnerName: string, code: string) {
+  return sendEmail(
+    email,
+    `Il tuo codice per la richiesta a ${partnerName}`,
+    `Il tuo codice per confermare la richiesta a ${partnerName} è ${code}. Scade tra 10 minuti.`,
+  );
+}
 
-function smsFailed(e: DeliveryError): { ok: false; error: string } {
-  console.error("[sms]", e.message);
-  return { ok: false, error: SMS_FAILED };
+const CODE_FAILED = "Non riusciamo a inviare l'email con il codice in questo momento. Riprova tra qualche minuto.";
+
+function codeFailed(e: DeliveryError): { ok: false; error: string } {
+  console.error("[codice]", e.message);
+  return { ok: false, error: CODE_FAILED };
 }
 
 /** Le email dopo la conferma sono avvisi: se non partono la richiesta resta valida, si registra solo l'errore. */
@@ -126,7 +136,7 @@ async function bestEffort(what: string, send: Promise<void>) {
 async function pendingLead(leadId: string) {
   if (!z.uuid().safeParse(leadId).success) return null;
   const [lead] = await db
-    .select({ id: leads.id, phone: leads.clientPhone, email: leads.clientEmail, verifiedAt: leads.verifiedAt, partnerName: partners.displayName })
+    .select({ id: leads.id, email: leads.clientEmail, verifiedAt: leads.verifiedAt, partnerName: partners.displayName })
     .from(leads)
     .innerJoin(partners, eq(partners.id, leads.partnerId))
     .where(eq(leads.id, leadId));
@@ -140,8 +150,8 @@ export async function verifyLeadRequest(leadId: string, code: string): Promise<V
   if (!lead) return { ok: false, error: "Richiesta non trovata" };
   if (!lead.verifiedAt) {
     if (!/^\d{6}$/.test(code.trim())) return { ok: false, error: "Il codice è di 6 cifre" };
-    const check = await verifyOtp({ purpose: "lead", target: lead.phone, code, leadId });
-    if (check === "wrong") return { ok: false, error: "Codice non corretto. Controlla l'SMS e riprova." };
+    const check = await verifyOtp({ purpose: "lead", target: lead.email, code, leadId });
+    if (check === "wrong") return { ok: false, error: "Codice non corretto. Controlla l'email e riprova." };
     if (check === "expired") return { ok: false, error: "Il codice è scaduto: chiedine uno nuovo." };
     if (check === "locked") return { ok: false, error: "Troppi tentativi: chiedi un nuovo codice." };
 
@@ -165,12 +175,12 @@ export async function resendLeadCode(leadId: string): Promise<{ ok: boolean; err
   const lead = await pendingLead(leadId);
   if (!lead || lead.verifiedAt) return { ok: false, error: "Richiesta già confermata o non trovata" };
   try {
-    const { code } = await issueOtp({ purpose: "lead", channel: "sms", target: lead.phone, leadId });
-    await sendSms(lead.phone, `Il tuo nuovo codice per la richiesta a ${lead.partnerName} è ${code}. Scade tra 10 minuti.`);
+    const { code } = await issueOtp({ purpose: "lead", channel: "email", target: lead.email, leadId });
+    await sendCode(lead.email, lead.partnerName, code);
     return { ok: true, devCode: showDevCodes() ? code : undefined };
   } catch (e) {
     if (e instanceof OtpRateLimitError) return { ok: false, error: e.message };
-    if (e instanceof DeliveryError) return smsFailed(e);
+    if (e instanceof DeliveryError) return codeFailed(e);
     throw e;
   }
 }
@@ -179,5 +189,15 @@ async function notifyPartner(partnerId: string, leadId: string) {
   const [p] = await db.select({ email: partners.email, name: partners.displayName }).from(partners).where(eq(partners.id, partnerId));
   if (!p?.email) return;
   const appUrl = process.env.APP_URL ?? "http://localhost:3000";
+  const [lead] = await db.select({ charge: leads.charge }).from(leads).where(eq(leads.id, leadId));
+  if (lead?.charge === "locked") {
+    // Piano gratuito oltre le 3 richieste del mese: si dice che c'è, senza dati del cliente.
+    await sendEmail(
+      p.email,
+      "Nuova richiesta di contatto: scegli un piano per vederla",
+      `Ciao ${p.name}, hai una nuova richiesta, ma questo mese hai già ricevuto le 3 gratuite. Scegli un piano per vedere i contatti del cliente: ${appUrl}/area-partner/abbonamento`,
+    );
+    return;
+  }
   await sendEmail(p.email, "Nuova richiesta di contatto verificata", `Ciao ${p.name}, hai una nuova richiesta: ${appUrl}/area-partner/lead/${leadId}`);
 }

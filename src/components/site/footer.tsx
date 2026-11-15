@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ABOUT_PHOTOS, CATEGORY_PHOTOS } from "@/lib/data/category-photos";
+import { ABOUT_PHOTOS, CATEGORY_PHOTOS, HOW_PHOTOS } from "@/lib/data/category-photos";
 import { Wordmark } from "./wordmark";
 
 const COLUMNS = [
@@ -45,7 +45,7 @@ const ISTAT_CREDIT = {
 
 /** Footer a colonne sul modello di Thumbtack, nei colori del brand, con i crediti di foto e mappa. */
 export function SiteFooter() {
-  const credits = [...new Map([...Object.values(CATEGORY_PHOTOS), ...Object.values(ABOUT_PHOTOS)].map((p) => [p.credit.page, p.credit])).values(), ISTAT_CREDIT];
+  const credits = [...new Map([...Object.values(CATEGORY_PHOTOS), ...Object.values(ABOUT_PHOTOS), ...Object.values(HOW_PHOTOS)].map((p) => [p.credit.page, p.credit])).values(), ISTAT_CREDIT];
   return (
     <footer className="mt-auto bg-brand text-salvia-200">
       <div className="container-page grid gap-12 pt-16 pb-12 md:grid-cols-2 md:pt-20 lg:grid-cols-[1.3fr_repeat(3,1fr)]">

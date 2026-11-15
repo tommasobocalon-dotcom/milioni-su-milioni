@@ -6,7 +6,8 @@ import { db } from "@/lib/db/client";
 import { municipalities, partners, plans, stripeProcessed, subscriptions } from "@/lib/db/schema";
 import { accountStatusFrom, areaExtensionFromCheckout, homeSponsorFromCheckout, searchBoostFromCheckout, periodFromItems, planFromLookupKey, planLookupKey, subscriptionStatusFromStripe, TRIAL_DAYS } from "@/lib/domain/billing";
 import { AREA_EXTENSION_OFFER, changePromo, HOME_SPONSOR_PACKAGES, homeSponsorPrice, launchDate, municipalityIdsFrom, planPromo, type PlanPromo, SEARCH_BOOST_PACKAGES } from "@/lib/domain/offers";
-import { grantAreaExtensions, grantHomeSponsor, grantSearchBoost } from "@/lib/leads/service";
+import { hadFreePlan } from "@/lib/data/partner-area";
+import { grantAreaExtensions, grantHomeSponsor, grantSearchBoost, unlockLeads } from "@/lib/leads/service";
 
 /**
  * Stripe Billing e Checkout (PRD §7, §13.1). Le azioni creano solo le sessioni di pagamento: abbonamenti e
@@ -187,14 +188,16 @@ export async function createSubscriptionCheckout(payer: Payer, planCode: string,
   const live = await stripe().subscriptions.list({ customer, status: "all", limit: 20 });
   if (live.data.some((s) => ["active", "trialing", "past_due", "unpaid", "incomplete"].includes(s.status)))
     throw new BillingError("Hai già un abbonamento: cambia piano o metodo di pagamento dal portale");
-  // Prova gratuita una sola volta per azienda: chi ha già avuto un abbonamento Stripe paga da subito.
+  // Prova gratuita una sola volta per azienda: chi ha già avuto un abbonamento Stripe paga da subito, e così chi
+  // arriva dal piano gratuito di lancio, che il sito l'ha già provato (ma con le promo garantite).
   const [past] = await db
     .select({ id: subscriptions.id })
     .from(subscriptions)
     .where(and(eq(subscriptions.partnerId, payer.partnerId), isNotNull(subscriptions.stripeSubscriptionId)))
     .limit(1);
+  const fromFree = await hadFreePlan(payer.partnerId);
   const metadata = { kind: "subscription", partnerId: payer.partnerId };
-  const promo = planPromo(plan, period, new Date(), launchDate());
+  const promo = planPromo(plan, period, new Date(), launchDate(), { guaranteed: fromFree });
   const session = await stripe().checkout.sessions.create({
     mode: "subscription",
     customer,
@@ -208,7 +211,7 @@ export async function createSubscriptionCheckout(payer: Payer, planCode: string,
     subscription_data: {
       metadata: promo?.giftHomeDays ? { ...metadata, giftHomeDays: String(promo.giftHomeDays) } : metadata,
       default_tax_rates: await taxRates(),
-      ...(past ? {} : { trial_period_days: TRIAL_DAYS }),
+      ...(past || fromFree ? {} : { trial_period_days: TRIAL_DAYS }),
     },
     success_url: `${appUrl()}/api/stripe/ritorno?session_id={CHECKOUT_SESSION_ID}`,
     cancel_url: `${appUrl()}/area-partner/abbonamento`,
@@ -263,7 +266,7 @@ export async function createPlanChangeSession(partnerId: string, planCode: strin
   const item = current.items.data[0];
   if (!item) throw new Error(`Abbonamento Stripe ${row.subscriptionId} senza voci`);
   if (item.price.id === price) throw new BillingError("È già il tuo piano");
-  const promo = changePromo(planPromo(plan, period, new Date(), launchDate()), await changePromoUsed(partnerId));
+  const promo = changePromo(planPromo(plan, period, new Date(), launchDate(), { guaranteed: await hadFreePlan(partnerId) }), await changePromoUsed(partnerId));
   if (promo) {
     await changePlanWithPromo(partnerId, row.subscriptionId, item.id, price, plan.code, period, promo);
     return `${appUrl()}/area-partner/abbonamento?pagamento=cambio`;
@@ -396,12 +399,14 @@ async function syncSubscription(subscriptionId: string): Promise<{ id: string; p
       .values({ ...values, partnerId: partner.id, stripeSubscriptionId: sub.id })
       .onConflictDoUpdate({ target: subscriptions.stripeSubscriptionId, set: values })
       .returning({ id: subscriptions.id });
-    // Gli abbonamenti creati senza Stripe (dati di esempio) lasciano il posto a quello pagato.
+    // Gli abbonamenti creati senza Stripe (dati di esempio, piano gratuito) lasciano il posto a quello pagato, e le
+    // richieste arrivate senza contatti col piano gratuito si sbloccano.
     if (values.status === "active") {
       await tx
         .update(subscriptions)
         .set({ status: "cancelled" })
         .where(and(eq(subscriptions.partnerId, partner.id), isNull(subscriptions.stripeSubscriptionId)));
+      await unlockLeads(tx, partner.id);
     }
     const all =await tx.select({ status: subscriptions.status }).from(subscriptions).where(eq(subscriptions.partnerId, partner.id));
     await tx.update(partners).set({ accountStatus: accountStatusFrom(all.map((s) => s.status)) }).where(eq(partners.id, partner.id));

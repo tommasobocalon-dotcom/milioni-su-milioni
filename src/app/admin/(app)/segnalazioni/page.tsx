@@ -28,7 +28,7 @@ const DECISION = {
 const CHARGE = {
   quota: "Consegnato",
   token: "Consegnato (sistema a pagamento dismesso)",
-  locked: "Bloccato oltre quota",
+  locked: "Senza contatti (piano gratuito oltre le 3 del mese)",
   refunded: "Restituito",
   expired: "Scaduto",
   duplicate: "Duplicato",

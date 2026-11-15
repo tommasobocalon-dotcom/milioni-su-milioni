@@ -284,7 +284,7 @@ export function ProfileView({ p }: { p: PartnerProfile }) {
                 </div>
               </div>
               <ul className="flex flex-col gap-1.5 text-body-s">
-                <li>✓ Numero verificato con SMS, niente spam</li>
+                <li>✓ Richiesta confermata via email, niente spam</li>
                 <li>✓ I tuoi dati vanno solo a questo partner</li>
               </ul>
               <ButtonLink href={`/richiesta/${p.slug}`}>

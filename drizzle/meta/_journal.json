@@ -169,6 +169,13 @@
       "when": 1794699042749,
       "tag": "0023_servizi_agenzie",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1794752005835,
+      "tag": "0024_piano_gratuito",
+      "breakpoints": true
     }
   ]
 }

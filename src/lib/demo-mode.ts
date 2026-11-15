@@ -1,5 +1,5 @@
 /**
- * Scorciatoie per provare l'app senza servizi esterni: codice SMS a schermo, account di prova nella
+ * Scorciatoie per provare l'app senza servizi esterni: codice della richiesta a schermo, account di prova nella
  * pagina di accesso, acquisto di token senza pagamento. Attive in sviluppo e sul sito di prova
  * (DEMO_MODE=1), ma solo se è protetto da password (SITE_ACCESS): mai sul sito pubblico.
  */

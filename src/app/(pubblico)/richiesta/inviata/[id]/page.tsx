@@ -55,7 +55,7 @@ async function Sent({ id }: { id: string }) {
     return (
       <div className="mx-auto flex max-w-xl flex-col items-center gap-4 text-center">
         <h1 className="font-display text-h1">Richiesta non ancora confermata</h1>
-        <p className="text-body text-ink-2">Manca la verifica del numero con il codice SMS.</p>
+        <p className="text-body text-ink-2">Manca la conferma con il codice ricevuto via email.</p>
         <ButtonLink href={`/richiesta/${lead.partnerSlug}`}>Ricomincia la richiesta</ButtonLink>
       </div>
     );

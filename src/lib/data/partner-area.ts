@@ -1,6 +1,8 @@
 import "server-only";
-import { and, asc, count, desc, eq, gt, isNotNull, ne, sql } from "drizzle-orm";
+import { and, asc, count, desc, eq, gt, isNotNull, ne, sql, type AnyColumn, type SQL } from "drizzle-orm";
 import { db } from "@/lib/db/client";
+import { freeLeadsLeft } from "@/lib/domain/free-plan";
+import { freeLeadsUsed } from "@/lib/leads/service";
 import {
   areaExtensions,
   boosts,
@@ -14,7 +16,8 @@ import {
   provinces,
   services,
   showcaseFeatures,
-  subscriptions } from "@/lib/db/schema";
+  subscriptions,
+  type LeadAnswer } from "@/lib/db/schema";
 
 /**
  * Dati dell'Area Partner. Tutte le funzioni ricevono l'id del partner dalla sessione
@@ -24,6 +27,15 @@ import {
 /** Lead visibili al partner: verificati e consegnati, esclusi duplicati e richieste mai confermate. */
 const visible = (partnerId: string) =>
   and(eq(leads.partnerId, partnerId), isNotNull(leads.deliveredAt), ne(leads.charge, "duplicate"));
+
+/**
+ * Richiesta bloccata dal piano gratuito (oltre le 3 del mese): il partner vede tipo di lavoro, comune e tempi, non chi è
+ * il cliente. Anche descrizione e risposte restano nascoste, perché il cliente può averci scritto il suo numero.
+ * Il filtro sta nella query, così i dati non arrivano mai al browser.
+ */
+const unlessLocked = <T>(column: AnyColumn, empty: SQL) => sql<T>`case when ${leads.charge} = 'locked' then ${empty} else ${column} end`;
+const hiddenText = (column: AnyColumn) => unlessLocked<string | null>(column, sql`null`);
+const hiddenAnswers = () => unlessLocked<LeadAnswer[]>(leads.answers, sql`'[]'::jsonb`).mapWith(leads.answers);
 
 export async function getSubscription(partnerId: string) {
   const [row] = await db
@@ -42,6 +54,7 @@ export async function getSubscription(partnerId: string) {
       currentPeriodStart: subscriptions.currentPeriodStart,
       currentPeriodEnd: subscriptions.currentPeriodEnd,
       stripeSubscriptionId: subscriptions.stripeSubscriptionId,
+      free: subscriptions.free,
     })
     .from(subscriptions)
     .innerJoin(plans, eq(plans.id, subscriptions.planId))
@@ -53,15 +66,15 @@ export async function getSubscription(partnerId: string) {
 
 const leadListColumns = {
   id: leads.id,
-  clientName: leads.clientName,
+  clientName: hiddenText(leads.clientName),
   requestType: leads.requestType,
-  description: leads.description,
+  description: hiddenText(leads.description),
   municipality: municipalities.name,
   status: leads.status,
   charge: leads.charge,
   unlockExpiresAt: leads.unlockExpiresAt,
   createdAt: leads.createdAt,
-  answers: leads.answers,
+  answers: hiddenAnswers(),
 };
 
 export type LeadListItem = Awaited<ReturnType<typeof listLeads>>[number];
@@ -96,12 +109,12 @@ export async function getLeadDetail(partnerId: string, leadId: string) {
   const [lead] = await db
     .select({
       id: leads.id,
-      clientName: leads.clientName,
-      clientEmail: leads.clientEmail,
-      clientPhone: leads.clientPhone,
+      clientName: hiddenText(leads.clientName),
+      clientEmail: hiddenText(leads.clientEmail),
+      clientPhone: hiddenText(leads.clientPhone),
       requestType: leads.requestType,
-      answers: leads.answers,
-      description: leads.description,
+      answers: hiddenAnswers(),
+      description: hiddenText(leads.description),
       timing: leads.timing,
       callbackSlot: leads.callbackSlot,
       municipality: municipalities.name,
@@ -222,6 +235,25 @@ export async function hadStripeSubscription(partnerId: string): Promise<boolean>
     .select({ id: subscriptions.id })
     .from(subscriptions)
     .where(and(eq(subscriptions.partnerId, partnerId), isNotNull(subscriptions.stripeSubscriptionId)))
+    .limit(1);
+  return !!row;
+}
+
+/** Piano gratuito: richieste con i contatti usate nel mese e richieste in attesa senza contatti. */
+export async function getFreePlanUsage(partnerId: string, now: Date) {
+  const [used, [locked]] = await Promise.all([
+    freeLeadsUsed(db, partnerId, now),
+    db.select({ n: count() }).from(leads).where(and(eq(leads.partnerId, partnerId), eq(leads.charge, "locked"))),
+  ]);
+  return { used, left: freeLeadsLeft(used), locked: locked?.n ?? 0 };
+}
+
+/** L'azienda è partita dal piano gratuito di lancio: niente prova di 7 giorni e promo garantite anche dopo i 6 mesi. */
+export async function hadFreePlan(partnerId: string): Promise<boolean> {
+  const [row] = await db
+    .select({ id: subscriptions.id })
+    .from(subscriptions)
+    .where(and(eq(subscriptions.partnerId, partnerId), eq(subscriptions.free, true)))
     .limit(1);
   return !!row;
 }

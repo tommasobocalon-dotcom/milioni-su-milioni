@@ -22,12 +22,15 @@ export function PlanChooser({
   owner,
   trial,
   current,
+  guaranteed = false,
 }: {
   plans: ChooserPlan[];
   demo: boolean;
   owner: boolean;
   trial: boolean;
   current?: { code: string; period: "monthly" | "yearly" };
+  /** Partita dal piano gratuito: l'annuale in promo vale anche dopo il lancio. */
+  guaranteed?: boolean;
 }) {
   const [yearly, setYearly] = useState(current?.period === "yearly");
   const [pending, start] = useTransition();
@@ -36,7 +39,7 @@ export function PlanChooser({
 
   return (
     <div className="flex flex-col gap-6">
-      <PromoBanner plans={plans} />
+      <PromoBanner plans={plans} guaranteed={guaranteed} />
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div role="radiogroup" aria-label="Come paghi" className="inline-flex rounded-full bg-surface p-1 ring-1 ring-line">
           {[

@@ -79,18 +79,22 @@ const PLAN_PROMOS: Record<string, { firstMonthCents: number; yearlyCents: number
 
 export type PlanPromo = { payNowCents: number; listCents: number; giftHomeDays: number };
 
-/** Promo sul primo pagamento del piano, o null se si paga il listino. */
+/**
+ * Promo sul primo pagamento del piano, o null se si paga il listino. `guaranteed`: l'azienda è partita dal piano
+ * gratuito di lancio, e la promo dell'annuale le resta anche dopo i 6 mesi (soci, 15/11/2026).
+ */
 export function planPromo(
   plan: { code: string; monthlyPriceCents: number; yearlyPriceCents: number },
   period: "monthly" | "yearly",
   now: Date,
   launch: Date | null,
+  opts: { guaranteed?: boolean } = {},
 ): PlanPromo | null {
   const promo = Object.hasOwn(PLAN_PROMOS, plan.code) ? PLAN_PROMOS[plan.code] : null;
   if (!promo) return null;
   const listCents = period === "yearly" ? plan.yearlyPriceCents : plan.monthlyPriceCents;
   const payNowCents = period === "yearly" ? promo.yearlyCents : promo.firstMonthCents;
-  if (period === "yearly" && !promoActive(now, launch)) return null;
+  if (period === "yearly" && !opts.guaranteed && !promoActive(now, launch)) return null;
   if (payNowCents >= listCents) return null;
   return { payNowCents, listCents, giftHomeDays: period === "yearly" ? promo.yearlyGiftHomeDays : 0 };
 }

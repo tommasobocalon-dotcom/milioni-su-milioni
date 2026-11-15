@@ -498,6 +498,8 @@ export const subscriptions = pgTable(
     currentPeriodEnd: timestamp("current_period_end", { withTimezone: true }).notNull(),
     leadsUsed: integer("leads_used").notNull().default(0),
     autoUseTokens: boolean("auto_use_tokens").notNull().default(false),
+    /** Piano gratuito di lancio (free-plan.ts): Base senza Stripe, 3 richieste con i contatti al mese. */
+    free: boolean("free").notNull().default(false),
     stripeSubscriptionId: text("stripe_subscription_id").unique(),
     createdAt: createdAt(),
   },

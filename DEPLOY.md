@@ -10,7 +10,7 @@ Servizi usati (come da CLAUDE.md):
 | Database | Supabase, regione Francoforte (UE) | Free: 0 €. Il progetto va in pausa dopo 7 giorni senza visite e si riattiva dal pannello |
 | Dominio | Aruba (già acquistato) | — |
 
-Come funziona la protezione: [src/proxy.ts](src/proxy.ts) legge la variabile `SITE_ACCESS`. Se è impostata, ogni richiesta richiede nome e password (HTTP Basic Auth); se è vuota, il sito è aperto. Con `DEMO_MODE=1` (e solo se il sito è protetto) i codici SMS compaiono a schermo e la pagina di accesso mostra l'account di prova, come in locale.
+Come funziona la protezione: [src/proxy.ts](src/proxy.ts) legge la variabile `SITE_ACCESS`. Se è impostata, ogni richiesta richiede nome e password (HTTP Basic Auth); se è vuota, il sito è aperto. Con `DEMO_MODE=1` (e solo se il sito è protetto) i codici delle richieste compaiono a schermo e la pagina di accesso mostra l'account di prova, come in locale.
 
 ---
 
@@ -64,7 +64,6 @@ tommaso:Xk3...,cliente:Pq9...,socio:Lm2...
    | `DATABASE_URL` | URI di Supabase del passo 1 |
    | `OTP_PEPPER` | segreto del passo 2 |
    | `APP_URL` | `https://gecoitalia.it` |
-   | `SMS_PROVIDER` | `console` |
    | `EMAIL_PROVIDER` | `console` |
    | `SITE_ACCESS` | accessi del team del passo 2 |
    | `DEMO_MODE` | `1` |
@@ -125,43 +124,39 @@ Manda a ogni persona:
 - il link https://gecoitalia.it;
 - il **suo** nome e la **sua** password (finestra del browser "Accedi");
 - per provare l'Area Partner: l'account di prova mostrato nella pagina **Accedi**;
-- per provare una richiesta di contatto: il codice SMS compare a schermo, non serve un telefono vero.
+- per provare una richiesta di contatto: il codice compare a schermo, non serve una casella email vera.
 
 **Aggiungere o togliere una persona:** su Vercel modifica `SITE_ACCESS` (Settings → Environment Variables), poi **Deployments → ⋯ → Redeploy** sull'ultimo deploy. Le variabili cambiate valgono solo dopo un nuovo deploy.
 
 ## Cosa non funziona ancora sul sito di prova
 
 - **Caricamento foto** (logo, portfolio, foto profilo): in locale le foto vanno su disco, ma su Vercel il disco è di sola lettura. Serve Supabase Storage.
-- **SMS ed email** non partono finché `SMS_PROVIDER` ed `EMAIL_PROVIDER` restano `console`: i codici compaiono a schermo (`DEMO_MODE`). Per l'invio vero vedi "SMS ed email con Brevo".
+- **Le email** non partono finché `EMAIL_PROVIDER` resta `console`: i codici delle richieste compaiono a schermo (`DEMO_MODE`). Per l'invio vero vedi "Email con Brevo".
 - **Accesso con Google/Apple**: funziona solo dopo aver inserito le variabili `GOOGLE_*` / `APPLE_*` su Vercel, con URI di ritorno `https://gecoitalia.it/auth/google/callback` e `https://gecoitalia.it/auth/apple/callback`.
 - **Pagamenti Stripe**: spenti finché non imposti le variabili `STRIPE_*` (vedi sotto); fino ad allora piani e pacchetti si attivano senza pagamento (solo sito di prova).
 - **Email vere e antispam Turnstile**: spenti finché non imposti le chiavi, passo passo in [ATTIVAZIONE-SERVIZI.md](ATTIVAZIONE-SERVIZI.md).
 - I dati sono **di esempio** (partner inventati): vanno bene finché il sito è riservato al team, **non al lancio** (PRD §5.6).
 
-## SMS ed email con Brevo
+## Email con Brevo
 
-Un solo account [Brevo](https://www.brevo.com) per i codici SMS dei clienti e per le email (conferma al cliente, avviso di nuova richiesta al partner).
+Un account [Brevo](https://www.brevo.com) per tutte le email: il codice con cui il cliente conferma la richiesta (dal 14/11/2026 niente più SMS), la conferma al cliente e l'avviso di nuova richiesta al partner.
 
 1. **Account.** Registrati su https://app.brevo.com con i dati dell'azienda.
 2. **Chiave API.** In alto a destra: nome account → **SMTP e API** → scheda **Chiavi API** → **Genera una nuova chiave API**. Copiala in `BREVO_API_KEY` (in `.env.local` per provare in locale, su Vercel per il sito). È segreta: non va mai nel codice né in chat.
 3. **Dominio per le email.** **Mittenti, domini e IP dedicati → Domini → Aggiungi un dominio**: `gecoitalia.it`. Brevo mostra alcuni record DNS (codice Brevo, DKIM, DMARC). Su Aruba: **Pannello di controllo → Gestione Domini → gecoitalia.it → Gestione DNS** aggiungi i record così come li mostra Brevo, poi premi **Verifica** su Brevo (può volerci qualche ora). Poi in **Mittenti** aggiungi `info@gecoitalia.it` con nome `geco`.
    Senza questi record le email finiscono nello spam o non partono.
-4. **SMS.** **Campagne → SMS** (o **Transazionale → SMS**): compra un pacchetto di crediti per l'Italia. Il mittente (`SMS_SENDER`, massimo 11 lettere o cifre, es. `geco`) in Italia va registrato prima dell'uso: segui la procedura che Brevo propone per i mittenti alfanumerici, altrimenti gli operatori possono bloccare i messaggi.
-5. **Variabili.** In `.env.local` (prova in locale) o su Vercel (poi **Redeploy**):
+4. **Variabili.** In `.env.local` (prova in locale) o su Vercel (poi **Redeploy**):
 
    | Nome | Valore |
    |---|---|
-   | `SMS_PROVIDER` | `brevo` |
    | `EMAIL_PROVIDER` | `brevo` |
    | `BREVO_API_KEY` | chiave del punto 2 |
-   | `SMS_SENDER` | mittente registrato al punto 4 |
    | `EMAIL_FROM` | `info@gecoitalia.it` |
 
 **Da sapere:**
-- Con `SMS_PROVIDER=brevo` i codici **non compaiono più a schermo**, nemmeno sul sito di prova: ogni richiesta di contatto consuma un SMS vero.
-- Si possono attivare separatamente: per esempio solo `EMAIL_PROVIDER=brevo` e SMS ancora in `console`.
-- Se Brevo non risponde o il credito SMS è finito, il cliente vede "Non riusciamo a inviare l'SMS in questo momento" e l'errore resta nei log di Vercel (`[sms]`). Le email dopo la conferma non bloccano mai la richiesta: se non partono restano solo nei log (`[email]`).
-- Controlla gli invii in Brevo: **Transazionale → Log** per le email, **SMS → Statistiche** per gli SMS. Imposta un avviso di credito SMS basso.
+- Con `EMAIL_PROVIDER=brevo` i codici **non compaiono più a schermo**, nemmeno sul sito di prova: arrivano solo nella casella del cliente.
+- Se Brevo non risponde, il cliente vede "Non riusciamo a inviare l'email con il codice in questo momento" e l'errore resta nei log di Vercel (`[codice]`). Le email dopo la conferma non bloccano mai la richiesta: se non partono restano solo nei log (`[email]`).
+- Controlla gli invii in Brevo: **Transazionale → Log**.
 
 ## Pagamenti con Stripe
 
@@ -197,7 +192,7 @@ Il comando stampa un `whsec_...` da mettere in `STRIPE_WEBHOOK_SECRET` in `.env.
 
 1. Togli `SITE_ACCESS` e `DEMO_MODE` da Vercel. Senza `SITE_ACCESS` le scorciatoie demo si spengono comunque da sole.
 2. In `vercel.json` togli `npm run db:seed` dal *buildCommand* e svuota i dati di esempio dal database.
-3. Prima del lancio servono anche RLS, rate limit e Turnstile, SMS ed email con Brevo, fatturazione elettronica SdI (vedi CLAUDE.md, "Da fare"). Per Stripe passa alle chiavi **live** e crea il webhook anche in modalità live.
+3. Prima del lancio servono anche RLS, rate limit e Turnstile, email con Brevo, fatturazione elettronica SdI (vedi CLAUDE.md, "Da fare"). Per Stripe passa alle chiavi **live** e crea il webhook anche in modalità live.
 
 ## Sicurezza: protezione da flood e DDoS
 

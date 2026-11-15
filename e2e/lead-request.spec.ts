@@ -34,9 +34,9 @@ test("un cliente invia una richiesta verificata con OTP a un idraulico", async (
   await page.getByRole("button", { name: "Invia e verifica" }).click();
 
   // 5. Verifica: in sviluppo il codice è mostrato a schermo
-  await expect(page.getByRole("heading", { name: "Conferma il tuo numero" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Conferma la tua email" })).toBeVisible();
   const code = await page.getByText(/Il codice è/).locator("strong").innerText();
-  await page.getByLabel("Codice ricevuto via SMS").fill(code);
+  await page.getByLabel("Codice ricevuto via email").fill(code);
   await page.getByRole("button", { name: "Conferma la richiesta" }).click();
 
   await expect(page).toHaveURL(/\/richiesta\/inviata\//);
@@ -62,7 +62,7 @@ test("un codice sbagliato non conferma la richiesta", async ({ page }) => {
 
   const code = await page.getByText(/Il codice è/).locator("strong").innerText();
   const wrong = code === "000000" ? "111111" : "000000";
-  await page.getByLabel("Codice ricevuto via SMS").fill(wrong);
+  await page.getByLabel("Codice ricevuto via email").fill(wrong);
   await page.getByRole("button", { name: "Conferma la richiesta" }).click();
   await expect(page.getByText(/Codice non corretto/)).toBeVisible();
   await expect(page).toHaveURL(/\/richiesta\/elettro-zanon$/);

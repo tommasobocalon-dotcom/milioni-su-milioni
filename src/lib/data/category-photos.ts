@@ -79,3 +79,39 @@ export const ABOUT_PHOTOS = {
     credit: { title: "Artigiano che incide il legno in laboratorio", author: "Pam Crane", license: "Licenza Pexels", licenseUrl: "https://www.pexels.com/it-it/license/", page: "https://www.pexels.com/it-it/foto/anziano-artigiano-che-incide-il-legno-in-laboratorio-30249657/" },
   },
 } satisfies Record<string, CategoryPhoto>;
+
+const PEXELS = { license: "Licenza Pexels", licenseUrl: "https://www.pexels.com/it-it/license/" };
+
+/** Foto della pagina Come funziona, da Pexels (fonti in public/foto/come-funziona/credits.json), creditate nel footer. */
+export const HOW_PHOTOS = {
+  hero: {
+    src: "/foto/come-funziona/verona.jpg",
+    alt: "Case colorate affacciate sull'Adige a Verona, con il campanile sullo sfondo",
+    credit: { title: "Case colorate sull'Adige a Verona", author: "Merve Türk", ...PEXELS, page: "https://www.pexels.com/it-it/foto/19158705/" },
+  },
+  search: {
+    src: "/foto/come-funziona/cerca-telefono.jpg",
+    alt: "Coppia sorridente sul divano che guarda insieme il telefono",
+    credit: { title: "Coppia che cerca dal telefono sul divano", author: "Vitaly Gariev", ...PEXELS, page: "https://www.pexels.com/it-it/foto/36813080/" },
+  },
+  compare: {
+    src: "/foto/come-funziona/confronta-portatile.jpg",
+    alt: "Coppia seduta sul divano che guarda insieme il portatile",
+    credit: { title: "Coppia che confronta dal portatile sul divano", author: "Mikhail Nilov", ...PEXELS, page: "https://www.pexels.com/it-it/foto/6894025/" },
+  },
+  request: {
+    src: "/foto/come-funziona/richiedi-telefono.jpg",
+    alt: "Ragazza sorridente al telefono, seduta sul divano di casa",
+    credit: { title: "Ragazza al telefono sul divano di casa", author: "Antoni Shkraba", ...PEXELS, page: "https://www.pexels.com/it-it/foto/7579177/" },
+  },
+  done: {
+    src: "/foto/come-funziona/lavoro-elettricista.jpg",
+    alt: "Elettricista con il casco che fora la parete per montare una presa",
+    credit: { title: "Elettricista che monta una presa in un appartamento", author: "Antoni Shkraba", ...PEXELS, page: "https://www.pexels.com/it-it/foto/4981802/" },
+  },
+  newHome: {
+    src: "/foto/come-funziona/chiavi-casa.jpg",
+    alt: "Coppia distesa sul pavimento tra gli scatoloni con in mano le chiavi della casa nuova",
+    credit: { title: "Coppia con le chiavi della casa nuova tra gli scatoloni", author: "Vitaly Gariev", ...PEXELS, page: "https://www.pexels.com/it-it/foto/36729696/" },
+  },
+} satisfies Record<string, CategoryPhoto>;

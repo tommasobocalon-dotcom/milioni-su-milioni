@@ -116,7 +116,7 @@ export function ProfileForm({ values, canEditFiscal }: { values: ProfileValues; 
           <input type="checkbox" name="hideDirectContacts" defaultChecked={values.hideDirectContacts} className="mt-0.5 size-5 accent-primary" />
           <span>
             <span className="font-semibold">Nascondi telefono ed email sulla scheda pubblica</span>
-            <span className="block text-ink-2">I clienti ti scrivono solo dal modulo di richiesta, con il numero verificato.</span>
+            <span className="block text-ink-2">I clienti ti scrivono solo dal modulo di richiesta, che confermano via email.</span>
           </span>
         </label>
       </section>

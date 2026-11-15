@@ -1,14 +1,14 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
-import { ArrowLeft, Clock, Mail, MessageCircle, Phone } from "lucide-react";
+import { ArrowLeft, Clock, Lock, Mail, MessageCircle, Phone } from "lucide-react";
 import { connection } from "next/server";
 import { z } from "zod";
 import { saveLeadNotes, updateLeadStatus } from "@/app/area-partner/actions";
 import { MarkSeen, ReportForm } from "@/components/partner/lead-client";
 import { PartnerSkeleton } from "@/components/partner/skeleton";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Button, ButtonLink } from "@/components/ui/button";
 import { Select, Textarea } from "@/components/ui/field";
 import { requirePartner } from "@/lib/auth/session";
 import { getLeadDetail } from "@/lib/data/partner-area";
@@ -52,10 +52,10 @@ async function Lead({ id }: { id: string }) {
       </Link>
       <header className="flex flex-col gap-1">
         <h1 className="font-display text-h1">
-          {lead.clientName} · {lead.requestType}
+          {lead.clientName ? `${lead.clientName} · ${lead.requestType}` : lead.requestType}
         </h1>
         <p className="text-body-s text-ink-2">
-          Ricevuta {whenLabel(lead.createdAt, now)} · {lead.municipality} · numero verificato con SMS
+          Ricevuta {whenLabel(lead.createdAt, now)} · {lead.municipality} · confermata via email
         </p>
       </header>
 
@@ -121,7 +121,15 @@ async function Lead({ id }: { id: string }) {
         <aside className="flex flex-col gap-6">
           <section className="flex flex-col gap-3 rounded-lg border border-line bg-surface p-6">
             <h2 className="text-h4 font-semibold">Contatti del cliente</h2>
-            {(
+            {!lead.clientPhone || !lead.clientEmail ? (
+              <>
+                <p className="inline-flex items-start gap-2 text-body-s">
+                  <Lock className="mt-0.5 size-4 shrink-0" aria-hidden /> Questo mese hai già ricevuto le 3 richieste gratuite. Scegli un piano
+                  per vedere nome, telefono, email e descrizione del cliente: si sbloccano anche tutte le altre richieste in attesa.
+                </p>
+                <ButtonLink href="/area-partner/abbonamento">Scegli un piano</ButtonLink>
+              </>
+            ) : (
               <>
                 <p className="inline-flex items-center gap-2 text-body">
                   <Phone className="size-4" aria-hidden /> {formatPhone(lead.clientPhone)}

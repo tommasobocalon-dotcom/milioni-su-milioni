@@ -1,12 +1,15 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
-import { Check } from "lucide-react";
+import { Check, Gift } from "lucide-react";
 import { LoginForm, type Audience } from "@/components/site/login-form";
 import { Wordmark } from "@/components/site/wordmark";
 import { DEMO_ACCOUNT } from "@/lib/auth/demo";
 import { getSessionUser, landingPathFor } from "@/lib/auth/session";
+import { getFreePlanOpen } from "@/lib/data/plans";
+import { FREE_LEADS_PER_MONTH } from "@/lib/domain/free-plan";
 import { demoMode } from "@/lib/demo-mode";
+import { cn } from "@/lib/utils";
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 
@@ -65,17 +68,39 @@ async function RedirectIfSignedIn({ audience, searchParams }: { audience: Audien
   redirect(await landingPathFor(user.id, audience, typeof next === "string" ? next : undefined));
 }
 
+/**
+ * Invito alle aziende (soci, 15/11/2026): finché il piano gratuito di lancio è aperto, l'accesso aziende lo dice nel
+ * pannello verde a destra, così il modulo resta in primo piano. Sul telefono, dove il pannello non c'è, va sotto il modulo.
+ */
+async function FreeLaunchOffer({ className }: { className?: string }) {
+  if (!(await getFreePlanOpen())) return null;
+  return (
+    <section aria-labelledby="offerta-lancio" className={cn("flex gap-3 rounded-lg bg-promo-soft p-4 text-ink", className)}>
+      <Gift aria-hidden className="mt-0.5 size-5 shrink-0 text-promo-ink" />
+      <div className="flex flex-col gap-1">
+        <h2 id="offerta-lancio" className="text-body font-semibold">
+          Per il lancio, la tua scheda è gratis
+        </h2>
+        <p className="text-body-s">
+          Non paghi nulla finché non ricevi {FREE_LEADS_PER_MONTH} richieste in un mese. Senza carta e senza vincoli: poi scegli tu il
+          piano, con le promo.
+        </p>
+      </div>
+    </section>
+  );
+}
+
 /** Cosa cambia tra l'accesso dei clienti (/accedi) e quello delle aziende (/accedi/azienda). */
 const SCREEN = {
   client: {
     claim: "Casa e lavori di casa, con persone verificate del Veneto.",
-    points: ["Richieste dei clienti verificate con un SMS", "Zone servite e lavori già svolti in vista", "Prezzi indicativi prima di chiamare"],
+    points: ["Richieste dei clienti confermate via email", "Zone servite e lavori già svolti in vista", "Prezzi indicativi prima di chiamare"],
     switchText: "Hai un'attività?",
     switchLink: { href: "/accedi/azienda", label: "Vai all'accesso aziende" },
   },
   business: {
     claim: "Richieste verificate dalla tua zona, senza intermediari.",
-    points: ["Ogni richiesta arriva con il numero verificato via SMS", "Richieste, abbonamento e sponsorizzazioni in un'unica area", "La tua scheda compare appena il piano è attivo"],
+    points: ["Ogni richiesta arriva già confermata dal cliente", "Richieste, abbonamento e sponsorizzazioni in un'unica area", "La tua scheda compare appena il piano è attivo"],
     switchText: "Cerchi casa o un professionista?",
     switchLink: { href: "/accedi", label: "Vai all'accesso clienti" },
   },
@@ -100,6 +125,11 @@ export function AuthScreen({ audience, searchParams }: { audience: Audience; sea
           </Suspense>
         }
       />
+      {audience === "business" && (
+        <Suspense fallback={null}>
+          <FreeLaunchOffer className="lg:hidden" />
+        </Suspense>
+      )}
       <p className="text-body-s text-ink-2">
         {screen.switchText}{" "}
         <Link href={screen.switchLink.href} className="font-semibold text-primary underline">
@@ -144,6 +174,11 @@ export function AuthShell({ audience = "client", children }: { audience?: Audien
               </li>
             ))}
           </ul>
+          {audience === "business" && (
+            <Suspense fallback={null}>
+              <FreeLaunchOffer />
+            </Suspense>
+          )}
         </div>
       </aside>
     </div>

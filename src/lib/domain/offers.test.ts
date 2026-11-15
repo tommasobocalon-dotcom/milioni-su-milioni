@@ -91,6 +91,12 @@ describe("promo dei piani (soci, 11/11/2026)", () => {
     expect(planPromo(base, "yearly", during, launch)).toBeNull();
     expect(planPromo({ ...normal, monthlyPriceCents: 3900 }, "monthly", during, launch)).toBeNull();
   });
+
+  it("chi è partito dal piano gratuito ha l'annuale in promo anche dopo i 6 mesi (soci, 15/11/2026)", () => {
+    expect(planPromo(normal, "yearly", after, launch, { guaranteed: true })).toEqual({ payNowCents: 59900, listCents: 82800, giftHomeDays: 0 });
+    expect(planPromo(premium, "yearly", after, launch, { guaranteed: true })).toEqual({ payNowCents: 149000, listCents: 190800, giftHomeDays: 30 });
+    expect(planPromo(base, "yearly", after, launch, { guaranteed: true })).toBeNull();
+  });
 });
 
 describe("promo nel cambio piano (soci, 11/11/2026)", () => {

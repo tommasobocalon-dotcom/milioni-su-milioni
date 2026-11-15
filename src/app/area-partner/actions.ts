@@ -21,7 +21,9 @@ import { parseOpeningHours, parseSpecialties } from "@/lib/domain/profile-fields
 import { canReportLead, REPORT_REASONS } from "@/lib/domain/lead-rules";
 import { AREA_EXTENSION_OFFER, HOME_SPONSOR_PACKAGES, municipalityIdsFrom, SEARCH_BOOST_PACKAGES } from "@/lib/domain/offers";
 
-import { grantAreaExtensions, grantHomeSponsor, grantSearchBoost } from "@/lib/leads/service";
+import { grantAreaExtensions, grantHomeSponsor, grantSearchBoost, unlockLeads } from "@/lib/leads/service";
+import { freePlanOpen } from "@/lib/domain/free-plan";
+import { launchDate } from "@/lib/domain/offers";
 import { LEAD_STATUSES, statusInfo } from "@/lib/leads/status";
 import { MESSAGE_MAX, TICKET_TOPICS } from "@/lib/domain/support";
 import { openTicket, replyFromPartner } from "@/lib/support/service";
@@ -503,8 +505,38 @@ export async function simulateSubscription(planCode: string, period: "monthly" |
     await tx.update(subscriptions).set({ status: "cancelled" }).where(eq(subscriptions.partnerId, partner.id));
     await tx.insert(subscriptions).values({ partnerId: partner.id, planId: plan.id, period, status: "active", currentPeriodStart: start, currentPeriodEnd: end });
     await tx.update(partners).set({ accountStatus: "active" }).where(eq(partners.id, partner.id));
+    await unlockLeads(tx, partner.id);
     await tx.insert(auditLogs).values({ actor: user.email, action: "billing.simulated_subscription", entity: "partner", entityId: partner.id, data: { planCode, period } });
   });
+  updateTag(`partner:${partner.slug}`);
+  updateTag("catalog");
+  revalidatePath("/area-partner", "layout");
+}
+
+/**
+ * Piano gratuito di lancio (soci, 15/11/2026): Base senza pagamento finché l'azienda non riceve 3 richieste in un mese.
+ * Solo per chi non ha mai avuto un abbonamento, nei primi 6 mesi dal lancio. Funziona anche con Stripe attivo.
+ */
+export async function startFreePlan() {
+  const { user, partner, memberRole } = await requirePartner();
+  if (memberRole !== "owner" || !freePlanOpen(new Date(), launchDate())) return;
+  const [plan] = await db.select({ id: plans.id }).from(plans).where(eq(plans.code, "base"));
+  if (!plan) return;
+  const done = await db.transaction(async (tx) => {
+    // Riga del partner bloccata: due clic insieme non creano due piani gratuiti.
+    await tx.select({ id: partners.id }).from(partners).where(eq(partners.id, partner.id)).for("update");
+    const [any] = await tx.select({ id: subscriptions.id }).from(subscriptions).where(eq(subscriptions.partnerId, partner.id)).limit(1);
+    if (any) return false;
+    const start = new Date();
+    // Nessuna scadenza: resta finché l'azienda non sceglie un piano a pagamento, che lo chiude (syncSubscription).
+    const end = new Date(start);
+    end.setFullYear(end.getFullYear() + 100);
+    await tx.insert(subscriptions).values({ partnerId: partner.id, planId: plan.id, period: "monthly", status: "active", free: true, currentPeriodStart: start, currentPeriodEnd: end });
+    await tx.update(partners).set({ accountStatus: "active" }).where(eq(partners.id, partner.id));
+    await tx.insert(auditLogs).values({ actor: user.email, action: "billing.free_plan", entity: "partner", entityId: partner.id });
+    return true;
+  });
+  if (!done) return;
   updateTag(`partner:${partner.slug}`);
   updateTag("catalog");
   revalidatePath("/area-partner", "layout");

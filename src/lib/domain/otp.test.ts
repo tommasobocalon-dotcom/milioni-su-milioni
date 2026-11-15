@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { checkOtp, generateOtpCode, hashOtp, MAX_OTP_ATTEMPTS, normalizeEmail, normalizeItalianPhone } from "./otp";
+import { checkOtp, generateOtpCode, hashOtp, maskEmail, MAX_OTP_ATTEMPTS, normalizeEmail, normalizeItalianPhone } from "./otp";
 
 describe("generateOtpCode", () => {
   it("returns six digits", () => {
@@ -56,5 +56,15 @@ describe("normalizeItalianPhone", () => {
 describe("normalizeEmail", () => {
   it("trims and lowercases", () => {
     expect(normalizeEmail("  Mario@RossiImpianti.IT ")).toBe("mario@rossiimpianti.it");
+  });
+});
+
+describe("maskEmail", () => {
+  it("keeps the first letter and the domain, hides the rest of the name", () => {
+    expect(maskEmail("mario.rossi@example.com")).toBe("m••••••••••@example.com");
+  });
+
+  it("hides even a one-letter name", () => {
+    expect(maskEmail("m@example.com")).toBe("•@example.com");
   });
 });

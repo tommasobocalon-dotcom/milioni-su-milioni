@@ -13,7 +13,7 @@ export const metadata: Metadata = {
 
 const QUICK = [
   { q: "Ho inviato una richiesta a un professionista", a: "Ti ricontatta lui nella fascia oraria che hai scelto. Se non succede entro due giorni, scrivici." },
-  { q: "Sono un'azienda e voglio comparire su geco", a: "Registrati da Per i professionisti: scegli il piano e la tua scheda è online appena il pagamento è confermato." },
+  { q: "Sono un'azienda e voglio comparire su geco", a: "Registrati da Per i professionisti: scegli il piano e la tua scheda è online appena il piano è attivo." },
   { q: "Un lead non è valido", a: "Segnalalo entro 72 ore dalla pagina del lead nell'Area Partner: lo controlliamo noi." },
 ];
 

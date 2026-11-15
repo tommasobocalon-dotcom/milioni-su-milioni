@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ChevronRight } from "lucide-react";
+import { ChevronRight, Lock } from "lucide-react";
 import type { LeadListItem } from "@/lib/data/partner-area";
 import { statusInfo } from "@/lib/leads/status";
 import { cn } from "@/lib/utils";
@@ -27,7 +27,13 @@ export function LeadRow({ lead, now }: { lead: LeadListItem; now: Date }) {
         </span>
         <span className="flex min-w-0 flex-1 flex-col">
           <span className="inline-flex items-center gap-1.5 font-semibold">
-            {lead.clientName}
+            {lead.charge === "locked" ? (
+              <>
+                <Lock className="size-4 text-ink-2" aria-hidden /> Contatti nascosti: scegli un piano
+              </>
+            ) : (
+              lead.clientName
+            )}
           </span>
           <span className="truncate text-body-s text-ink-2">{summary}</span>
         </span>

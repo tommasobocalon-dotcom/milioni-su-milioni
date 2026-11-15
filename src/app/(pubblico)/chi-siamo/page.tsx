@@ -34,7 +34,7 @@ const WHAT_WE_DO = [
 const STEPS = [
   { title: "Descrivere l'esigenza", text: "Indicare il lavoro o il servizio di cui si ha bisogno e il comune o la provincia in cui si trova l'immobile." },
   { title: "Scegliere l'impresa", text: "Consultare le schede delle imprese che operano in quella zona e individuare quella più adatta." },
-  { title: "Inviare la richiesta", text: "Compilare la richiesta di contatto e confermare il proprio numero di telefono con un codice ricevuto via SMS." },
+  { title: "Inviare la richiesta", text: "Compilare la richiesta di contatto e confermarla con un codice ricevuto via email." },
   { title: "Essere ricontattati", text: "L'impresa richiama il cliente nella fascia oraria indicata nella richiesta." },
 ];
 
@@ -42,7 +42,7 @@ const COMMITMENTS: { icon: LucideIcon; title: string; body: ReactNode }[] = [
   {
     icon: ShieldCheck,
     title: "Richieste autentiche",
-    body: "Ogni richiesta di contatto è confermata tramite SMS, affinché le imprese ricevano soltanto richieste reali e possano rispondere con la dovuta attenzione.",
+    body: "Ogni richiesta di contatto è confermata dal cliente tramite email, affinché le imprese ricevano soltanto richieste reali e possano rispondere con la dovuta attenzione.",
   },
   {
     icon: Scale,

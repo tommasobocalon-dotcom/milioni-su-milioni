@@ -1,22 +1,26 @@
 import { Suspense } from "react";
-import { Check } from "lucide-react";
-import { openBillingPortal } from "@/app/area-partner/actions";
+import { connection } from "next/server";
+import { Check, Lock } from "lucide-react";
+import { openBillingPortal, startFreePlan } from "@/app/area-partner/actions";
 import { CheckoutButton, PaymentNotice } from "@/components/partner/checkout-button";
 import { PartnerPageHeader } from "@/components/partner/page-header";
 import { PlanChooser } from "@/components/partner/plan-chooser";
 import { PartnerSkeleton } from "@/components/partner/skeleton";
-import { ButtonLink } from "@/components/ui/button";
+import { Button, ButtonLink } from "@/components/ui/button";
 import { requirePartner } from "@/lib/auth/session";
 import { changePromoUsed, pendingPlanChange, stripeConfigured } from "@/lib/billing/stripe";
-import { getSubscription, hadStripeSubscription } from "@/lib/data/partner-area";
+import { getFreePlanUsage, getSubscription, hadFreePlan, hadStripeSubscription } from "@/lib/data/partner-area";
 import { getPlansWithPromo } from "@/lib/data/plans";
 import { demoMode } from "@/lib/demo-mode";
-import { changePromo } from "@/lib/domain/offers";
+import { FREE_LEADS_PER_MONTH, freePlanOpen, romeMonthStart } from "@/lib/domain/free-plan";
+import { changePromo, launchDate, planPromo } from "@/lib/domain/offers";
 import { planFeatures } from "@/lib/domain/plan-features";
 import { formatEuro } from "@/lib/domain/format";
+import { cn } from "@/lib/utils";
 
 export const metadata = { title: "Abbonamento" };
 
+const monthFmt = new Intl.DateTimeFormat("it-IT", { month: "long", timeZone: "Europe/Rome" });
 const dateFmt = new Intl.DateTimeFormat("it-IT", { day: "numeric", month: "long", year: "numeric", timeZone: "Europe/Rome" });
 
 const STATUS: Record<string, string> = {
@@ -44,13 +48,20 @@ async function Chooser({
   demo,
   trial,
   current,
+  guaranteed = false,
 }: {
   owner: boolean;
   demo: boolean;
   trial: boolean;
   current?: { code: string; period: "monthly" | "yearly"; partnerId: string };
+  /** Partita dal piano gratuito: promo dell'annuale anche dopo i 6 mesi dal lancio. */
+  guaranteed?: boolean;
 }) {
-  const all = await getPlansWithPromo();
+  await connection();
+  const now = new Date();
+  const all = (await getPlansWithPromo()).map((p) =>
+    guaranteed ? { ...p, promo: { monthly: p.promo.monthly, yearly: planPromo(p, "yearly", now, launchDate(), { guaranteed }) } } : p,
+  );
   // Nel cambio piano la promo vale una volta per azienda (stessa regola di createPlanChangeSession), mai sul piano attuale.
   const used = current ? await changePromoUsed(current.partnerId) : false;
   const isCurrent = (code: string, period: "monthly" | "yearly") => current?.code === code && current.period === period;
@@ -65,13 +76,15 @@ async function Chooser({
     },
     features: planFeatures(p.code),
   }));
-  return <PlanChooser plans={plans} demo={demo} owner={owner} trial={trial} current={current} />;
+  return <PlanChooser plans={plans} demo={demo} owner={owner} trial={trial} current={current} guaranteed={guaranteed} />;
 }
 
 async function Subscription({ payment, welcome }: { payment: "received" | "started" | "changed" | null; welcome: boolean }) {
   // Pagina raggiungibile anche con account sospeso: è qui che il partner paga per riattivarsi.
   const { partner, memberRole } = await requirePartner({ allowSuspended: true });
-  const [sub, hadStripe] = await Promise.all([getSubscription(partner.id), hadStripeSubscription(partner.id)]);
+  const [sub, hadStripe, fromFree] = await Promise.all([getSubscription(partner.id), hadStripeSubscription(partner.id), hadFreePlan(partner.id)]);
+  await connection();
+  const now = new Date();
   const stripeOn = stripeConfigured();
   const owner = memberRole === "owner";
   const demo = !stripeOn && demoMode();
@@ -87,31 +100,145 @@ async function Subscription({ payment, welcome }: { payment: "received" | "start
       )
     );
   const chooser = canChoose ? (
-    <Chooser owner={owner} demo={demo} trial={!hadStripe} />
+    <Chooser owner={owner} demo={demo} trial={!hadStripe && !fromFree} guaranteed={fromFree} />
   ) : (
     <ButtonLink href="/per-i-professionisti#piani" className="self-start">
       Vedi i piani
     </ButtonLink>
   );
 
-  // 1. Nessun piano: solo la scelta.
+  // 1. Nessun piano: solo la scelta, con il piano gratuito se l'azienda non ha mai avuto un abbonamento.
   if (!sub || sub.status === "cancelled") {
+    const free = !sub && freePlanOpen(now, launchDate());
     return (
       <div className="flex flex-col gap-6">
         <PartnerPageHeader title="Scegli il tuo piano" subtitle="Le richieste dei clienti sono gratis e illimitate con tutti i piani" partnerName={partner.displayName} logoUrl={partner.logoUrl} />
         {notice}
         {welcome && (
           <p role="status" className="rounded-lg bg-subtle p-4 text-body-s">
-            <strong>Scheda creata.</strong> Ultimo passo: scegli il piano. Appena è attivo la tua scheda compare nei risultati.
+            <strong>Scheda creata.</strong> Ultimo passo: {free ? "parti gratis o scegli un piano" : "scegli il piano"}. Appena è attivo la tua
+            scheda compare nei risultati.
           </p>
         )}
         {!notice && !welcome && <p className="rounded-lg bg-subtle p-4 text-body-s">Nessun piano attivo: la tua scheda non compare nei risultati.</p>}
+        {free && (
+          <section aria-labelledby="piano-gratuito" className="flex flex-col gap-4 rounded-lg border-2 border-primary bg-surface p-6">
+            <div className="flex flex-col gap-1">
+              <h2 id="piano-gratuito" className="text-h3 font-semibold">
+                Parti gratis
+              </h2>
+              <p className="text-body-s text-ink-2">
+                Per il lancio la tua scheda è gratis finché non ricevi {FREE_LEADS_PER_MONTH} richieste in un mese. Poi scegli il piano che
+                preferisci, sempre con le promo.
+              </p>
+            </div>
+            <ul className="flex flex-col gap-2 text-body-s">
+              {[
+                "Le funzioni del piano Base, senza carta e senza pagare nulla",
+                `${FREE_LEADS_PER_MONTH} richieste al mese con i contatti del cliente`,
+                "Dalla 4ª richiesta del mese vedi zona e tipo di lavoro; i contatti si sbloccano scegliendo un piano",
+                "Le promo restano tue anche quando passi a pagamento",
+              ].map((t) => (
+                <li key={t} className="flex items-start gap-2">
+                  <Check className="mt-0.5 size-4 shrink-0 text-primary" aria-hidden /> {t}
+                </li>
+              ))}
+            </ul>
+            <form action={startFreePlan}>
+              <Button type="submit" disabled={!owner}>
+                Inizia gratis
+              </Button>
+            </form>
+            {!owner && <p className="text-caption text-ink-2">Solo il titolare dell&apos;account può attivare il piano.</p>}
+          </section>
+        )}
+        {free && (
+          <h2 className="text-h3 font-semibold">Oppure scegli subito un piano</h2>
+        )}
         {chooser}
       </div>
     );
   }
 
-  // 2. Piano attivato senza pagamento (sito di prova o dati di esempio) e pagamenti online attivi: va pagato.
+  // 2. Piano gratuito di lancio: richieste del mese, contatti in attesa e scelta del piano con le promo.
+  if (sub.free) {
+    const usage = await getFreePlanUsage(partner.id, now);
+    const used = Math.min(usage.used, FREE_LEADS_PER_MONTH);
+    // Primo giorno del mese prossimo, quando il contatore torna a zero (ora italiana).
+    const resetDay = `1° ${monthFmt.format(new Date(romeMonthStart(now).getTime() + 32 * 86_400_000))}`;
+    return (
+      <div className="flex flex-col gap-6">
+        <PartnerPageHeader title="Piano gratuito" partnerName={partner.displayName} logoUrl={partner.logoUrl} planCode={sub.planCode} />
+        {notice}
+        {usage.locked > 0 && (
+          <section role="alert" className="flex items-start gap-3 rounded-lg border border-primary bg-surface p-5 text-body-s">
+            <Lock className="mt-0.5 size-5 shrink-0 text-primary" aria-hidden />
+            <p>
+              <strong>
+                {usage.locked === 1 ? "Hai 1 richiesta" : `Hai ${usage.locked} richieste`} senza contatti.
+              </strong>{" "}
+              Scegli un piano qui sotto: {usage.locked === 1 ? "si sblocca" : "si sbloccano"} appena il piano è attivo.
+            </p>
+          </section>
+        )}
+        <section className="grid gap-6 rounded-lg border border-line bg-surface p-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+          <div className="flex flex-col gap-4">
+            <div>
+              <p id="richieste-gratuite" className="text-body-s text-ink-2">
+                Richieste gratuite questo mese
+              </p>
+              <p className="font-display text-h1">
+                {used} di {FREE_LEADS_PER_MONTH}
+              </p>
+            </div>
+            {/* Una tacca per richiesta: si riempie a ogni richiesta con i contatti arrivata nel mese. */}
+            <div
+              role="progressbar"
+              aria-labelledby="richieste-gratuite"
+              aria-valuemin={0}
+              aria-valuemax={FREE_LEADS_PER_MONTH}
+              aria-valuenow={used}
+              aria-valuetext={`${used} richieste su ${FREE_LEADS_PER_MONTH}`}
+              className="flex gap-1.5"
+            >
+              {Array.from({ length: FREE_LEADS_PER_MONTH }, (_, i) => (
+                <span key={i} className={cn("h-3 flex-1 rounded-full transition-colors", i < used ? "bg-primary" : "bg-muted")} />
+              ))}
+            </div>
+            <p className="text-body-s">
+              {usage.left > 0
+                ? `Ne puoi ricevere ancora ${usage.left} con i contatti del cliente. Il conteggio riparte il ${resetDay}.`
+                : `Hai usato le richieste gratuite di questo mese: le prossime ti mostrano zona e tipo di lavoro, e i contatti si sbloccano scegliendo un piano. Il conteggio riparte il ${resetDay}.`}
+            </p>
+          </div>
+          <div className="flex flex-col gap-3 rounded-md bg-subtle p-5">
+            <p className="text-body-s font-semibold">Cosa include</p>
+            <ul className="flex flex-col gap-2 text-body-s">
+              {planFeatures(sub.planCode).map((t) => (
+                <li key={t} className="flex items-start gap-2">
+                  <Check className="mt-0.5 size-4 shrink-0 text-primary" aria-hidden /> {t}
+                </li>
+              ))}
+            </ul>
+          </div>
+        </section>
+        <section aria-labelledby="scegli-piano" className="flex flex-col gap-4">
+          <div className="flex flex-col gap-1">
+            <h2 id="scegli-piano" className="text-h3 font-semibold">
+              Scegli il tuo piano
+            </h2>
+            <p className="text-body-s text-ink-2">
+              Le promo valgono anche per te: primo mese a prezzo scontato e annuale in promo, anche dopo la fine del lancio. Paghi da subito,
+              senza i 7 giorni di prova, e il piano gratuito si chiude da solo appena quello nuovo è attivo.
+            </p>
+          </div>
+          {chooser}
+        </section>
+      </div>
+    );
+  }
+
+  // 3. Piano attivato senza pagamento (sito di prova o dati di esempio) e pagamenti online attivi: va pagato.
   if (stripeOn && !sub.stripeSubscriptionId) {
     return (
       <div className="flex flex-col gap-6">
@@ -126,7 +253,7 @@ async function Subscription({ payment, welcome }: { payment: "received" | "start
     );
   }
 
-  // 3. Abbonamento pagato: piano, prossimo rinnovo, pagamenti e fatture.
+  // 4. Abbonamento pagato: piano, prossimo rinnovo, pagamenti e fatture.
   const yearly = sub.period === "yearly";
   // Discesa programmata nel portale: il database cambia solo al rinnovo, qui si dice subito. Se Stripe non risponde, niente avviso.
   const pending = stripeOn && sub.stripeSubscriptionId ? await pendingPlanChange(sub.stripeSubscriptionId).catch(() => null) : null;

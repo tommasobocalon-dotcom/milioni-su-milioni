@@ -18,6 +18,9 @@ import { profileHref } from "@/lib/data/search";
 import { countTicketsByStatus, listTickets } from "@/lib/data/support";
 import { monthlyRecurringCents } from "@/lib/domain/admin";
 
+/** Nome del piano nel gestionale: il piano gratuito di lancio è un Base senza pagamento. */
+const planLabel = sql<string>`case when ${subscriptions.free} then 'Gratuito' else ${plans.name} end`;
+
 /** Letture del Backoffice (PRD §10). Ogni pagina che le usa passa prima da requireAdmin(). */
 
 const DAY = 86_400_000;
@@ -44,7 +47,8 @@ export async function getAdminOverview(now: Date) {
       .select({ period: subscriptions.period, monthlyPriceCents: plans.monthlyPriceCents, yearlyPriceCents: plans.yearlyPriceCents })
       .from(subscriptions)
       .innerJoin(plans, eq(plans.id, subscriptions.planId))
-      .where(eq(subscriptions.status, "active")),
+      // Il piano gratuito di lancio non incassa nulla.
+      .where(and(eq(subscriptions.status, "active"), eq(subscriptions.free, false))),
     db.select({ verified: count(leads.verifiedAt), delivered: count(leads.deliveredAt) }).from(leads).where(gt(leads.createdAt, since)),
     db.select({ placement: boosts.placement, n: count() }).from(boosts).where(gt(boosts.startsAt, since)).groupBy(boosts.placement),
     db.select({ n: count() }).from(leads).where(eq(leads.reportStatus, "open")),
@@ -100,7 +104,7 @@ export async function listPartnersAdmin({ q, filter }: { q?: string; filter?: Pa
       createdAt: partners.createdAt,
       category: categories.name,
       municipality: municipalities.name,
-      plan: plans.name,
+      plan: planLabel,
     })
     .from(partners)
     .innerJoin(categories, eq(categories.id, partners.categoryId))
@@ -173,7 +177,8 @@ export async function getPartnerAdmin(id: string) {
         period: subscriptions.period,
         currentPeriodEnd: subscriptions.currentPeriodEnd,
         stripeSubscriptionId: subscriptions.stripeSubscriptionId,
-        planName: plans.name,
+        planName: planLabel,
+        free: subscriptions.free,
       })
       .from(subscriptions)
       .innerJoin(plans, eq(plans.id, subscriptions.planId))

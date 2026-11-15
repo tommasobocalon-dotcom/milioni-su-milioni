@@ -50,3 +50,11 @@ export function normalizeEmail(input: string): string {
 export function maskPhone(e164: string): string {
   return e164.replace(/^(\+39)(\d+)(\d{3})$/, (_, p, mid: string, end) => `${p} ${"•".repeat(mid.length)}${end}`);
 }
+
+/** Mostra solo la prima lettera e il dominio di un'email (es. nel passo di verifica della richiesta). */
+export function maskEmail(email: string): string {
+  const at = email.lastIndexOf("@");
+  const name = email.slice(0, at);
+  const shown = name.length > 1 ? name[0] : "";
+  return `${shown}${"•".repeat(name.length - shown.length)}${email.slice(at)}`;
+}

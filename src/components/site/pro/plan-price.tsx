@@ -23,7 +23,7 @@ export function bestYearlySaving(plans: PromoPlan[]): number | null {
  * Fascia sopra i piani: la promo deve saltare all'occhio e spingere a scegliere (soci, 11/11/2026).
  * Solo numeri veri, presi dalle promo attive; sparisce da sola quando non ce ne sono più.
  */
-export function PromoBanner({ plans }: { plans: PromoPlan[] }) {
+export function PromoBanner({ plans, guaranteed = false }: { plans: PromoPlan[]; guaranteed?: boolean }) {
   const firstMonth = plans.flatMap((p) => (p.promo.monthly ? [p.promo.monthly] : [])).sort((a, b) => a.payNowCents - b.payNowCents)[0];
   const yearly = bestYearlySaving(plans);
   if (!firstMonth && !yearly) return null;
@@ -40,7 +40,12 @@ export function PromoBanner({ plans }: { plans: PromoPlan[] }) {
         )}
         {firstMonth && yearly && " "}
         {yearly && <>Con l&apos;annuale risparmi fino a {formatEuro(yearly)}.</>}
-        {yearly && <span className="font-normal text-on-brand-muted"> L&apos;annuale in promo vale solo nei primi 6 mesi dal lancio.</span>}
+        {yearly && (
+          <span className="font-normal text-on-brand-muted">
+            {/* Chi è partito dal piano gratuito di lancio ha l'annuale in promo anche dopo i 6 mesi. */}
+            {guaranteed ? " Per te l'annuale in promo vale anche dopo il lancio." : " L'annuale in promo vale solo nei primi 6 mesi dal lancio."}
+          </span>
+        )}
       </p>
     </div>
   );

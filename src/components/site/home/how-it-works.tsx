@@ -25,7 +25,7 @@ const STEPS = [
   },
   {
     title: "Richiedi un contatto",
-    text: "Un modulo guidato in pochi passi. Verifichiamo il tuo numero con un SMS: niente richieste false.",
+    text: "Un modulo guidato in pochi passi. La confermi con un codice via email: niente richieste false.",
   },
   {
     title: "Vieni richiamato",
@@ -369,7 +369,7 @@ function ScreenRequest() {
             </span>
           ))}
         </span>
-        Codice via SMS
+        Codice via email
       </div>
       <span className="mt-auto inline-flex h-11 shrink-0 items-center justify-center rounded-full bg-brand text-[13px] font-semibold text-on-brand">
         Continua

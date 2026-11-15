@@ -1,25 +1,9 @@
 import "server-only";
-import { and, asc, desc, eq, gt, lte, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gt, lte } from "drizzle-orm";
 import { cacheLife, cacheTag } from "next/cache";
 import { db } from "@/lib/db/client";
 import { boosts, categories, municipalities, partners, provinces } from "@/lib/db/schema";
 import { profileHref } from "./search";
-
-/** Numeri della hero, solo dal database: mai numeri inventati sulle pagine pubbliche. */
-export type HomeStats = { partners: number; categories: number };
-
-/** Sotto queste soglie la riga dei numeri non si mostra: pochi numeri piccoli non rassicurano nessuno. */
-export const HOME_STATS_MIN = { partners: 10 } as const;
-
-export async function getHomeStats(): Promise<HomeStats> {
-  "use cache";
-  cacheLife("hours");
-  cacheTag("catalog");
-  const [row] = await db.execute<HomeStats>(sql`
-    select (select count(*)::int from partners where verification_status = 'verified' and account_status = 'active') as partners,
-           (select count(distinct category_id)::int from partners where account_status = 'active') as categories`);
-  return row;
-}
 
 export type HomeSponsor = {
   id: string;

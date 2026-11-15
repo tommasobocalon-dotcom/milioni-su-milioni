@@ -17,7 +17,7 @@ export const metadata: Metadata = {
 
 const TYPE_LABEL = { agency: "Agenzie immobiliari", technician: "Studi tecnici", artisan: "Artigiani", b2b: "Servizi per la casa" } as const;
 
-const STEPS = ["Account", "Dati dell'attività", "Piano e pagamento"];
+const STEPS = ["Account", "Dati dell'attività", "Piano"];
 
 function Steps({ current }: { current: number }) {
   return (
@@ -46,7 +46,7 @@ export default function PartnerSignupPage() {
         <p className="caps-label text-ink-2">Registrazione partner</p>
         <h1 className="font-display text-h1">Porta la tua attività su geco</h1>
         <p className="text-body text-ink-2">
-          Pochi dati per creare la scheda, poi scegli il piano. La scheda compare nei risultati appena il pagamento è confermato.
+          Pochi dati per creare la scheda, poi scegli il piano. La scheda compare nei risultati appena il piano è attivo.
         </p>
       </div>
       <Suspense fallback={<Steps current={0} />}>

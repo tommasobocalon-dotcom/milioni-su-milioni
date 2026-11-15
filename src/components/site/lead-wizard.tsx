@@ -40,7 +40,7 @@ export function LeadWizard({ ctx, places, initialServiceSlug }: Props) {
   const [turnstileToken, setTurnstileToken] = useState("");
   const [turnstileReset, setTurnstileReset] = useState(0);
   const [leadId, setLeadId] = useState<string | null>(null);
-  const [maskedPhone, setMaskedPhone] = useState("");
+  const [maskedEmail, setMaskedEmail] = useState("");
   const [devCode, setDevCode] = useState<string | undefined>();
   const [code, setCode] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -98,7 +98,7 @@ export function LeadWizard({ ctx, places, initialServiceSlug }: Props) {
         return;
       }
       setLeadId(res.leadId);
-      setMaskedPhone(res.maskedPhone);
+      setMaskedEmail(res.maskedEmail);
       setDevCode(res.devCode);
       setStep(4);
     });
@@ -144,7 +144,7 @@ export function LeadWizard({ ctx, places, initialServiceSlug }: Props) {
             "Raccontaci qualche dettaglio",
             "Dove e quando?",
             "Come possiamo ricontattarti?",
-            "Conferma il tuo numero",
+            "Conferma la tua email",
           ][step]
         }
       </h2>
@@ -237,10 +237,10 @@ export function LeadWizard({ ctx, places, initialServiceSlug }: Props) {
           <Field label="Nome e cognome" htmlFor="name" required className="sm:col-span-2">
             <Input id="name" autoComplete="name" value={name} onChange={(e) => setName(e.target.value)} />
           </Field>
-          <Field label="Email" htmlFor="email" required help="Ti mandiamo il riepilogo della richiesta">
+          <Field label="Email" htmlFor="email" required help="Ti mandiamo il codice per confermare la richiesta">
             <Input id="email" type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} />
           </Field>
-          <Field label="Telefono" htmlFor="phone" required help="Ti inviamo un codice via SMS per verificarlo">
+          <Field label="Telefono" htmlFor="phone" required help="L'azienda ti richiama a questo numero">
             <Input id="phone" type="tel" autoComplete="tel" inputMode="tel" value={phone} onChange={(e) => setPhone(e.target.value)} />
           </Field>
           {/* Campo esca per i bot, invisibile alle persone */}
@@ -271,15 +271,15 @@ export function LeadWizard({ ctx, places, initialServiceSlug }: Props) {
       {step === 4 && (
         <div className="flex flex-col gap-4">
           <p className="text-body">
-            Ti abbiamo inviato un SMS con un codice di 6 cifre al numero <strong>{maskedPhone}</strong>. Solo le richieste
-            verificate arrivano ai professionisti: così niente spam, per te e per loro.
+            Ti abbiamo inviato un&apos;email con un codice di 6 cifre all&apos;indirizzo <strong>{maskedEmail}</strong>. Solo le
+            richieste confermate arrivano ai professionisti: così niente spam, per te e per loro.
           </p>
           {devCode && (
             <p className="rounded-md border border-dashed border-info bg-info-soft p-3 text-body-s text-info">
-              Ambiente di prova: gli SMS non partono davvero. Il codice è <strong className="tracking-widest">{devCode}</strong>.
+              Ambiente di prova: le email non partono davvero. Il codice è <strong className="tracking-widest">{devCode}</strong>.
             </p>
           )}
-          <Field label="Codice ricevuto via SMS" htmlFor="code" required>
+          <Field label="Codice ricevuto via email" htmlFor="code" required>
             <Input
               id="code"
               inputMode="numeric"

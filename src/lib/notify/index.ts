@@ -74,7 +74,7 @@ export function showDevLinks(): boolean {
   return demoMode() && (process.env.EMAIL_PROVIDER ?? "console") === "console";
 }
 
-/** In sviluppo e sul sito di prova, con i messaggi stampati in console, mostriamo il codice anche a schermo. */
+/** In sviluppo e sul sito di prova, con le email stampate in console, mostriamo anche a schermo il codice della richiesta. */
 export function showDevCodes(): boolean {
-  return demoMode() && (process.env.SMS_PROVIDER ?? "console") === "console";
+  return demoMode() && (process.env.EMAIL_PROVIDER ?? "console") === "console";
 }

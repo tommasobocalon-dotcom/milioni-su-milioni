@@ -3,24 +3,34 @@ import Image from "next/image";
 import { BadgeCheck, Check, Inbox, PhoneCall, Search } from "lucide-react";
 import { PlanPicker, type PlanCard } from "@/components/site/pro/plan-picker";
 import { ButtonLink } from "@/components/ui/button";
-import { getPlansWithPromo } from "@/lib/data/plans";
+import { getFreePlanOpen, getPlansWithPromo } from "@/lib/data/plans";
+import { FREE_LEADS_PER_MONTH } from "@/lib/domain/free-plan";
 import { REPORT_WINDOW_HOURS } from "@/lib/domain/lead-rules";
 import { planFeatures } from "@/lib/domain/plan-features";
 
 export const metadata: Metadata = {
   title: "Per artigiani, tecnici e agenzie",
   description:
-    "Richieste di clienti della tua zona gratis e illimitate, con il numero verificato da un SMS. Tre piani, 7 giorni di prova gratis.",
+    "Richieste di clienti della tua zona gratis e illimitate, confermate dal cliente via email. Tre piani, con le promo di lancio.",
 };
 
 const STEPS = [
   { icon: Search, title: "Il cliente ti trova", text: "Cerca il lavoro e il comune e vede la tua scheda con prezzi indicativi e foto dei lavori." },
-  { icon: BadgeCheck, title: "Conferma il numero", text: "Prima di inviarti la richiesta conferma il suo telefono con un codice via SMS." },
+  { icon: BadgeCheck, title: "Conferma la richiesta", text: "Prima di inviartela conferma la richiesta con un codice che riceve via email." },
   { icon: Inbox, title: "Ricevi la richiesta", text: "Per email e nell'Area aziende: che lavoro, dove, quando e a che ora chiamarlo." },
   { icon: PhoneCall, title: "Lo chiami tu", text: "Nella fascia oraria che ha scelto, quando sai già cosa gli serve." },
 ];
 
-const FAQ = [
+/** Domande frequenti: finché il piano gratuito di lancio è aperto, pagamento e partenza lo dicono. */
+const faq = (free: boolean) => [
+  ...(free
+    ? [
+        {
+          q: "Posso provare senza pagare?",
+          a: `Sì. Per il lancio la tua scheda è gratis, con le funzioni del piano Base, finché non ricevi ${FREE_LEADS_PER_MONTH} richieste nello stesso mese. Dalla ${FREE_LEADS_PER_MONTH + 1}ª richiesta del mese vedi zona e tipo di lavoro, e per vedere i contatti del cliente scegli un piano: le promo restano valide anche per te.`,
+        },
+      ]
+    : []),
   {
     q: "Quanto pago per ogni richiesta?",
     a: "Niente. Le richieste dei clienti sono gratis e illimitate con tutti i piani: paghi solo l'abbonamento.",
@@ -35,15 +45,21 @@ const FAQ = [
   },
   {
     q: "Come pago? Posso disdire?",
-    a: "I primi 7 giorni sono gratis: inserisci la carta e se disdici prima non paghi nulla. Poi paghi in anticipo, con carta o addebito SEPA. Disdici quando vuoi dall'Area aziende: il piano resta attivo fino alla fine del periodo pagato.",
+    a: free
+      ? "Se scegli subito un piano, i primi 7 giorni sono gratis: inserisci la carta e se disdici prima non paghi nulla. Se invece parti dal piano gratuito paghi da quando scegli il piano. Si paga in anticipo, con carta o addebito SEPA. Disdici quando vuoi dall'Area aziende: il piano resta attivo fino alla fine del periodo pagato."
+      : "I primi 7 giorni sono gratis: inserisci la carta e se disdici prima non paghi nulla. Poi paghi in anticipo, con carta o addebito SEPA. Disdici quando vuoi dall'Area aziende: il piano resta attivo fino alla fine del periodo pagato.",
   },
   {
     q: "Quanto ci metto a partire?",
-    a: "Pochi minuti: crei l'account, inserisci i dati dell'attività (partita IVA, codice SDI o PEC), scegli il piano e paghi. La scheda compare appena il pagamento è confermato.",
+    a: free
+      ? "Pochi minuti: crei l'account, inserisci i dati dell'attività (partita IVA, codice SDI o PEC) e scegli se partire gratis o con un piano. La scheda compare appena il piano è attivo."
+      : "Pochi minuti: crei l'account, inserisci i dati dell'attività (partita IVA, codice SDI o PEC), scegli il piano e paghi. La scheda compare appena il pagamento è confermato.",
   },
 ];
 
 export default async function ForProfessionalsPage() {
+  const free = await getFreePlanOpen();
+  const FAQ = faq(free);
   const plans: PlanCard[] = (await getPlansWithPromo()).map((p) => ({
     code: p.code,
     name: p.name,
@@ -61,11 +77,15 @@ export default async function ForProfessionalsPage() {
           <div className="flex flex-col gap-6">
             <h1 className="font-display text-h1 md:text-display-xl">Trova nuovi clienti nella tua zona</h1>
             <p className="text-body-l text-on-brand-muted">
-              Per artigiani, tecnici e agenzie del Veneto. Ricevi richieste di persone che cercano proprio il tuo lavoro, con il
-              numero già verificato.
+              Per artigiani, tecnici e agenzie del Veneto. Ricevi richieste di persone che cercano proprio il tuo lavoro, già
+              confermate dal cliente.
             </p>
             <ul className="flex flex-col gap-2 text-body">
-              {["Richieste dei clienti gratis e illimitate", "Clienti verificati con un SMS", "7 giorni di prova gratis, poi disdici quando vuoi"].map((t) => (
+              {[
+                "Richieste dei clienti gratis e illimitate",
+                "Richieste confermate dal cliente via email",
+                free ? `Per il lancio parti gratis, fino a ${FREE_LEADS_PER_MONTH} richieste al mese` : "7 giorni di prova gratis, poi disdici quando vuoi",
+              ].map((t) => (
                 <li key={t} className="flex items-center gap-2">
                   <Check className="size-5 shrink-0 text-salvia-300" aria-hidden /> {t}
                 </li>
@@ -118,6 +138,20 @@ export default async function ForProfessionalsPage() {
             </h2>
             <p className="text-body text-ink-2">Con tutti i piani le richieste dei clienti sono gratis e illimitate. I primi 7 giorni non paghi nulla.</p>
           </div>
+          {free && (
+            <div className="flex flex-col gap-4 rounded-lg border-2 border-primary bg-surface p-6 md:flex-row md:items-center md:justify-between">
+              <div className="flex max-w-2xl flex-col gap-1">
+                <h3 className="text-h3 font-semibold">Per il lancio, parti gratis</h3>
+                <p className="text-body-s text-ink-2">
+                  La tua scheda non costa nulla finché non ricevi {FREE_LEADS_PER_MONTH} richieste in un mese, con le funzioni del piano Base e
+                  senza carta. Poi scegli il piano che preferisci, sempre con le promo qui sotto.
+                </p>
+              </div>
+              <ButtonLink href="/registrazione-partner" className="shrink-0">
+                Parti gratis
+              </ButtonLink>
+            </div>
+          )}
           <PlanPicker plans={plans} />
 
         </div>

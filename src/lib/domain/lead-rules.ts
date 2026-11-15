@@ -14,13 +14,15 @@ export const DUPLICATE_WINDOW_DAYS = 30;
 /**
  * Le richieste dei clienti sono gratis e illimitate per tutti i piani (decisione del 4/11/2026):
  * niente quota, niente richieste extra da sbloccare. "quota" resta il nome della consegna normale nel database.
+ * Eccezione: il piano gratuito (free-plan.ts), che dopo 3 richieste nel mese le consegna "locked", senza contatti.
  */
-export type LeadChargeDecision = { kind: "quota" } | { kind: "duplicate" } | { kind: "redirect" };
+export type LeadChargeDecision = { kind: "quota" } | { kind: "duplicate" } | { kind: "redirect" } | { kind: "locked" };
 
-export function decideLeadCharge(input: { accountActive: boolean; isDuplicate: boolean }): LeadChargeDecision {
+export function decideLeadCharge(input: { accountActive: boolean; isDuplicate: boolean; freeLeadsLeft?: number | null }): LeadChargeDecision {
   if (input.isDuplicate) return { kind: "duplicate" };
   // Account sospeso o non attivo: il cliente non resta senza risposta, gli proponiamo alternative.
   if (!input.accountActive) return { kind: "redirect" };
+  if (input.freeLeadsLeft != null && input.freeLeadsLeft <= 0) return { kind: "locked" };
   return { kind: "quota" };
 }
 
