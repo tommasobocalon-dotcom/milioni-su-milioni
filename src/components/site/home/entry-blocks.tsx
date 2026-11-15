@@ -108,7 +108,7 @@ function Block(props: {
       data-reveal
       className={cn(
         "group/block flex flex-col rounded-xl p-3",
-        sage ? "sage-wash [--reveal-shift:8%]" : "bg-surface",
+        sage ? "sage-wash [--reveal-shift:8%] [--wash-base:38%] [--wash-top:90%]" : "bg-surface",
       )}
     >
       <div className="relative aspect-[4/3] overflow-hidden rounded-lg bg-muted">

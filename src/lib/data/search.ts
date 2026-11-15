@@ -226,8 +226,9 @@ export async function searchPartners(input: {
   // Classifica decisa dal cliente (ranking.ts): riquadro grande per un Premium, poi per piano e boost.
   const ranked = rankListing(items, visitorSeed);
   const sorters: Record<Exclude<SortKey, "rilevanza">, (a: (typeof items)[number], b: (typeof items)[number]) => number> = {
-    distanza: (a, b) => (a.distanceKm ?? Infinity) - (b.distanceKm ?? Infinity),
-    prezzo: (a, b) => (a.price?.fromCents ?? Infinity) - (b.price?.fromCents ?? Infinity),
+    // Chi non ha distanza o prezzo va in fondo; Infinity - Infinity darebbe NaN e rovinerebbe l'ordinamento.
+    distanza: (a, b) => (a.distanceKm ?? Number.MAX_VALUE) - (b.distanceKm ?? Number.MAX_VALUE),
+    prezzo: (a, b) => (a.price?.fromCents ?? Number.MAX_VALUE) - (b.price?.fromCents ?? Number.MAX_VALUE),
   };
   const sort = input.sort ?? "rilevanza";
   const sorted = sort === "rilevanza" ? ranked.results : [...ranked.results].sort(sorters[sort]);

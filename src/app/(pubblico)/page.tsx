@@ -20,12 +20,12 @@ export default function HomePage() {
       <HowItWorks />
       <section aria-labelledby="province" className="bg-page py-28 md:py-36">
         <div className="container-page">
-          <div data-reveal className="grid grid-cols-1 items-end gap-4 lg:grid-cols-[1fr_minmax(0,26rem)] lg:gap-10">
+          <div data-reveal>
             <h2 id="province" className="font-display text-[2.25rem] leading-[1.08] tracking-[-0.02em] text-balance md:text-display-l">
               Professionisti fidati, vicino a te
             </h2>
-            <p className="max-w-xl text-body-l text-neutro-700">
-              Scegli la tua provincia o cerca direttamente il tuo comune: ti mostriamo chi lavora nella tua zona.
+            <p className="mt-4 max-w-xl text-body-l text-neutro-700">
+              Parti dalla tua provincia, o cerca il tuo comune.
             </p>
           </div>
           <ProvinceExplorer />

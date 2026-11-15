@@ -12,7 +12,7 @@ export function BellLink({ unread }: { unread: number }) {
     >
       <Bell className="size-5" aria-hidden />
       {unread > 0 && (
-        <span className="absolute -top-0.5 -right-0.5 min-w-5 rounded-full bg-ambra-500 px-1 text-center text-caption leading-5 font-semibold text-bosco-900">
+        <span className="absolute -top-0.5 -right-0.5 min-w-5 rounded-full bg-promo px-1 text-center text-caption leading-5 font-semibold text-ink ring-2 ring-brand">
           {unread > 99 ? "99+" : unread}
         </span>
       )}

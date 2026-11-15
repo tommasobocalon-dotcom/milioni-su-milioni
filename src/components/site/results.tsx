@@ -2,14 +2,13 @@ import { cacheLife, cacheTag } from "next/cache";
 import { cookies } from "next/headers";
 import { connection } from "next/server";
 import Link from "next/link";
-import { Award, ChevronLeft, ChevronRight, Info, SlidersHorizontal, Sparkles, Star } from "lucide-react";
+import { ChevronLeft, ChevronRight, Info, SlidersHorizontal } from "lucide-react";
 import { PartnerCard } from "@/components/site/partner-card";
 import { Button } from "@/components/ui/button";
 import { ChipLink } from "@/components/ui/chip";
 import { Input, Select } from "@/components/ui/field";
 import { findZone, getCategories, getCategoryBySlug, getMunicipalities, getProvinceZones, getServicesForCategory } from "@/lib/data/catalog";
 import { FeaturedPartner } from "@/components/site/featured-partner";
-import { ResultsMap, type MapPoint } from "@/components/site/results-map";
 import { recordImpressions, searchPartners, type SortKey } from "@/lib/data/search";
 import { VISITOR_COOKIE, visitorRotation } from "@/lib/domain/ranking";
 import { pageNumbers, parsePage } from "@/lib/domain/pagination";
@@ -17,7 +16,7 @@ import { cn } from "@/lib/utils";
 
 /**
  * Schede per pagina nei risultati: 7 dalla seconda pagina in poi; la prima è più corta (5 + il riquadro grande in evidenza) così l'elenco supera
- * di poco filtri e mappa a sinistra senza lasciare spazio vuoto ai lati (richiesta del cliente, 9/11/2026).
+ * di poco i filtri a sinistra senza lasciare spazio vuoto ai lati (richiesta del cliente, 9/11/2026).
  */
 const FIRST_PAGE_SIZE = 5;
 const PAGE_SIZE = 7;
@@ -76,7 +75,8 @@ async function findResults(mode: "agency" | "pro", params: ResultsParams, seed: 
     serviceId: service?.id,
     place,
     provinceId: province?.id,
-    sort,
+    // Senza un comune non c'è un punto da cui misurare: si resta sull'ordine normale e la pagina lo dice.
+    sort: sort === "distanza" && !place ? "rilevanza" : sort,
     page: parsePage(params.pagina),
     pageSize: PAGE_SIZE,
     firstPageSize: FIRST_PAGE_SIZE,
@@ -103,10 +103,6 @@ async function ResultsBody({ mode, params, seed }: { mode: "agency" | "pro"; par
     return s ? `${basePath}?${s}` : basePath;
   };
 
-  // Marker della mappa: featured + risultati con coordinate valide.
-  const mapPoints: MapPoint[] = [...(featured ? [featured] : []), ...results]
-    .filter((p) => Number.isFinite(p.lat) && Number.isFinite(p.lng))
-    .map((p) => ({ id: p.id, name: p.displayName, href: p.href, lat: p.lat, lng: p.lng }));
 
   const what = mode === "agency" ? "Agenzie immobiliari" : category?.pluralName ?? "Professionisti e artigiani";
   const where = place ? `a ${place.name}` : province ? `in provincia di ${province.name}` : "in Veneto";
@@ -148,7 +144,7 @@ async function ResultsBody({ mode, params, seed }: { mode: "agency" | "pro"; par
       </div>
 
       <div className="grid grid-cols-1 gap-8 lg:grid-cols-[280px_minmax(0,1fr)]">
-        {/* Colonna sinistra: filtri e, sotto, la mappa piccola dei risultati. */}
+        {/* Colonna sinistra: filtri. */}
         <div className="order-2 flex flex-col gap-4 self-start lg:order-1">
           <aside
             id="filtri"
@@ -179,11 +175,14 @@ async function ResultsBody({ mode, params, seed }: { mode: "agency" | "pro"; par
               </label>
               <Select id="ordina" name="ordina" defaultValue={sort}>
                 {SORTS.map((s) => (
-                  <option key={s.value} value={s.value} disabled={s.value === "distanza" && !place}>
+                  <option key={s.value} value={s.value}>
                     {s.label}
                   </option>
                 ))}
               </Select>
+              {sort === "distanza" && !place && (
+                <p className="text-caption text-ink-2">Per ordinare per distanza scrivi un comune nel campo Zona.</p>
+              )}
               <Button type="submit" variant="secondary" size="s">
                 Applica
               </Button>
@@ -234,7 +233,6 @@ async function ResultsBody({ mode, params, seed }: { mode: "agency" | "pro"; par
               </span>
             </p>
           </aside>
-          {mapPoints.length > 0 && <ResultsMap points={mapPoints} className="h-64 md:h-64" />}
         </div>
 
         <section aria-label="Risultati" className="order-1 flex flex-col gap-4 lg:order-2">
@@ -244,7 +242,6 @@ async function ResultsBody({ mode, params, seed }: { mode: "agency" | "pro"; par
           >
             <SlidersHorizontal className="size-4" aria-hidden /> Filtri e ordinamento
           </a>
-          {total > 0 && <PlanLegend />}
           {featured && <FeaturedPartner p={featured} />}
           {results.map((p) => (
             <PartnerCard key={p.id} p={p} />
@@ -281,32 +278,6 @@ export function ResultsSkeleton() {
         </div>
       </div>
     </div>
-  );
-}
-
-/** Legenda sopra i risultati: come si riconoscono i piani e chi ha comprato visibilità (richiesta del cliente, 9/11/2026). */
-function PlanLegend() {
-  return (
-    <ul aria-label="Legenda delle schede" className="flex flex-wrap items-center gap-x-5 gap-y-2 text-body-s text-ink-2">
-      <li className="inline-flex items-center gap-2">
-        <span className="inline-flex h-6 items-center gap-1 rounded-full border border-lavanda-300 bg-tertiary px-2 text-caption font-semibold text-ink">
-          <Star className="size-3.5 fill-ambra-500 text-ambra-500" aria-hidden /> Partner Elite
-        </span>
-        piano più alto
-      </li>
-      <li className="inline-flex items-center gap-2">
-        <span className="inline-flex h-6 items-center gap-1 rounded-full bg-brand-soft/40 px-2 text-caption font-semibold text-ink">
-          <Award className="size-3.5 text-primary" aria-hidden /> Partner Pro
-        </span>
-        piano intermedio
-      </li>
-      <li className="inline-flex items-center gap-2">
-        <span className="inline-flex h-6 items-center gap-1 rounded-full border border-line bg-surface px-2 text-caption font-semibold text-ink">
-          <Sparkles className="size-3.5" aria-hidden /> Sponsorizzato
-        </span>
-        ha pagato per più visibilità
-      </li>
-    </ul>
   );
 }
 

@@ -259,12 +259,13 @@
 }
 
 /* Velatura salvia leggera con due zone più piene (in basso a destra, in alto a sinistra): card della Home,
-   riquadro del telefono in Come funziona e schede Partner Pro in Trova professionista. Gradiente chiesto dal cliente (eccezione alla taste-skill). */
+   riquadro del telefono in Come funziona e schede Partner Pro in Trova professionista. Gradiente chiesto dal cliente (eccezione alla taste-skill).
+   Intensità regolabile con --wash-base e --wash-top: le card della Home le alzano (soci, 15/11/2026). */
 @utility sage-wash {
-  background-color: color-mix(in oklab, var(--color-brand-soft) 25%, transparent);
+  background-color: color-mix(in oklab, var(--color-brand-soft) var(--wash-base, 25%), transparent);
   background-image:
     radial-gradient(90% 60% at 100% 100%, color-mix(in oklab, var(--color-brand-soft) 75%, transparent), transparent 70%),
-    radial-gradient(60% 40% at 0% 0%, color-mix(in oklab, var(--color-brand-soft) 50%, transparent), transparent 70%);
+    radial-gradient(60% 40% at 0% 0%, color-mix(in oklab, var(--color-brand-soft) var(--wash-top, 50%), transparent), transparent 70%);
 }
 
 @utility caps-label {

@@ -7,15 +7,35 @@
 export type Intent = { mode: "agency" | "pro"; category?: string; service?: string };
 
 const RULES: [RegExp, Intent][] = [
-  // Sgomberi, pulizie, giardini e interni prima di geometri ("successione") e agenzie ("casa", "appartamento").
-  [/svuot|dopo (una |la )?successione/, { mode: "pro", category: "sgomberi", service: "dopo-successione" }],
-  [/sgomber\w* (la |una )?(cantin|soffitt|garage)|cantin\w* da sgomber/, { mode: "pro", category: "sgomberi", service: "cantine-soffitte" }],
-  [/ingombrant|raee|smaltiment/, { mode: "pro", category: "sgomberi", service: "ingombranti-raee" }],
-  [/sgomber/, { mode: "pro", category: "sgomberi" }],
+  // Traslochi e sgomberi, pulizie, giardini e interni prima di geometri ("successione") e agenzie ("casa", "appartamento").
+  [/deposit\w* (dei |di )?mobil|custodia (dei |di )?mobil/, { mode: "pro", category: "traslochi", service: "deposito-mobili" }],
+  [/montaggi\w* .*\bmobil/, { mode: "pro", category: "traslochi", service: "montaggio-mobili" }],
+  [/trasloc\w* (di |del |dell'|degli )?(uffic|aziend|negoz)/, { mode: "pro", category: "traslochi", service: "trasloco-uffici" }],
+  [/piccol\w* trasloc|minitrasloc/, { mode: "pro", category: "traslochi", service: "piccoli-traslochi" }],
+  [/trasloc\w* (la |di |della )?(casa|appartament)/, { mode: "pro", category: "traslochi", service: "trasloco-casa" }],
+  [/trasloc/, { mode: "pro", category: "traslochi" }],
+  [/svuot|dopo (una |la )?successione/, { mode: "pro", category: "traslochi", service: "dopo-successione" }],
+  [/sgomber\w* (la |una )?(cantin|soffitt|garage)|cantin\w* da sgomber/, { mode: "pro", category: "traslochi", service: "cantine-soffitte" }],
+  [/ingombrant|raee|smaltiment/, { mode: "pro", category: "traslochi", service: "ingombranti-raee" }],
+  [/sgomber/, { mode: "pro", category: "traslochi" }],
+  // Piscine prima delle pulizie ("pulizia piscina"); vasche solo da giardino, quella da bagno resta agli idraulici.
+  [/piscin|vasc\w* (da |del |in )?giardin/, { mode: "pro", category: "giardiniere", service: "piscine" }],
   [/fine cantiere/, { mode: "pro", category: "impresa-pulizie", service: "fine-cantiere" }],
   [/pulizi\w* (degli |di |dell')?(uffic|negoz)/, { mode: "pro", category: "impresa-pulizie", service: "uffici-negozi" }],
   [/pulizi\w* (dei |delle )?(condomin|scale)/, { mode: "pro", category: "impresa-pulizie", service: "condomini" }],
   [/pulizi|\bpulire\b|colf/, { mode: "pro", category: "impresa-pulizie" }],
+  // Serramenti e piastrelle dopo le pulizie ("pulizia finestre") e prima di agenzie ("casa") e idraulici ("bagno").
+  [/blindat|portoncin/, { mode: "pro", category: "serramentista", service: "porte-blindate" }],
+  [/port\w* intern/, { mode: "pro", category: "serramentista", service: "porte-interne" }],
+  [/tapparell|persian|scuri\b/, { mode: "pro", category: "serramentista", service: "tapparelle-persiane" }],
+  [/zanzarier/, { mode: "pro", category: "serramentista", service: "zanzariere" }],
+  [/tend\w* da sole|pergol/, { mode: "pro", category: "serramentista", service: "tende-pergole" }],
+  [/finestr/, { mode: "pro", category: "serramentista", service: "finestre" }],
+  [/serrament|infiss/, { mode: "pro", category: "serramentista" }],
+  [/(piastrell|rivestiment)\w* (del |di |per il )?bagno/, { mode: "pro", category: "piastrellista", service: "rivestimento-bagno" }],
+  [/pavimen\w* (del |dell'|in |per il |esterno|esterni)?(terrazz|giardin|esterno|esterni|balcon|cortil)|terrazz\w* da pavimentare/, { mode: "pro", category: "piastrellista", service: "pavimenti-esterni" }],
+  [/pavimen|\bgres\b/, { mode: "pro", category: "piastrellista", service: "posa-pavimenti" }],
+  [/piastrell/, { mode: "pro", category: "piastrellista" }],
   [/potatur|potare/, { mode: "pro", category: "giardiniere", service: "potatura" }],
   [/irrigazion/, { mode: "pro", category: "giardiniere", service: "irrigazione" }],
   [/taglio (del |dell')?(prato|erba|siep)|tagliare (il prato|l'erba|la siepe)/, { mode: "pro", category: "giardiniere", service: "taglio-prato-siepi" }],

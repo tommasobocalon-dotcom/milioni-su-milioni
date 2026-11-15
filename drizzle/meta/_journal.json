@@ -190,6 +190,20 @@
       "when": 1794768823574,
       "tag": "0026_indici_gestionale",
       "breakpoints": true
+    },
+    {
+      "idx": 27,
+      "version": "7",
+      "when": 1794774359543,
+      "tag": "0027_serramenti_piastrelle",
+      "breakpoints": true
+    },
+    {
+      "idx": 28,
+      "version": "7",
+      "when": 1794774562901,
+      "tag": "0028_traslochi",
+      "breakpoints": true
     }
   ]
 }
