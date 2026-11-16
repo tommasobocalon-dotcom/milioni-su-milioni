@@ -1,0 +1,103 @@
+# Backup notturno del database di produzione (Supabase), con prova di ripristino a ogni copia.
+# La copia è cifrata (AES-256) prima di uscire dalla macchina: il repository è pubblico.
+# Si conserva tra gli artifact di GitHub, fuori da Supabase e Vercel. Oltre BACKUP_LIMIT_MB si cancellano i più
+# vecchi e restano i più recenti; GitHub in ogni caso non tiene un artifact più di 90 giorni.
+# Segreti (Settings → Secrets and variables → Actions): BACKUP_DATABASE_URL, BACKUP_PASSPHRASE. Ripristino in DEPLOY.md.
+name: Backup database
+
+on:
+  schedule:
+    - cron: "0 2 * * *" # ogni notte alle 3 (ora italiana d'inverno, 4 d'estate)
+  workflow_dispatch:
+
+permissions:
+  actions: write # per cancellare i backup più vecchi
+  contents: read
+
+concurrency:
+  group: backup
+  cancel-in-progress: false
+
+env:
+  BACKUP_LIMIT_MB: 500
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      # PostgreSQL usa e getta, stessa versione di Supabase, per provare che il backup si ripristina davvero.
+      restore:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: ${{ secrets.BACKUP_DATABASE_URL }}
+      PASSPHRASE: ${{ secrets.BACKUP_PASSPHRASE }}
+    steps:
+      - name: Client PostgreSQL 17
+        run: |
+          sudo apt-get install -y -qq postgresql-common
+          sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y
+          sudo apt-get install -y -qq postgresql-client-17
+          echo /usr/lib/postgresql/17/bin >> "$GITHUB_PATH"
+
+      - name: Copia del database
+        run: |
+          if [ -z "$DATABASE_URL" ] || [ -z "$PASSPHRASE" ]; then
+            echo "::error::Mancano i segreti BACKUP_DATABASE_URL e BACKUP_PASSPHRASE"; exit 1
+          fi
+          # Il pooler in modalità transaction (6543) non regge pg_dump: si usa la modalità session (5432).
+          url=$(printf '%s' "$DATABASE_URL" | sed -E 's/:6543\//:5432\//; s/[?&](supa|pgbouncer)=[^&]*//g')
+          pg_dump "$url" -Fc -n public -n drizzle --no-owner --no-privileges -f db.dump
+          echo "NAME=geco-db-$(date -u +%Y-%m-%d-%H%M)" >> "$GITHUB_ENV"
+
+      - name: Prova di ripristino
+        env:
+          PGPASSWORD: postgres
+        run: |
+          db="postgres://postgres@localhost:5432/postgres"
+          psql -q "$db" -c "create role geco_partner nologin" -c "drop schema public cascade"
+          pg_restore -d "$db" --no-owner --no-privileges --exit-on-error db.dump
+          psql -At "$db" -c "select 'aziende ' || (select count(*) from partners) || ', richieste ' || (select count(*) from leads) || ', utenti ' || (select count(*) from users)"
+          test "$(psql -At "$db" -c 'select count(*) from partners')" -gt 0
+
+      - name: Cifratura
+        run: |
+          openssl enc -aes-256-cbc -pbkdf2 -iter 200000 -salt -pass env:PASSPHRASE -in db.dump -out "$NAME.dump.enc"
+          rm db.dump
+          ls -l "$NAME.dump.enc"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.NAME }}
+          path: ${{ env.NAME }}.dump.enc
+          retention-days: 90
+          compression-level: 0
+
+      - name: Cancella i backup più vecchi oltre il limite
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const limit = Number(process.env.BACKUP_LIMIT_MB) * 1024 * 1024;
+            const all = await github.paginate(github.rest.actions.listArtifactsForRepo, { ...context.repo, per_page: 100 });
+            const backups = all
+              .filter((a) => a.name.startsWith("geco-db-") && !a.expired)
+              .sort((a, b) => b.created_at.localeCompare(a.created_at));
+            let total = 0;
+            for (const [i, a] of backups.entries()) {
+              total += a.size_in_bytes;
+              // Il più recente resta sempre, anche da solo sopra il limite.
+              if (i > 0 && total > limit) {
+                await github.rest.actions.deleteArtifact({ ...context.repo, artifact_id: a.id });
+                core.info(`Cancellato ${a.name}`);
+              }
+            }
+            core.info(`Backup conservati: ${backups.length}, limite ${process.env.BACKUP_LIMIT_MB} MB`);

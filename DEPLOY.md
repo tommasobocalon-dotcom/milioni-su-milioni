@@ -195,6 +195,35 @@ Il comando stampa un `whsec_...` da mettere in `STRIPE_WEBHOOK_SECRET` in `.env.
 
 **Fatture elettroniche**: Stripe emette ricevute e fatture "di cortesia". La fattura elettronica verso lo SdI non è ancora collegata: serve un provider italiano via API prima di incassare davvero.
 
+## Backup notturno del database
+
+Ogni notte alle 3 GitHub Actions ([.github/workflows/backup.yml](.github/workflows/backup.yml)) copia il database di
+produzione, lo **ripristina per prova** in un PostgreSQL usa e getta, lo **cifra** (AES-256) e lo conserva tra gli
+artifact di GitHub, fuori da Supabase e Vercel. Oltre 500 MB (`BACKUP_LIMIT_MB`) cancella i più vecchi e tiene i più
+recenti; GitHub comunque non tiene un backup più di 90 giorni. Se una notte fallisce, GitHub manda un'email al
+proprietario del repository. Le foto (Supabase Storage) non sono nel backup.
+
+**Attivarlo (una volta):** su GitHub, nel repository → Settings → Secrets and variables → Actions → New repository secret:
+
+| Segreto | Valore |
+|---|---|
+| `BACKUP_DATABASE_URL` | Su Vercel, progetto `geco` → Environment Variables → `POSTGRES_URL_NON_POOLING` (o `POSTGRES_URL`: il workflow passa da solo alla porta 5432) |
+| `BACKUP_PASSPHRASE` | Una frase lunga generata dal gestore di password. **Va conservata**: senza, i backup non si aprono |
+
+Poi Actions → **Backup database** → **Run workflow** e controllare che diventi verde.
+
+**Ripristinare:** dalla pagina dell'esecuzione in Actions scaricare l'artifact (zip), estrarlo e decifrarlo (chiede la passphrase):
+```
+openssl enc -d -aes-256-cbc -pbkdf2 -iter 200000 -in geco-db-AAAA-MM-GG-HHMM.dump.enc -out geco.dump
+```
+Poi caricarlo in un database **nuovo e vuoto** (per esempio un nuovo progetto Supabase), con client PostgreSQL 17:
+```
+psql "URL_DEL_DATABASE_NUOVO" -c "create role geco_partner nologin" -c "drop schema public cascade"
+pg_restore -d "URL_DEL_DATABASE_NUOVO" --no-owner --no-privileges geco.dump
+```
+Il `drop schema public` cancella tutto: **mai** sul database in uso. Infine aggiornare la stringa del database su Vercel e
+rifare il deploy.
+
 ## Al lancio pubblico
 
 1. Togli `SITE_ACCESS` e `DEMO_MODE` da Vercel. Senza `SITE_ACCESS` le scorciatoie demo si spengono comunque da sole.
