@@ -204,6 +204,13 @@
       "when": 1794774562901,
       "tag": "0028_traslochi",
       "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "7",
+      "when": 1794774662901,
+      "tag": "0029_rls_area_partner",
+      "breakpoints": true
     }
   ]
 }

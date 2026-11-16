@@ -13,6 +13,7 @@ import { ipRateLimited } from "@/lib/security/ip-limit";
 import { putImage } from "@/lib/storage";
 import { BillingError, createAreaExtensionCheckout, createHomeSponsorCheckout, createSearchBoostCheckout, createPlanChangeSession, createPortalSession, createSubscriptionCheckout, stripeConfigured } from "@/lib/billing/stripe";
 import { db } from "@/lib/db/client";
+import { asPartner } from "@/lib/db/tenant";
 import { auditLogs, leadEvents, leads, partners, partnerServices, plans, portfolioItems, priceUnit, subscriptions, users } from "@/lib/db/schema";
 import { getListableServices, getPriceList, getSubscription } from "@/lib/data/partner-area";
 import { demoMode } from "@/lib/demo-mode";
@@ -34,10 +35,12 @@ const Id = z.uuid();
 /** Il lead deve appartenere al partner della sessione ed essere stato consegnato. */
 async function ownLead(partnerId: string, leadId: string) {
   if (!Id.safeParse(leadId).success) return null;
-  const [lead] = await db
-    .select({ id: leads.id, status: leads.status, deliveredAt: leads.deliveredAt, reportStatus: leads.reportStatus, charge: leads.charge })
-    .from(leads)
-    .where(and(eq(leads.id, leadId), eq(leads.partnerId, partnerId), isNotNull(leads.deliveredAt)));
+  const [lead] = await asPartner(partnerId, (tx) =>
+    tx
+      .select({ id: leads.id, status: leads.status, deliveredAt: leads.deliveredAt, reportStatus: leads.reportStatus, charge: leads.charge })
+      .from(leads)
+      .where(and(eq(leads.id, leadId), eq(leads.partnerId, partnerId), isNotNull(leads.deliveredAt))),
+  );
   return lead ?? null;
 }
 
@@ -45,8 +48,10 @@ export async function markLeadSeen(leadId: string) {
   const { user, partner } = await requirePartner();
   const lead = await ownLead(partner.id, leadId);
   if (!lead || lead.status !== "new") return;
-  await db.update(leads).set({ status: "seen" }).where(eq(leads.id, lead.id));
-  await db.insert(leadEvents).values({ leadId: lead.id, type: "seen", message: `Lead aperto da ${user.name}`, actor: user.name });
+  await asPartner(partner.id, async (tx) => {
+    await tx.update(leads).set({ status: "seen" }).where(eq(leads.id, lead.id));
+    await tx.insert(leadEvents).values({ leadId: lead.id, type: "seen", message: `Lead aperto da ${user.name}`, actor: user.name });
+  });
   revalidatePath("/area-partner", "layout");
 }
 
@@ -58,12 +63,14 @@ export async function updateLeadStatus(leadId: string, formData: FormData) {
   const lead = await ownLead(partner.id, leadId);
   if (!lead || !status.success) return;
   if (lead.status === status.data) return;
-  await db.update(leads).set({ status: status.data as (typeof LEAD_STATUSES)[number]["value"] }).where(eq(leads.id, lead.id));
-  await db.insert(leadEvents).values({
-    leadId: lead.id,
-    type: "status",
-    message: `Stato cambiato in "${statusInfo(status.data).label}"`,
-    actor: user.name,
+  await asPartner(partner.id, async (tx) => {
+    await tx.update(leads).set({ status: status.data as (typeof LEAD_STATUSES)[number]["value"] }).where(eq(leads.id, lead.id));
+    await tx.insert(leadEvents).values({
+      leadId: lead.id,
+      type: "status",
+      message: `Stato cambiato in "${statusInfo(status.data).label}"`,
+      actor: user.name,
+    });
   });
   revalidatePath("/area-partner", "layout");
 }
@@ -73,7 +80,7 @@ export async function saveLeadNotes(leadId: string, formData: FormData) {
   const notes = z.string().max(2000).safeParse(String(formData.get("notes") ?? "").trim());
   const lead = await ownLead(partner.id, leadId);
   if (!lead || !notes.success) return;
-  await db.update(leads).set({ notes: notes.data || null }).where(eq(leads.id, lead.id));
+  await asPartner(partner.id, (tx) => tx.update(leads).set({ notes: notes.data || null }).where(eq(leads.id, lead.id)));
   revalidatePath(`/area-partner/lead/${lead.id}`);
 }
 
@@ -88,8 +95,10 @@ export async function reportLead(leadId: string, _prev: ReportState, formData: F
   if (lead.reportStatus) return { error: "Hai già segnalato questa richiesta" };
   const now = new Date();
   if (!canReportLead(lead.deliveredAt, now)) return { error: "Sono passate più di 72 ore dalla consegna: non è più possibile segnalarlo" };
-  await db.update(leads).set({ reportReason: reason.value, reportStatus: "open", reportedAt: now }).where(eq(leads.id, lead.id));
-  await db.insert(leadEvents).values({ leadId: lead.id, type: "reported", message: `Segnalato: ${reason.label}`, actor: user.name, createdAt: now });
+  await asPartner(partner.id, async (tx) => {
+    await tx.update(leads).set({ reportReason: reason.value, reportStatus: "open", reportedAt: now }).where(eq(leads.id, lead.id));
+    await tx.insert(leadEvents).values({ leadId: lead.id, type: "reported", message: `Segnalato: ${reason.label}`, actor: user.name, createdAt: now });
+  });
   await db.insert(auditLogs).values({ actor: user.email, action: "lead.report", entity: "lead", entityId: lead.id, data: { reason: reason.value } });
   revalidatePath(`/area-partner/lead/${lead.id}`);
   return { ok: true };
@@ -226,12 +235,16 @@ export async function addPortfolioItem(_prev: ActionState, formData: FormData): 
   if (isProperty && !d.contract) return { error: "Scegli il tipo di contratto" };
 
   // Limiti del piano (documento del 4/11/2026): progetti in bacheca e video solo per Premium.
-  const [plan] = await db
-    .select({ name: plans.name, maxItems: plans.maxPortfolioItems, weight: plans.visibilityWeight })
-    .from(subscriptions)
-    .innerJoin(plans, eq(plans.id, subscriptions.planId))
-    .where(and(eq(subscriptions.partnerId, partner.id), eq(subscriptions.status, "active")));
-  const [{ n }] = await db.select({ n: count() }).from(portfolioItems).where(eq(portfolioItems.partnerId, partner.id));
+  const [[plan], [{ n }]] = await asPartner(partner.id, (tx) =>
+    Promise.all([
+      tx
+        .select({ name: plans.name, maxItems: plans.maxPortfolioItems, weight: plans.visibilityWeight })
+        .from(subscriptions)
+        .innerJoin(plans, eq(plans.id, subscriptions.planId))
+        .where(and(eq(subscriptions.partnerId, partner.id), eq(subscriptions.status, "active"))),
+      tx.select({ n: count() }).from(portfolioItems).where(eq(portfolioItems.partnerId, partner.id)),
+    ]),
+  );
   if (!plan) return { error: "Attiva un piano per pubblicare i tuoi lavori" };
   if (plan.maxItems != null && n >= plan.maxItems) {
     return { error: `Il piano ${plan.name} include fino a ${plan.maxItems} progetti: elimina un progetto o cambia piano` };
@@ -253,23 +266,25 @@ export async function addPortfolioItem(_prev: ActionState, formData: FormData): 
     checked.map(async ({ file, ext }) => (await putImage(`portfolio/${partner.id}-${randomUUID()}.${ext}`, Buffer.from(await file.arrayBuffer()), ext)).url),
   );
 
-  const [{ last }] = await db.select({ last: max(portfolioItems.sortOrder) }).from(portfolioItems).where(eq(portfolioItems.partnerId, partner.id));
-  await db.insert(portfolioItems).values({
-    partnerId: partner.id,
-    kind: isProperty ? "property" : "work",
-    title: d.title,
-    description: d.description || null,
-    municipalityId: d.municipalityId ?? null,
-    contract: isProperty ? d.contract : null,
-    priceCents: isProperty && d.priceEuro !== undefined ? d.priceEuro * 100 : null,
-    sqm: isProperty ? (d.sqm ?? null) : null,
-    rooms: isProperty ? (d.rooms ?? null) : null,
-    status: isProperty ? "available" : null,
-    hasBeforeAfter: !isProperty && d.hasBeforeAfter === "on",
-    imageUrl: photos[0],
-    photos,
-    videoUrl: d.videoUrl || null,
-    sortOrder: (last ?? -1) + 1,
+  await asPartner(partner.id, async (tx) => {
+    const [{ last }] = await tx.select({ last: max(portfolioItems.sortOrder) }).from(portfolioItems).where(eq(portfolioItems.partnerId, partner.id));
+    await tx.insert(portfolioItems).values({
+      partnerId: partner.id,
+      kind: isProperty ? "property" : "work",
+      title: d.title,
+      description: d.description || null,
+      municipalityId: d.municipalityId ?? null,
+      contract: isProperty ? d.contract : null,
+      priceCents: isProperty && d.priceEuro !== undefined ? d.priceEuro * 100 : null,
+      sqm: isProperty ? (d.sqm ?? null) : null,
+      rooms: isProperty ? (d.rooms ?? null) : null,
+      status: isProperty ? "available" : null,
+      hasBeforeAfter: !isProperty && d.hasBeforeAfter === "on",
+      imageUrl: photos[0],
+      photos,
+      videoUrl: d.videoUrl || null,
+      sortOrder: (last ?? -1) + 1,
+    });
   });
   updateTag(`partner:${partner.slug}`);
   revalidatePath("/area-partner/lavori");
@@ -282,10 +297,12 @@ export async function setPortfolioStatus(itemId: string, formData: FormData) {
   const { partner } = await requirePartner();
   const status = PropertyStatusSchema.safeParse(formData.get("status"));
   if (!Id.safeParse(itemId).success || !status.success) return;
-  await db
-    .update(portfolioItems)
-    .set({ status: status.data })
-    .where(and(eq(portfolioItems.id, itemId), eq(portfolioItems.partnerId, partner.id), eq(portfolioItems.kind, "property")));
+  await asPartner(partner.id, (tx) =>
+    tx
+      .update(portfolioItems)
+      .set({ status: status.data })
+      .where(and(eq(portfolioItems.id, itemId), eq(portfolioItems.partnerId, partner.id), eq(portfolioItems.kind, "property"))),
+  );
   updateTag(`partner:${partner.slug}`);
   revalidatePath("/area-partner/lavori");
 }
@@ -293,7 +310,7 @@ export async function setPortfolioStatus(itemId: string, formData: FormData) {
 export async function deletePortfolioItem(itemId: string) {
   const { partner } = await requirePartner();
   if (!Id.safeParse(itemId).success) return;
-  await db.delete(portfolioItems).where(and(eq(portfolioItems.id, itemId), eq(portfolioItems.partnerId, partner.id)));
+  await asPartner(partner.id, (tx) => tx.delete(portfolioItems).where(and(eq(portfolioItems.id, itemId), eq(portfolioItems.partnerId, partner.id))));
   updateTag(`partner:${partner.slug}`);
   revalidatePath("/area-partner/lavori");
 }
@@ -333,12 +350,14 @@ export async function savePriceItem(_prev: ActionState, formData: FormData): Pro
   }
 
   const values = { serviceId: d.serviceId, unit: d.unit, priceFrom, priceTo, notes: d.notes || null };
-  if (editing) {
-    await db.update(partnerServices).set(values).where(and(eq(partnerServices.id, editing.id), eq(partnerServices.partnerId, partner.id)));
-  } else {
-    const [{ last }] = await db.select({ last: max(partnerServices.sortOrder) }).from(partnerServices).where(eq(partnerServices.partnerId, partner.id));
-    await db.insert(partnerServices).values({ ...values, partnerId: partner.id, sortOrder: (last ?? -1) + 1 });
-  }
+  await asPartner(partner.id, async (tx) => {
+    if (editing) {
+      await tx.update(partnerServices).set(values).where(and(eq(partnerServices.id, editing.id), eq(partnerServices.partnerId, partner.id)));
+    } else {
+      const [{ last }] = await tx.select({ last: max(partnerServices.sortOrder) }).from(partnerServices).where(eq(partnerServices.partnerId, partner.id));
+      await tx.insert(partnerServices).values({ ...values, partnerId: partner.id, sortOrder: (last ?? -1) + 1 });
+    }
+  });
   await db.insert(auditLogs).values({
     actor: user.email,
     action: editing ? "price_list.updated" : "price_list.added",
@@ -354,10 +373,12 @@ export async function savePriceItem(_prev: ActionState, formData: FormData): Pro
 export async function deletePriceItem(itemId: string) {
   const { user, partner } = await requirePartner();
   if (!Id.safeParse(itemId).success) return;
-  const removed = await db
-    .delete(partnerServices)
-    .where(and(eq(partnerServices.id, itemId), eq(partnerServices.partnerId, partner.id)))
-    .returning({ serviceId: partnerServices.serviceId });
+  const removed = await asPartner(partner.id, (tx) =>
+    tx
+      .delete(partnerServices)
+      .where(and(eq(partnerServices.id, itemId), eq(partnerServices.partnerId, partner.id)))
+      .returning({ serviceId: partnerServices.serviceId }),
+  );
   if (removed.length === 0) return;
   await db.insert(auditLogs).values({ actor: user.email, action: "price_list.removed", entity: "partner", entityId: partner.id, data: removed[0] });
   updateTag(`partner:${partner.slug}`);
@@ -372,7 +393,7 @@ export async function movePriceItem(itemId: string, direction: "up" | "down") {
   const j = direction === "up" ? i - 1 : i + 1;
   if (i < 0 || j < 0 || j >= rows.length) return;
   [rows[i], rows[j]] = [rows[j], rows[i]];
-  await db.transaction(async (tx) => {
+  await asPartner(partner.id, async (tx) => {
     for (const [order, r] of rows.entries()) {
       await tx.update(partnerServices).set({ sortOrder: order }).where(and(eq(partnerServices.id, r.id), eq(partnerServices.partnerId, partner.id)));
     }

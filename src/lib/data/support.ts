@@ -1,6 +1,7 @@
 import "server-only";
 import { and, asc, count, desc, eq, ilike, ne, or, type SQL } from "drizzle-orm";
 import { db } from "@/lib/db/client";
+import { asPartner } from "@/lib/db/tenant";
 import { partners, supportMessages, supportTickets, users } from "@/lib/db/schema";
 import type { TicketStatus } from "@/lib/domain/support";
 
@@ -96,26 +97,30 @@ export async function getTicketAdmin(number: number) {
 }
 
 export async function listPartnerTickets(partnerId: string) {
-  return db
-    .select({ number: supportTickets.number, subject: supportTickets.subject, status: supportTickets.status, lastMessageAt: supportTickets.lastMessageAt })
-    .from(supportTickets)
-    .where(eq(supportTickets.partnerId, partnerId))
-    .orderBy(desc(supportTickets.lastMessageAt))
-    .limit(50);
+  return asPartner(partnerId, async (tx) => {
+    return tx
+      .select({ number: supportTickets.number, subject: supportTickets.subject, status: supportTickets.status, lastMessageAt: supportTickets.lastMessageAt })
+      .from(supportTickets)
+      .where(eq(supportTickets.partnerId, partnerId))
+      .orderBy(desc(supportTickets.lastMessageAt))
+      .limit(50);
+  });
 }
 
 /** Ticket dell'azienda, con i messaggi visibili al partner: le note interne del team restano fuori. */
 export async function getPartnerTicket(partnerId: string, number: number) {
-  const [t] = await db
-    .select({ id: supportTickets.id, number: supportTickets.number, subject: supportTickets.subject, status: supportTickets.status, createdAt: supportTickets.createdAt })
-    .from(supportTickets)
-    .where(and(eq(supportTickets.number, number), eq(supportTickets.partnerId, partnerId)))
-    .limit(1);
-  if (!t) return null;
-  const messages = await db
-    .select({ id: supportMessages.id, kind: supportMessages.kind, authorName: supportMessages.authorName, body: supportMessages.body, createdAt: supportMessages.createdAt })
-    .from(supportMessages)
-    .where(and(eq(supportMessages.ticketId, t.id), ne(supportMessages.kind, "note")))
-    .orderBy(asc(supportMessages.createdAt));
-  return { ...t, messages };
+  return asPartner(partnerId, async (tx) => {
+    const [t] = await tx
+      .select({ id: supportTickets.id, number: supportTickets.number, subject: supportTickets.subject, status: supportTickets.status, createdAt: supportTickets.createdAt })
+      .from(supportTickets)
+      .where(and(eq(supportTickets.number, number), eq(supportTickets.partnerId, partnerId)))
+      .limit(1);
+    if (!t) return null;
+    const messages = await tx
+      .select({ id: supportMessages.id, kind: supportMessages.kind, authorName: supportMessages.authorName, body: supportMessages.body, createdAt: supportMessages.createdAt })
+      .from(supportMessages)
+      .where(and(eq(supportMessages.ticketId, t.id), ne(supportMessages.kind, "note")))
+      .orderBy(asc(supportMessages.createdAt));
+    return { ...t, messages };
+  });
 }

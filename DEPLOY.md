@@ -16,6 +16,13 @@ Come funziona la protezione: [src/proxy.ts](src/proxy.ts) legge la variabile `SI
 
 ## Passo 1 — Database su Supabase
 
+> **Il sito online oggi** (16/11/2026) usa il database `supabase-teal-engine` (ID `daxpsckkfilslihqtghs`, Free),
+> creato dal **Marketplace di Vercel** nel team "Alvise Marchi's projects": non compare negli account
+> Supabase personali. Ci si entra da Vercel → progetto `geco` → **Storage** → `supabase-teal-engine` →
+> **Open in Supabase**. Le variabili (`POSTGRES_URL`, `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, …) le
+> gestisce l'integrazione. Bucket pubblico `uploads` (5 MB a file) e `STORAGE_PROVIDER=supabase` già impostati.
+> I passi qui sotto servono solo per un nuovo ambiente.
+
 1. Vai su https://supabase.com e accedi con **GitHub** (lo stesso account del repository).
 2. **New project**:
    - Name: `geco-prova`
