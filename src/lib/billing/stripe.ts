@@ -8,6 +8,7 @@ import { accountStatusFrom, areaExtensionFromCheckout, homeSponsorFromCheckout, 
 import { AREA_EXTENSION_OFFER, changePromo, HOME_SPONSOR_PACKAGES, homeSponsorPrice, launchDate, municipalityIdsFrom, planPromo, type PlanPromo, SEARCH_BOOST_PACKAGES } from "@/lib/domain/offers";
 import { hadFreePlan } from "@/lib/data/partner-area";
 import { grantAreaExtensions, grantHomeSponsor, grantSearchBoost, unlockLeads } from "@/lib/leads/service";
+import { alertTeam } from "@/lib/notify";
 
 /**
  * Stripe Billing e Checkout (PRD §7, §13.1). Le azioni creano solo le sessioni di pagamento: abbonamenti e
@@ -511,6 +512,24 @@ export async function handleStripeEvent(event: Stripe.Event): Promise<void> {
     case "invoice.paid":
       await grantInvoiceGift(event.data.object);
       return;
+
+    // Solo avvisi: la sospensione arriva con customer.subscription.updated (stato past_due/unpaid).
+    case "invoice.payment_failed": {
+      const inv = event.data.object;
+      const who = inv.customer_name || inv.customer_email || idOf(inv.customer) || "cliente sconosciuto";
+      await alertTeam(
+        `Pagamento non riuscito: ${who}`,
+        `Fattura ${inv.id} di ${(inv.amount_due / 100).toFixed(2)} € (${inv.customer_email ?? "senza email"}), tentativo ${inv.attempt_count}.\nL'azienda viene sospesa finché non paga. Dettagli in Stripe → Fatture.`,
+      );
+      return;
+    }
+
+    case "checkout.session.async_payment_failed": {
+      const s = event.data.object;
+      const who = s.customer_details?.name || s.customer_details?.email || "cliente sconosciuto";
+      await alertTeam(`Addebito SEPA non riuscito: ${who}`, `Checkout ${s.id} (${s.metadata?.kind ?? "pagamento"}): l'addebito sul conto non è andato a buon fine, quindi nulla è stato attivato.`);
+      return;
+    }
 
     default:
       return;

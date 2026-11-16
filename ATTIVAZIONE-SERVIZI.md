@@ -116,6 +116,7 @@ SUPPORT_ALERT_EMAIL=tuaemail@esempio.it
 ```
 - `SUPPORT_EMAIL` è l'indirizzo mostrato sul sito e il "rispondi a" di tutte le email dell'assistenza.
 - `SUPPORT_ALERT_EMAIL` (facoltativa) riceve un avviso con il link al ticket a ogni nuova richiesta o risposta di un cliente. Usa una casella diversa da `SUPPORT_EMAIL`.
+- `ALERT_EMAILS` (facoltativa, più indirizzi separati da virgola) riceve gli **allarmi**: webhook Stripe non elaborato, pagamento o addebito SEPA non riuscito, codice delle richieste non inviato ai clienti. Senza, vanno ad `ADMIN_EMAILS`, altrimenti a info@gecoitalia.it. Lo stesso allarme arriva al massimo ogni 10 minuti; partono con Brevo, quindi se è Brevo a non funzionare restano solo nei log di Vercel.
 
 ### Passo 4.3 — Far entrare le email nel gestionale
 La casella `SUPPORT_EMAIL` deve inoltrare ogni email al gestionale. Il modo più semplice, senza toccare la posta che già usi su Aruba:
@@ -178,6 +179,7 @@ APP_URL=https://gecoitalia.it
 ADMIN_EMAILS=
 SUPPORT_EMAIL=assistenza@gecoitalia.it
 SUPPORT_ALERT_EMAIL=
+ALERT_EMAILS=
 RESEND_INBOUND_SECRET=
 INBOUND_EMAIL_TOKEN=
 ```

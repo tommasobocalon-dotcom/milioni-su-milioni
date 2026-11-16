@@ -98,6 +98,8 @@ async function main() {
     "customer.subscription.paused",
     "customer.subscription.resumed",
     "invoice.paid",
+    "invoice.payment_failed",
+    "checkout.session.async_payment_failed",
   ];
   const existing = (await stripe.webhookEndpoints.list({ limit: 100 })).data.find((w) => w.url === webhookUrl);
   if (existing) {

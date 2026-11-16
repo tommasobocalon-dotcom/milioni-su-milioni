@@ -1,6 +1,7 @@
 import "server-only";
 import { demoMode } from "@/lib/demo-mode";
 import { brevoEmailRequest, brevoSmsRequest } from "@/lib/domain/brevo";
+import { parseEmailList } from "@/lib/domain/support";
 
 /**
  * Invio di SMS ed email: il resto dell'app usa solo queste due funzioni.
@@ -67,6 +68,26 @@ async function sendWithResend(to: string, subject: string, text: string, replyTo
     body: JSON.stringify({ from, to: [to], subject, text, ...(replyTo ? { reply_to: replyTo } : {}) }),
   });
   if (!res.ok) throw new Error(`Invio email non riuscito (${res.status}): ${await res.text()}`);
+}
+
+const ALERT_EVERY_MS = 10 * 60_000;
+const lastAlert = new Map<string, number>();
+
+/**
+ * Allarme al team (webhook Stripe fallito, pagamento non riuscito, codice non inviato ai clienti): email a ALERT_EMAILS,
+ * altrimenti ad ADMIN_EMAILS, altrimenti a info@gecoitalia.it. Lo stesso oggetto parte al massimo ogni 10 minuti e
+ * l'allarme non blocca mai chi lo chiama. Resta anche nei log di Vercel.
+ */
+// ponytail: limite per istanza e invio con lo stesso Brevo; se Brevo è giù l'avviso resta solo nei log. Sentry quando serve.
+export async function alertTeam(subject: string, details: string): Promise<void> {
+  console.error(`[allarme] ${subject}\n${details}`);
+  const now = Date.now();
+  if (now - (lastAlert.get(subject) ?? -Infinity) < ALERT_EVERY_MS) return;
+  lastAlert.set(subject, now);
+  const list = parseEmailList(process.env.ALERT_EMAILS);
+  const to = list.length ? list : parseEmailList(process.env.ADMIN_EMAILS);
+  const results = await Promise.allSettled((to.length ? to : ["info@gecoitalia.it"]).map((r) => sendEmail(r, `[GecoItalia] ${subject}`, details)));
+  for (const r of results) if (r.status === "rejected") console.error("[allarme] email non inviata:", r.reason);
 }
 
 /** In sviluppo e sul sito di prova, con le email stampate in console, mostriamo il link anche a schermo. */

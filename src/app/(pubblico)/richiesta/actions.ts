@@ -12,7 +12,7 @@ import { leads, partners } from "@/lib/db/schema";
 import { maskEmail, normalizeEmail, normalizeItalianPhone } from "@/lib/domain/otp";
 import { confirmLead, createPendingLead } from "@/lib/leads/service";
 import { AGENCY_REQUEST_TYPES, CALLBACK_SLOTS, OTHER_REQUEST, TIMINGS } from "@/lib/leads/options";
-import { DeliveryError, sendEmail, showDevCodes } from "@/lib/notify";
+import { alertTeam, DeliveryError, sendEmail, showDevCodes } from "@/lib/notify";
 
 const RequestSchema = z.object({
   partnerSlug: z.string().min(1).max(120),
@@ -119,8 +119,9 @@ function sendCode(email: string, partnerName: string, code: string) {
 
 const CODE_FAILED = "Non riusciamo a inviare l'email con il codice in questo momento. Riprova tra qualche minuto.";
 
-function codeFailed(e: DeliveryError): { ok: false; error: string } {
+async function codeFailed(e: DeliveryError): Promise<{ ok: false; error: string }> {
   console.error("[codice]", e.message);
+  await alertTeam("Codice delle richieste non inviato", `Un cliente non ha ricevuto il codice per confermare la richiesta: ${e.message}\n\nControllare Brevo (chiave, dominio, limiti di invio).`);
   return { ok: false, error: CODE_FAILED };
 }
 
