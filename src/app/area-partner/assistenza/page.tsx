@@ -30,7 +30,7 @@ export default function SupportPage() {
 }
 
 async function Support() {
-  const { partner } = await requirePartner();
+  const { partner } = await requirePartner({ allowSuspended: true });
   const tickets = await listPartnerTickets(partner.id);
   const email = supportEmail();
   const subject = encodeURIComponent(`Assistenza: ${partner.displayName}`);

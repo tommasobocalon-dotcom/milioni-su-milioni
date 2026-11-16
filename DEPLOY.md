@@ -249,7 +249,11 @@ per IP, invio richieste per IP: vedi `src/lib/security/ip-limit.ts`). Questi fer
 credential stuffing, **ma non un vero attacco DDoS**: un flood di richieste va assorbito al bordo,
 prima che arrivi all'applicazione.
 
-In produzione, configurare (dalla dashboard Vercel, non dal codice):
+Attiva dal 16/11/2026: regola **"Rate limit auth paths"** (Vercel → `geco` → Firewall → Rules) su `/accedi`, `/auth`,
+`/richiesta`, `/assistenza`, `/registrazione-partner`: oltre 60 richieste al minuto per IP risponde 429. Il piano Hobby
+ne consente 3. I webhook (`/api/...`) restano fuori.
+
+Altre opzioni, sempre dalla dashboard Vercel e non dal codice:
 
 - **Vercel Firewall → Attack Challenge Mode**: da attivare in caso di attacco in corso; presenta una
   sfida ai client sospetti.

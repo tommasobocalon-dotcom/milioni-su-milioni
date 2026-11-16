@@ -25,7 +25,7 @@ export default function SupportTicketPage({ params }: PageProps<"/area-partner/a
 }
 
 async function Ticket({ number: raw }: { number: string }) {
-  const { partner } = await requirePartner();
+  const { partner } = await requirePartner({ allowSuspended: true });
   if (!/^\d{1,9}$/.test(raw)) notFound();
   const t = await getPartnerTicket(partner.id, Number(raw));
   if (!t) notFound();

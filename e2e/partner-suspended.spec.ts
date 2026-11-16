@@ -43,4 +43,26 @@ test("da sospeso l'Area Partner si riduce al solo pagamento", async ({ page }) =
   await page.goto("/area-partner/abbonamento");
   await expect(page).toHaveURL(/\/area-partner\/abbonamento$/);
   await expect(page.getByText(/account sospeso/i)).toBeVisible();
+
+  // Il menu mostra solo le voci che funzionano da sospeso: niente link che rimbalzano.
+  const nav = page.getByRole("navigation", { name: "Area Partner" });
+  await expect(nav.getByRole("link")).toHaveText(["Abbonamento", "Aiuto"]);
+  await expect(page.getByRole("link", { name: /posta in arrivo/i })).toHaveCount(0);
+
+  // L'assistenza resta raggiungibile: è l'unico modo per chiedere al team.
+  await page.goto("/area-partner/assistenza");
+  await expect(page).toHaveURL(/\/area-partner\/assistenza$/);
+});
+
+test("sospeso a mano dal gestionale: l'abbonamento spiega perché e rimanda all'assistenza", async ({ page }) => {
+  await login(page);
+  // Sospensione manuale (gestionale): l'account è sospeso ma l'abbonamento resta pagato.
+  await setStatus("active");
+  const [p] = await sql<{ id: string }[]>`select id from partners where slug = 'rossi-impianti'`;
+  await sql`update partners set account_status = 'suspended' where id = ${p.id}`;
+
+  await page.goto("/area-partner/lead");
+  await expect(page).toHaveURL(/\/area-partner\/abbonamento/);
+  await expect(page.getByText(/sospeso dal team/i)).toBeVisible();
+  await expect(page.getByRole("main").getByRole("link", { name: /assistenza/i })).toBeVisible();
 });

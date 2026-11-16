@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import Link from "next/link";
 import { connection } from "next/server";
 import { Check, Lock } from "lucide-react";
 import { openBillingPortal, startFreePlan } from "@/app/area-partner/actions";
@@ -99,6 +100,19 @@ async function Subscription({ payment, welcome }: { payment: "received" | "start
         <PaymentNotice>Il piano si attiva appena Stripe conferma il pagamento: con la carta in pochi secondi, con l&apos;addebito SEPA in qualche giorno lavorativo.</PaymentNotice>
       )
     );
+  // Sospensione manuale dal gestionale: l'abbonamento è in regola, quindi pagare non basta per riattivarsi.
+  const teamSuspension = partner.accountStatus === "suspended" && sub?.status !== "suspended" && (
+    <section role="alert" className="flex flex-col gap-2 rounded-lg border border-error bg-surface p-5">
+      <p className="text-body font-semibold">Account sospeso dal team di GecoItalia.</p>
+      <p className="text-body-s">
+        La scheda è nascosta dai risultati e non ricevi nuove richieste. Per sapere il motivo e come riattivarlo scrivi all&apos;
+        <Link href="/area-partner/assistenza" className="font-semibold text-primary underline">
+          assistenza
+        </Link>
+        .
+      </p>
+    </section>
+  );
   const chooser = canChoose ? (
     <Chooser owner={owner} demo={demo} trial={!hadStripe && !fromFree} guaranteed={fromFree} />
   ) : (
@@ -114,6 +128,7 @@ async function Subscription({ payment, welcome }: { payment: "received" | "start
       <div className="flex flex-col gap-6">
         <PartnerPageHeader title="Scegli il tuo piano" subtitle="Le richieste dei clienti sono gratis e illimitate con tutti i piani" partnerName={partner.displayName} logoUrl={partner.logoUrl} />
         {notice}
+        {teamSuspension}
         {welcome && (
           <p role="status" className="rounded-lg bg-subtle p-4 text-body-s">
             <strong>Scheda creata.</strong> Ultimo passo: {free ? "parti gratis o scegli un piano" : "scegli il piano"}. Appena è attivo la tua
@@ -170,6 +185,7 @@ async function Subscription({ payment, welcome }: { payment: "received" | "start
       <div className="flex flex-col gap-6">
         <PartnerPageHeader title="Piano gratuito" partnerName={partner.displayName} logoUrl={partner.logoUrl} planCode={sub.planCode} />
         {notice}
+        {teamSuspension}
         {usage.locked > 0 && (
           <section role="alert" className="flex items-start gap-3 rounded-lg border border-primary bg-surface p-5 text-body-s">
             <Lock className="mt-0.5 size-5 shrink-0 text-primary" aria-hidden />
@@ -244,6 +260,7 @@ async function Subscription({ payment, welcome }: { payment: "received" | "start
       <div className="flex flex-col gap-6">
         <PartnerPageHeader title="Attiva il pagamento" partnerName={partner.displayName} logoUrl={partner.logoUrl} planCode={sub.planCode} />
         {notice}
+        {teamSuspension}
         <p className="rounded-lg bg-ambra-100 p-4 text-body-s">
           Il piano <strong>{sub.planName}</strong> è attivo in prova, senza pagamento. Scegli il piano qui sotto per collegarlo a un
           pagamento: quello di prova si chiude da solo appena il nuovo è attivo.
@@ -267,6 +284,7 @@ async function Subscription({ payment, welcome }: { payment: "received" | "start
     <div className="flex flex-col gap-6">
       <PartnerPageHeader title="Il tuo abbonamento" partnerName={partner.displayName} logoUrl={partner.logoUrl} planCode={sub.planCode} />
       {notice}
+      {teamSuspension}
       {pending && pendingName && (
         <p role="status" className="rounded-lg bg-subtle p-4 text-body-s">
           <strong>

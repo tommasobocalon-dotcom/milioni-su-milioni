@@ -577,7 +577,8 @@ const SupportTicketSchema = z.object({
 });
 
 export async function openSupportTicket(_prev: ActionState, formData: FormData): Promise<ActionState> {
-  const { user } = await requirePartner();
+  // L'assistenza funziona anche da sospeso: è il modo per chiedere al team perché e come riattivarsi.
+  const { user } = await requirePartner({ allowSuspended: true });
   const parsed = SupportTicketSchema.safeParse({ topic: formData.get("topic"), subject: formData.get("subject"), body: formData.get("body") });
   if (!parsed.success) return { error: parsed.error.issues[0].message };
   if (await ipRateLimited("support_partner", 20, 60)) return { error: "Hai aperto molte richieste nell'ultima ora. Riprova più tardi." };
@@ -595,7 +596,7 @@ export async function openSupportTicket(_prev: ActionState, formData: FormData):
 }
 
 export async function replySupportTicket(number: number, _prev: ActionState, formData: FormData): Promise<ActionState> {
-  const { user, partner } = await requirePartner();
+  const { user, partner } = await requirePartner({ allowSuspended: true });
   const body = SupportMessage.safeParse(formData.get("body"));
   if (!body.success) return { error: body.error.issues[0].message };
   if (!(await replyFromPartner(partner.id, number, user, body.data))) return { error: "Richiesta non trovata" };

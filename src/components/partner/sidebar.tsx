@@ -20,13 +20,16 @@ const NAV = [
   { href: "/area-partner/assistenza", label: "Aiuto", icon: LifeBuoy, also: [] },
 ];
 
+/** Da sospeso funzionano solo queste: le altre pagine rimandano all'abbonamento (PRD §7.2). */
+const SUSPENDED_NAV = ["/area-partner/abbonamento", "/area-partner/assistenza"];
+
 /** `locked`: segno accanto a una voce (il lucchetto su "Boost e sponsorizzazioni" per il piano Base). */
-function NavList({ pathname, locked }: { pathname: string | null; locked?: Record<string, React.ReactNode> }) {
+function NavList({ pathname, locked, suspended }: { pathname: string | null; locked?: Record<string, React.ReactNode>; suspended?: boolean }) {
   const active = (href: string, also: string[]) =>
     !!pathname && ((href === "/area-partner" ? pathname === href : pathname.startsWith(href)) || also.some((a) => pathname.startsWith(a)));
   return (
     <>
-      {NAV.map(({ href, label, icon: Icon, also }) => (
+      {(suspended ? NAV.filter((n) => SUSPENDED_NAV.includes(n.href)) : NAV).map(({ href, label, icon: Icon, also }) => (
         <Link
           key={href}
           href={href}
@@ -45,12 +48,12 @@ function NavList({ pathname, locked }: { pathname: string | null; locked?: Recor
   );
 }
 
-function ActiveNavList({ locked }: { locked?: Record<string, React.ReactNode> }) {
-  return <NavList pathname={usePathname()} locked={locked} />;
+function ActiveNavList(props: { locked?: Record<string, React.ReactNode>; suspended?: boolean }) {
+  return <NavList pathname={usePathname()} {...props} />;
 }
 
-/** Componente "Sidebar partner" di Figma; su telefono diventa una barra di schede scorrevole. */
-export function PartnerSidebar({ bell, boostLock }: { bell: React.ReactNode; boostLock?: React.ReactNode }) {
+/** Componente "Sidebar partner" di Figma; su telefono diventa una barra di schede scorrevole. `suspended`: menu ridotto al pagamento. */
+export function PartnerSidebar({ bell, boostLock, suspended }: { bell: React.ReactNode; boostLock?: React.ReactNode; suspended?: boolean }) {
   const locked = { "/area-partner/sponsorizzazioni": boostLock };
   return (
     <aside className="flex shrink-0 flex-col bg-brand text-on-brand lg:sticky lg:top-0 lg:h-screen lg:w-64">
@@ -67,8 +70,8 @@ export function PartnerSidebar({ bell, boostLock }: { bell: React.ReactNode; boo
       </div>
       <nav aria-label="Area Partner" className="flex gap-1 overflow-x-auto px-3 pb-3 lg:flex-1 lg:flex-col lg:overflow-visible lg:px-4">
         {/* L'URL è un dato della richiesta: la voce attiva arriva dentro un Suspense. */}
-        <Suspense fallback={<NavList pathname={null} locked={locked} />}>
-          <ActiveNavList locked={locked} />
+        <Suspense fallback={<NavList pathname={null} locked={locked} suspended={suspended} />}>
+          <ActiveNavList locked={locked} suspended={suspended} />
         </Suspense>
       </nav>
       <div className="hidden p-4 lg:block">

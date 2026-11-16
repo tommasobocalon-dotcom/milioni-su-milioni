@@ -36,6 +36,7 @@ Turnstile controlla che chi invia un modulo sia una persona. Di solito non chied
 NEXT_PUBLIC_TURNSTILE_SITE_KEY=<Site Key>
 TURNSTILE_SECRET_KEY=<Secret Key>
 ```
+Su Vercel la Site Key va salvata come tipo **Config**, non Secret: Vercel rifiuta le variabili `NEXT_PUBLIC_` di tipo Secret, perché finiscono nel browser. La Secret Key resta di tipo **Secret**. Entrambe solo in **Production**: i deploy di anteprima (`*.vercel.app`) non sono tra gli host del widget.
 Attenzione: la Site Key entra nel codice della pagina al momento della build. Dopo averla aggiunta su Vercel serve **per forza** un Redeploy.
 
 ### Passo 1.3 — Verificare
