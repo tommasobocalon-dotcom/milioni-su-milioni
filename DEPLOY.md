@@ -201,7 +201,11 @@ Ogni notte alle 3 GitHub Actions ([.github/workflows/backup.yml](.github/workflo
 produzione, lo **ripristina per prova** in un PostgreSQL usa e getta, lo **cifra** (AES-256) e lo conserva tra gli
 artifact di GitHub, fuori da Supabase e Vercel. Oltre 500 MB (`BACKUP_LIMIT_MB`) cancella i più vecchi e tiene i più
 recenti; GitHub comunque non tiene un backup più di 90 giorni. Se una notte fallisce, GitHub manda un'email al
-proprietario del repository. Le foto (Supabase Storage) non sono nel backup.
+proprietario del repository.
+
+Nello stesso workflow il job **foto** copia tutte le foto caricate dalle aziende (bucket `uploads` di Supabase
+Storage): l'elenco lo legge dal database, i file dagli indirizzi pubblici. Le cifra con la stessa passphrase e
+tiene solo le ultime 3 copie (artifact `geco-foto-…`), perché ogni copia contiene già tutte le foto.
 
 **Attivarlo (una volta):** su GitHub, nel repository → Settings → Secrets and variables → Actions → New repository secret:
 
@@ -224,10 +228,18 @@ pg_restore -d "URL_DEL_DATABASE_NUOVO" --no-owner --no-privileges geco.dump
 Il `drop schema public` cancella tutto: **mai** sul database in uso. Infine aggiornare la stringa del database su Vercel e
 rifare il deploy.
 
+**Ripristinare le foto:** scaricare l'ultimo artifact `geco-foto-…`, estrarlo e decifrarlo:
+```
+openssl enc -d -aes-256-cbc -pbkdf2 -iter 200000 -in geco-foto-AAAA-MM-GG-HHMM.tar.enc | tar -xf -
+```
+Esce una cartella `foto` con le sottocartelle (`avatars`, `partners`, `portfolio`). Caricarle nel bucket `uploads`
+dal pannello Supabase → Storage, trascinandole e tenendo gli stessi nomi: gli indirizzi salvati nel database
+tornano a funzionare. Se il progetto Supabase è nuovo, cambia l'indirizzo nelle foto: va aggiornato anche nel database.
+
 ## Al lancio pubblico
 
 1. Togli `SITE_ACCESS` e `DEMO_MODE` da Vercel. Senza `SITE_ACCESS` le scorciatoie demo si spengono comunque da sole.
-2. In `vercel.json` togli `npm run db:seed` dal *buildCommand* e svuota i dati di esempio dal database.
+2. Svuota i dati di esempio dal database. Dal 16/11/2026 il deploy non lancia più `npm run db:seed` (`vercel.json`), così le aziende di esempio non tornano dopo la pulizia. Su un database nuovo e vuoto il seed va lanciato una volta a mano, con `DATABASE_URL` di quel database: categorie, servizi e piani di partenza arrivano da lì.
 3. Prima del lancio servono anche RLS, rate limit e Turnstile, email con Brevo, fatturazione elettronica SdI (vedi CLAUDE.md, "Da fare"). Per Stripe passa alle chiavi **live** e crea il webhook anche in modalità live.
 
 ## Sicurezza: protezione da flood e DDoS

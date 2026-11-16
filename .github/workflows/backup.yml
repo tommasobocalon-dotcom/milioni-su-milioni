@@ -2,8 +2,9 @@
 # La copia è cifrata (AES-256) prima di uscire dalla macchina: il repository è pubblico.
 # Si conserva tra gli artifact di GitHub, fuori da Supabase e Vercel. Oltre BACKUP_LIMIT_MB si cancellano i più
 # vecchi e restano i più recenti; GitHub in ogni caso non tiene un artifact più di 90 giorni.
+# Job "foto": copia cifrata delle foto di Supabase Storage, ultime 3 copie.
 # Segreti (Settings → Secrets and variables → Actions): BACKUP_DATABASE_URL, BACKUP_PASSPHRASE. Ripristino in DEPLOY.md.
-name: Backup database
+name: Backup database e foto
 
 on:
   schedule:
@@ -101,3 +102,55 @@ jobs:
               }
             }
             core.info(`Backup conservati: ${backups.length}, limite ${process.env.BACKUP_LIMIT_MB} MB`);
+
+  # Foto caricate dalle aziende (bucket pubblico "uploads" di Supabase Storage): l'elenco viene dal database
+  # (storage.objects), i file dagli URL pubblici, quindi bastano gli stessi due segreti del database.
+  # ponytail: copia intera ogni notte e solo le ultime 3; se le foto diventano tanti GB serve una copia incrementale (rclone su S3).
+  foto:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      DATABASE_URL: ${{ secrets.BACKUP_DATABASE_URL }}
+      PASSPHRASE: ${{ secrets.BACKUP_PASSPHRASE }}
+      BUCKET: uploads
+    steps:
+      - name: Copia delle foto
+        run: |
+          if [ -z "$DATABASE_URL" ] || [ -z "$PASSPHRASE" ]; then
+            echo "::error::Mancano i segreti BACKUP_DATABASE_URL e BACKUP_PASSPHRASE"; exit 1
+          fi
+          url=$(printf '%s' "$DATABASE_URL" | sed -E 's/:6543\//:5432\//; s/[?&](supa|pgbouncer)=[^&]*//g')
+          # Il progetto Supabase si legge dalla stringa: utente "postgres.<ref>" (pooler) o host "db.<ref>.supabase.co".
+          ref=$(printf '%s' "$DATABASE_URL" | sed -nE 's#^[a-z]+://postgres\.([a-z0-9]+):.*#\1#p; s#.*@db\.([a-z0-9]+)\.supabase\.co.*#\1#p' | head -n 1)
+          if [ -z "$ref" ]; then echo "::error::Progetto Supabase non riconosciuto in BACKUP_DATABASE_URL"; exit 1; fi
+          psql "$url" -At -c "select name from storage.objects where bucket_id = '$BUCKET' order by name" > elenco.txt
+          mkdir foto
+          xargs -P 8 -I {} curl -fsS --retry 3 --create-dirs -o "foto/{}" "https://$ref.supabase.co/storage/v1/object/public/$BUCKET/{}" < elenco.txt
+          test "$(find foto -type f | wc -l)" -eq "$(wc -l < elenco.txt)"
+          echo "Foto copiate: $(wc -l < elenco.txt), $(du -sh foto | cut -f1)"
+          echo "NAME=geco-foto-$(date -u +%Y-%m-%d-%H%M)" >> "$GITHUB_ENV"
+
+      - name: Cifratura
+        run: |
+          tar -cf - foto | openssl enc -aes-256-cbc -pbkdf2 -iter 200000 -salt -pass env:PASSPHRASE -out "$NAME.tar.enc"
+          ls -l "$NAME.tar.enc"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.NAME }}
+          path: ${{ env.NAME }}.tar.enc
+          retention-days: 90
+          compression-level: 0
+
+      - name: Tiene solo le ultime 3 copie delle foto
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const all = await github.paginate(github.rest.actions.listArtifactsForRepo, { ...context.repo, per_page: 100 });
+            const copies = all
+              .filter((a) => a.name.startsWith("geco-foto-") && !a.expired)
+              .sort((a, b) => b.created_at.localeCompare(a.created_at));
+            for (const a of copies.slice(3)) {
+              await github.rest.actions.deleteArtifact({ ...context.repo, artifact_id: a.id });
+              core.info(`Cancellato ${a.name}`);
+            }
