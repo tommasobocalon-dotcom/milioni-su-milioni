@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import { withSentryConfig } from "@sentry/nextjs/config";
 
 // Content-Security-Policy: in sviluppo servono eval e websocket per l'hot reload di Next/React.
 const isDev = process.env.NODE_ENV !== "production";
@@ -27,7 +28,8 @@ const csp = [
   // MapLibre gira in un web worker creato da un blob.
   "worker-src 'self' blob:",
   // Turnstile + tile di OpenStreetMap (mappa dei risultati).
-  `connect-src 'self' https://challenges.cloudflare.com https://tile.openstreetmap.org ${ADS_HOSTS.connect}${isDev ? " ws:" : ""}`,
+  // Sentry (regione UE): errori del browser.
+  `connect-src 'self' https://challenges.cloudflare.com https://tile.openstreetmap.org https://*.ingest.de.sentry.io ${ADS_HOSTS.connect}${isDev ? " ws:" : ""}`,
   ...(isDev ? [] : ["upgrade-insecure-requests"]),
 ].join("; ");
 
@@ -75,4 +77,13 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default nextConfig;
+// Sentry: con SENTRY_AUTH_TOKEN (e SENTRY_ORG, SENTRY_PROJECT) la build carica le source map, così gli errori del
+// browser mostrano il codice vero e non quello compresso. Senza, la build resta uguale e gli errori arrivano lo stesso.
+export default withSentryConfig(nextConfig, {
+  org: process.env.SENTRY_ORG,
+  project: process.env.SENTRY_PROJECT,
+  authToken: process.env.SENTRY_AUTH_TOKEN,
+  sourcemaps: { disable: !process.env.SENTRY_AUTH_TOKEN, deleteSourcemapsAfterUpload: true },
+  silent: !process.env.CI,
+  telemetry: false,
+});

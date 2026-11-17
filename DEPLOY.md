@@ -216,6 +216,19 @@ Il sito misura quali pubblicità portano **richieste dei clienti**, **iscrizioni
 
 Prima del lancio pubblico l'informativa (`/privacy`, sezione Cookie) va fatta rivedere dal consulente insieme al resto.
 
+## Errori con Sentry
+
+Gli errori del sito (server e browser) arrivano su [Sentry](https://sentry.io) con pagina, browser e punto del codice, e Sentry manda un'email quando ne compare uno nuovo. Senza la variabile qui sotto non parte niente. Codice in `src/instrumentation.ts`, `src/instrumentation-client.ts` e `src/lib/domain/sentry.ts`.
+
+Cosa **non** viene mandato: cookie, intestazioni di accesso, IP, email, contenuto dei moduli, token nei link, parametri delle query al database e variabili del codice (`SENTRY_DATA_COLLECTION` e `scrubEvent`). Niente registrazione dello schermo e nessun cookie nel browser, quindi non serve il consenso del banner.
+
+1. **Account.** Su https://sentry.io crea l'account con info@gecoitalia.it e, alla domanda sulla regione dei dati, scegli **European Union (Frankfurt)**. Va scelta alla creazione dell'organizzazione e non si cambia dopo. Il piano gratuito (Developer, un utente, 5.000 errori al mese) basta per iniziare.
+2. **Progetto.** Create Project → piattaforma **Next.js** → nome `gecoitalia`. Salta la procedura guidata (`npx @sentry/wizard`): il codice è già nel sito. Copia il **DSN**, del tipo `https://abc123@o456.ingest.de.sentry.io/789`. Deve contenere `ingest.de.sentry.io`: è l'unico indirizzo di Sentry ammesso dalla CSP.
+3. **Vercel** → Environment Variables: `NEXT_PUBLIC_SENTRY_DSN` = il DSN (non è segreto). Facoltative, per vedere nel browser il codice vero e non quello compresso: `SENTRY_ORG` (slug dell'organizzazione), `SENTRY_PROJECT` (`gecoitalia`) e `SENTRY_AUTH_TOKEN` (Settings → Auth Tokens → Create New Token, **segreto**). Poi un nuovo deploy.
+4. **Avvisi.** In Sentry → Alerts lascia l'avviso predefinito "nuovo problema" via email; aggiungi le email del team in Settings → Members, oppure inoltra da info@.
+
+Gli allarmi via email già attivi (`alertTeam`: webhook Stripe, pagamenti falliti, codici non inviati) restano: Sentry li affianca e copre tutti gli altri errori.
+
 ## Backup notturno del database
 
 Ogni notte alle 3 GitHub Actions ([.github/workflows/backup.yml](.github/workflows/backup.yml)) copia il database di
