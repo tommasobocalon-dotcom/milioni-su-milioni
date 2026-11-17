@@ -270,9 +270,14 @@ export const profileEvents = pgTable(
       .notNull()
       .references(() => partners.id, { onDelete: "cascade" }),
     type: profileEventType("type").notNull(),
+    /** Impronta giornaliera del visitatore (visitorKey) per le visite dal browser; null per le impressioni. */
+    visitor: text("visitor"),
     createdAt: createdAt(),
   },
-  (t) => [index("profile_events_partner_idx").on(t.partnerId, t.createdAt)],
+  (t) => [
+    index("profile_events_partner_idx").on(t.partnerId, t.createdAt),
+    index("profile_events_visitor_idx").on(t.partnerId, t.visitor),
+  ],
 );
 
 export const memberRole = pgEnum("member_role", ["owner", "member"]);

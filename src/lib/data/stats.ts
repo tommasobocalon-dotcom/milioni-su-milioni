@@ -3,6 +3,7 @@ import { and, count, desc, eq, gte, isNotNull, ne, sql } from "drizzle-orm";
 import { db } from "@/lib/db/client";
 import { boosts, leads, municipalities, profileEvents, services } from "@/lib/db/schema";
 import { dayKeys, fillDaily, type StatsPeriod } from "@/lib/domain/stats";
+import type { BrowserEventType } from "@/lib/domain/track-event";
 
 type ProfileEventType = (typeof profileEvents.$inferInsert)["type"];
 
@@ -10,6 +11,20 @@ type ProfileEventType = (typeof profileEvents.$inferInsert)["type"];
 export async function recordProfileEvents(partnerIds: string[], type: ProfileEventType) {
   if (partnerIds.length === 0) return;
   await db.insert(profileEvents).values(partnerIds.map((partnerId) => ({ partnerId, type })));
+}
+
+/**
+ * Visita o apertura del modulo dal browser (/api/evento): scritta solo se lo stesso visitatore (visitorKey, che cambia
+ * ogni giorno) non l'ha già fatta per questa azienda, così ricaricare la pagina non gonfia le statistiche.
+ */
+export async function recordBrowserEvent(partnerId: string, type: BrowserEventType, visitor: string) {
+  await db.execute(sql`
+    insert into ${profileEvents} (partner_id, type, visitor)
+    select ${partnerId}, ${type}, ${visitor}
+    where not exists (
+      select 1 from ${profileEvents}
+      where partner_id = ${partnerId} and type = ${type} and visitor = ${visitor}
+    )`);
 }
 
 const romeDaySql = (col: typeof profileEvents.createdAt | typeof leads.createdAt) =>
