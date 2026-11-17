@@ -399,6 +399,7 @@ export const LEAD_FILTERS = [
   { value: "non-consegnate", label: "Non consegnate" },
   { value: "da-confermare", label: "Codice non confermato" },
   { value: "segnalate", label: "Segnalate" },
+  { value: "non-richiamati", label: "Cliente non richiamato" },
 ] as const;
 export type LeadFilter = (typeof LEAD_FILTERS)[number]["value"];
 
@@ -409,6 +410,7 @@ const leadFilterSql = (f: LeadFilter): SQL =>
     "non-consegnate": and(isNotNull(leads.verifiedAt), isNull(leads.deliveredAt), eq(leads.charge, "pending"))!,
     "da-confermare": isNull(leads.verifiedAt),
     segnalate: isNotNull(leads.reportStatus),
+    "non-richiamati": eq(leads.clientContacted, false),
   })[f];
 
 export async function listLeadsAdmin({ q, filter, partnerId, limit = 200 }: { q?: string; filter?: LeadFilter; partnerId?: string; limit?: number }) {
@@ -443,6 +445,7 @@ export async function listLeadsAdmin({ q, filter, partnerId, limit = 200 }: { q?
       verifiedAt: leads.verifiedAt,
       deliveredAt: leads.deliveredAt,
       reportStatus: leads.reportStatus,
+      clientContacted: leads.clientContacted,
     })
     .from(leads)
     .innerJoin(partners, eq(partners.id, leads.partnerId))

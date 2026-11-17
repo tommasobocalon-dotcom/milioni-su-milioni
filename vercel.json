@@ -3,5 +3,11 @@
   "regions": [
     "fra1"
   ],
-  "buildCommand": "npm run db:migrate && npm run build"
+  "buildCommand": "npm run db:migrate && npm run build",
+  "crons": [
+    {
+      "path": "/api/cron/esito-richieste",
+      "schedule": "0 8 * * *"
+    }
+  ]
 }

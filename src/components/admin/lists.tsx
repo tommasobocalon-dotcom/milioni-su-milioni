@@ -31,6 +31,8 @@ type LeadRow = {
   verifiedAt: Date | null;
   deliveredAt: Date | null;
   reportStatus: string | null;
+  /** Risposta all'email "Com'è andata?": null finché il cliente non risponde. */
+  clientContacted: boolean | null;
 };
 
 export function LeadList({ leads, now, showPartner = true }: { leads: LeadRow[]; now: Date; showPartner?: boolean }) {
@@ -64,6 +66,9 @@ export function LeadList({ leads, now, showPartner = true }: { leads: LeadRow[];
               <span title={dateOnly.format(l.createdAt)}>{ago(l.createdAt, now)}</span>
               {outcome.key === "delivered" && <span className={cn(PILL, statusInfo(l.status).tone)}>{statusInfo(l.status).label}</span>}
               <span className={cn(PILL, TONE[outcome.tone])}>{outcome.label}</span>
+              {l.clientContacted !== null && (
+                <span className={cn(PILL, l.clientContacted ? TONE.ok : TONE.bad)}>{l.clientContacted ? "Cliente richiamato" : "Cliente non richiamato"}</span>
+              )}
             </span>
           </li>
         );

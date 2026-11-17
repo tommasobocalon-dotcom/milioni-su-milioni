@@ -3,7 +3,7 @@ import { routeByHost } from "@/lib/domain/admin-host";
 import { VISITOR_COOKIE } from "@/lib/domain/ranking";
 import { hasSiteAccess, parseSiteAccess } from "@/lib/domain/site-access";
 
-const WEBHOOKS = new Set(["/api/stripe/webhook", "/api/assistenza/email", "/api/cron/crediti-mensili"]);
+const WEBHOOKS = new Set(["/api/stripe/webhook", "/api/assistenza/email", "/api/cron/esito-richieste"]);
 
 /**
  * Sito di prova visibile solo al team: con SITE_ACCESS impostata ogni richiesta chiede nome e password.

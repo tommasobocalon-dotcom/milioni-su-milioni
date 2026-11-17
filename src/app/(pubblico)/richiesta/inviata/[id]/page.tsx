@@ -6,9 +6,8 @@ import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { PartnerCard } from "@/components/site/partner-card";
 import { ButtonLink } from "@/components/ui/button";
-import { findPlace } from "@/lib/data/catalog";
 import { connection } from "next/server";
-import { recordImpressions, searchPartners } from "@/lib/data/search";
+import { alternativesTo } from "@/lib/data/search";
 import { db } from "@/lib/db/client";
 import { categories, leads, municipalities, partners } from "@/lib/db/schema";
 
@@ -61,12 +60,8 @@ async function Sent({ id }: { id: string }) {
     );
   }
 
-  const place = await findPlace(lead.municipality);
-  const found = await searchPartners({ categoryId: lead.categoryId, place });
   await connection();
-  recordImpressions(found);
-  const { featured, results } = found;
-  const alternatives = [...(featured ? [featured] : []), ...results].filter((p) => p.id !== lead.partnerId).slice(0, 2);
+  const alternatives = await alternativesTo(lead, 2);
   const duplicate = lead.charge === "duplicate";
   const unavailable = lead.charge === "pending";
 

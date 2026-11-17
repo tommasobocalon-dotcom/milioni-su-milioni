@@ -406,6 +406,11 @@ export const leads = pgTable(
     reportStatus: reportStatus("report_status"),
     reportedAt: timestamp("reported_at", { withTimezone: true }),
     notes: text("notes"),
+    /** Email "Com'è andata?" al cliente, qualche giorno dopo la consegna (lead-follow-up.ts). */
+    followUpSentAt: timestamp("follow_up_sent_at", { withTimezone: true }),
+    /** Risposta del cliente: true = l'azienda l'ha ricontattato, false = no, null = nessuna risposta. */
+    clientContacted: boolean("client_contacted"),
+    clientAnsweredAt: timestamp("client_answered_at", { withTimezone: true }),
     createdAt: createdAt(),
   },
   (t) => [

@@ -19,7 +19,7 @@ import {
 } from "@/lib/db/schema";
 import { distanceKm, formatPriceRange, type PriceUnit } from "@/lib/domain/format";
 import { canBoost, rankListing } from "@/lib/domain/ranking";
-import type { Place } from "./catalog";
+import { findPlace, type Place } from "./catalog";
 import { recordProfileEvents } from "./stats";
 import { pageItems } from "@/lib/domain/pagination";
 
@@ -257,4 +257,14 @@ export async function searchPartners(input: {
 export function recordImpressions(r: { featured: PartnerListItem | null; results: PartnerListItem[] }) {
   const ids = [...(r.featured ? [r.featured] : []), ...r.results].map((i) => i.id);
   after(() => recordProfileEvents(ids, "impression"));
+}
+
+/**
+ * Altre aziende della stessa categoria vicine al comune di una richiesta, esclusa quella già scelta (pagina di conferma
+ * e "Com'è andata?"). Chi la chiama deve aver già fatto `await connection()`: registra le impressioni.
+ */
+export async function alternativesTo(lead: { categoryId: string; municipality: string; partnerId: string }, limit: number) {
+  const found = await searchPartners({ categoryId: lead.categoryId, place: await findPlace(lead.municipality) });
+  recordImpressions(found);
+  return [...(found.featured ? [found.featured] : []), ...found.results].filter((p) => p.id !== lead.partnerId).slice(0, limit);
 }
