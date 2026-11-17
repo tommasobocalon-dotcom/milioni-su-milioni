@@ -1,3 +1,4 @@
+import Link from "next/link";
 import {
   CalendarDays,
   Home,
@@ -297,6 +298,11 @@ export function ProfileView({ p }: { p: PartnerProfile }) {
                   </li>
                 ))}
               </ul>
+              {p.localHref && (
+                <Link href={p.localHref} className="self-start text-body-s font-semibold text-primary underline">
+                  Cerca {p.categoryPlural.toLowerCase()} a {p.municipalityName}
+                </Link>
+              )}
             </section>
 
             {p.openingHours.length > 0 && (

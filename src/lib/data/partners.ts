@@ -15,6 +15,7 @@ import {
   services,
   subscriptions,
 } from "@/lib/db/schema";
+import { listCategoryPlacePaths } from "./paths";
 import { profileHref } from "./search";
 
 /** Scheda pubblica completa di un partner. Cache breve: i dati li aggiorna il partner. */
@@ -49,6 +50,7 @@ export async function getPartnerProfile(slug: string) {
       categoryPlural: categories.pluralName,
       categorySlug: categories.slug,
       municipalityName: municipalities.name,
+      municipalitySlug: municipalities.slug,
       provinceName: provinces.name,
       provinceCode: provinces.code,
       provinceSlug: provinces.slug,
@@ -61,7 +63,7 @@ export async function getPartnerProfile(slug: string) {
     .limit(1);
   if (!p) return null;
 
-  const [priceList, areas, portfolio, plan] = await Promise.all([
+  const [priceList, areas, portfolio, plan, placePaths] = await Promise.all([
     db
       .select({
         id: partnerServices.id,
@@ -111,11 +113,15 @@ export async function getPartnerProfile(slug: string) {
       .innerJoin(plans, eq(plans.id, subscriptions.planId))
       .where(and(eq(subscriptions.partnerId, p.id), eq(subscriptions.status, "active")))
       .limit(1),
+    listCategoryPlacePaths(),
   ]);
+  // Pagina "categoria × comune" della sede (es. /idraulico/padova), solo se esiste: link interno per i motori di ricerca.
+  const hasLocalPage = placePaths.some((x) => x.categorySlug === p.categorySlug && x.municipalitySlug === p.municipalitySlug);
 
   return {
     ...p,
     href: profileHref({ partnerType: p.type, provinceSlug: p.provinceSlug, categorySlug: p.categorySlug, slug: p.slug }),
+    localHref: hasLocalPage ? `/${p.categorySlug}/${p.municipalitySlug}` : null,
     planCode: plan[0]?.code ?? null,
     priceList,
     areas: areas.map((a) => (a.province ? `Provincia di ${a.province}` : a.municipality!)),

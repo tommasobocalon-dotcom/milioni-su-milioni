@@ -32,3 +32,15 @@ test("la sitemap contiene le pagine con aziende e non quelle vuote", async ({ re
   expect(xml).toMatch(/\/idraulico\/padova<\/loc>/);
   expect(xml).not.toMatch(/\/giardiniere\//);
 });
+
+test("le pagine si collegano tra loro e dalle schede delle aziende", async ({ page }) => {
+  await page.goto("/idraulico/padova");
+  const nearby = page.getByRole("region", { name: "Idraulici nei comuni vicini" });
+  await expect(nearby.getByRole("link").first()).toBeVisible();
+  await page.getByRole("region", { name: "Altri servizi a Padova" }).getByRole("link", { name: "Agenzie immobiliari" }).click();
+  await expect(page).toHaveURL(/\/agenzia-immobiliare\/padova$/);
+
+  await page.goto("/professionisti/padova/idraulico/rossi-impianti");
+  await page.getByRole("link", { name: "Cerca idraulici a Padova" }).click();
+  await expect(page.getByRole("heading", { level: 1, name: "Idraulici a Padova" })).toBeVisible();
+});

@@ -2,8 +2,11 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { Results, ResultsSkeleton } from "@/components/site/results";
-import { getCategoryBySlug, getMunicipalities } from "@/lib/data/catalog";
+import { ChipLink } from "@/components/ui/chip";
+import { getCategories, getCategoryBySlug, getMunicipalities, type Place } from "@/lib/data/catalog";
+import { listCategoryPlacePaths } from "@/lib/data/paths";
 import { searchPartners } from "@/lib/data/search";
+import { distanceKm } from "@/lib/domain/format";
 
 /**
  * Pagine "categoria × comune" per i motori di ricerca (PRD §15), es. /idraulico/padova: lo stesso elenco di Trova
@@ -44,5 +47,57 @@ async function Landing({ categoria, comune }: { categoria: string; comune: strin
   const landing = await findLanding(categoria, comune);
   if (!landing) notFound();
   const { category, place } = landing;
-  return <Results mode={category.partnerType === "agency" ? "agency" : "pro"} params={{ categoria: category.slug, dove: place.name }} />;
+  return (
+    <>
+      <Results mode={category.partnerType === "agency" ? "agency" : "pro"} params={{ categoria: category.slug, dove: place.name }} />
+      <RelatedLinks category={category} place={place} />
+    </>
+  );
+}
+
+/** Link alle pagine vicine (stessa categoria nei comuni più vicini, altre categorie nello stesso comune): così i motori di ricerca le trovano tutte. */
+async function RelatedLinks({ category, place }: { category: { slug: string; pluralName: string }; place: Place }) {
+  const [paths, places, categories] = await Promise.all([listCategoryPlacePaths(), getMunicipalities(), getCategories()]);
+  const placeBySlug = new Map(places.map((m) => [m.slug, m]));
+  const nearby = paths
+    .filter((x) => x.categorySlug === category.slug && x.municipalitySlug !== place.slug)
+    .map((x) => placeBySlug.get(x.municipalitySlug))
+    .filter((m): m is Place => !!m)
+    .sort((a, b) => distanceKm(place, a) - distanceKm(place, b))
+    .slice(0, 12);
+  const otherCategories = categories.filter((c) => c.slug !== category.slug && paths.some((x) => x.categorySlug === c.slug && x.municipalitySlug === place.slug));
+  if (nearby.length === 0 && otherCategories.length === 0) return null;
+
+  return (
+    <div className="container-page flex flex-col gap-8 pb-12">
+      {nearby.length > 0 && (
+        <section aria-labelledby="vicini" className="flex flex-col gap-3">
+          <h2 id="vicini" className="text-h4 font-semibold">
+            {category.pluralName} nei comuni vicini
+          </h2>
+          <ul className="flex flex-wrap gap-2">
+            {nearby.map((m) => (
+              <li key={m.slug}>
+                <ChipLink href={`/${category.slug}/${m.slug}`}>{m.name}</ChipLink>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+      {otherCategories.length > 0 && (
+        <section aria-labelledby="altri-servizi" className="flex flex-col gap-3">
+          <h2 id="altri-servizi" className="text-h4 font-semibold">
+            Altri servizi a {place.name}
+          </h2>
+          <ul className="flex flex-wrap gap-2">
+            {otherCategories.map((c) => (
+              <li key={c.slug}>
+                <ChipLink href={`/${c.slug}/${place.slug}`}>{c.pluralName}</ChipLink>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+    </div>
+  );
 }
