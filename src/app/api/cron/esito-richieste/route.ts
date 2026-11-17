@@ -1,5 +1,5 @@
 import { timingSafeEqual } from "node:crypto";
-import { NextResponse, type NextRequest } from "next/server";
+import { connection, NextResponse, type NextRequest } from "next/server";
 import { sendFollowUps } from "@/lib/data/lead-follow-up";
 
 /**
@@ -8,6 +8,9 @@ import { sendFollowUps } from "@/lib/data/lead-follow-up";
  * chiamarla ma non cambia nulla di più: ogni richiesta riceve l'email una volta sola (follow_up_sent_at).
  */
 export async function GET(request: NextRequest) {
+  // Senza, con Cache Components la build eseguirebbe la route in anticipo (email mandate durante il deploy) e il cron
+  // riceverebbe poi una risposta fissa.
+  await connection();
   const secret = process.env.CRON_SECRET;
   if (secret) {
     const given = Buffer.from(request.headers.get("authorization") ?? "");
