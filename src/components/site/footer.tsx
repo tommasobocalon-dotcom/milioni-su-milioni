@@ -1,3 +1,4 @@
+import { CookiePreferencesButton } from "@/components/site/consent";
 import Link from "next/link";
 import { ABOUT_PHOTOS, CATEGORY_PHOTOS, HOW_PHOTOS } from "@/lib/data/category-photos";
 import { Wordmark } from "./wordmark";
@@ -66,7 +67,10 @@ export function SiteFooter() {
       </div>
       <div className="border-t border-bosco-700">
         <div className="container-page flex flex-col gap-3 py-5 text-body-s md:flex-row md:items-start md:justify-between md:gap-8">
-          <p>© 2026 GecoItalia · Veneto, Italia</p>
+          <p>
+            © 2026 GecoItalia · Veneto, Italia
+            <CookiePreferencesButton className="ml-3 underline underline-offset-2 hover:text-on-brand" />
+          </p>
         </div>
         <details className="container-page pb-5 text-body-s">
           <summary className="cursor-pointer self-start hover:text-on-brand">Crediti di foto e mappe</summary>

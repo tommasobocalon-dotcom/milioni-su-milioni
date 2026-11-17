@@ -2,6 +2,13 @@ import type { NextConfig } from "next";
 
 // Content-Security-Policy: in sviluppo servono eval e websocket per l'hot reload di Next/React.
 const isDev = process.env.NODE_ENV !== "production";
+// Indirizzi da cui Google Ads (gtag) e Meta caricano script, mandano le conversioni e aprono iframe di misurazione.
+const ADS_HOSTS = {
+  script: "https://www.googletagmanager.com https://www.googleadservices.com https://googleads.g.doubleclick.net https://connect.facebook.net",
+  connect:
+    "https://www.googletagmanager.com https://www.google.com https://www.googleadservices.com https://googleads.g.doubleclick.net https://*.google-analytics.com https://*.analytics.google.com https://www.facebook.com https://connect.facebook.net",
+  frame: "https://td.doubleclick.net https://www.googletagmanager.com https://www.facebook.com",
+};
 const csp = [
   "default-src 'self'",
   "base-uri 'self'",
@@ -14,12 +21,13 @@ const csp = [
   // Tailwind e Next iniettano stili inline: senza nonce 'unsafe-inline' evita di rompere la UI.
   "style-src 'self' 'unsafe-inline'",
   // Cloudflare Turnstile (antispam): script e iframe del widget, verifica dal browser.
-  `script-src 'self' 'unsafe-inline' https://challenges.cloudflare.com${isDev ? " 'unsafe-eval'" : ""}`,
-  "frame-src https://challenges.cloudflare.com https://www.youtube-nocookie.com https://player.vimeo.com",
+  // Google Ads e pixel di Meta: caricati solo dopo "Accetta" nel banner dei cookie (components/site/consent.tsx).
+  `script-src 'self' 'unsafe-inline' https://challenges.cloudflare.com ${ADS_HOSTS.script}${isDev ? " 'unsafe-eval'" : ""}`,
+  `frame-src https://challenges.cloudflare.com https://www.youtube-nocookie.com https://player.vimeo.com ${ADS_HOSTS.frame}`,
   // MapLibre gira in un web worker creato da un blob.
   "worker-src 'self' blob:",
   // Turnstile + tile di OpenStreetMap (mappa dei risultati).
-  `connect-src 'self' https://challenges.cloudflare.com https://tile.openstreetmap.org${isDev ? " ws:" : ""}`,
+  `connect-src 'self' https://challenges.cloudflare.com https://tile.openstreetmap.org ${ADS_HOSTS.connect}${isDev ? " ws:" : ""}`,
   ...(isDev ? [] : ["upgrade-insecure-requests"]),
 ].join("; ");
 

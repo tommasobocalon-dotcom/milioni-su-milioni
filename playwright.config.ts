@@ -13,6 +13,10 @@ export const E2E_INBOUND_EMAIL_TOKEN = "e2e-token-email-solo-test-locale";
 export const E2E_PORT = 3100;
 export const E2E_DATABASE_URL = "postgres://postgres:postgres@127.0.0.1:54329/geco_e2e";
 
+/** ID finti di Google Ads e Meta: fanno comparire il banner dei cookie; gli script veri li blocca e2e/consent.spec.ts. */
+export const E2E_GOOGLE_ADS_ID = "AW-000000000";
+export const E2E_META_PIXEL_ID = "000000000000000";
+
 export default defineConfig({
   testDir: "./e2e",
   globalSetup: "./e2e/global-setup.ts",
@@ -30,6 +34,11 @@ export default defineConfig({
     channel: "chrome",
     locale: "it-IT",
     trace: "retain-on-failure",
+    // Cookie già rifiutati: il banner non copre i bottoni degli altri test (lo prova e2e/consent.spec.ts).
+    storageState: {
+      cookies: [{ name: "geco_consenso", value: "v1%3A0", domain: "localhost", path: "/", expires: -1, httpOnly: false, secure: false, sameSite: "Lax" }],
+      origins: [],
+    },
   },
   webServer: {
     command: `npx concurrently -k -n db,web "npm:db:server" "next dev --port ${E2E_PORT}"`,
@@ -47,6 +56,9 @@ export default defineConfig({
       EMAIL_PROVIDER: "console",
       SMS_PROVIDER: "console",
       INBOUND_EMAIL_TOKEN: E2E_INBOUND_EMAIL_TOKEN,
+      NEXT_PUBLIC_GOOGLE_ADS_ID: E2E_GOOGLE_ADS_ID,
+      NEXT_PUBLIC_GOOGLE_ADS_LEAD_LABEL: "e2eLead",
+      NEXT_PUBLIC_META_PIXEL_ID: E2E_META_PIXEL_ID,
     },
     timeout: 180_000,
   },

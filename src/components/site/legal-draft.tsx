@@ -1,3 +1,4 @@
+import { slugify } from "@/lib/domain/format";
 
 export function LegalDraft({ title, sections }: { title: string; sections: [heading: string, text: string][] }) {
   return (
@@ -7,7 +8,7 @@ export function LegalDraft({ title, sections }: { title: string; sections: [head
         Bozza di lavoro: il testo definitivo va validato con il consulente legale e privacy prima della pubblicazione (PRD §16).
       </p>
       {sections.map(([h, t]) => (
-        <section key={h} className="flex flex-col gap-2">
+        <section key={h} id={slugify(h)} className="flex scroll-mt-24 flex-col gap-2">
           <h2 className="text-h3 font-semibold">{h}</h2>
           <p className="text-body">{t}</p>
         </section>

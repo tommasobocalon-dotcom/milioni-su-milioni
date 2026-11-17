@@ -1,3 +1,4 @@
+import { TrackConversion } from "@/components/site/consent";
 import { Suspense } from "react";
 import { connection } from "next/server";
 import { simulateHomeSponsor, simulateSearchBoost, startHomeSponsorCheckout, startSearchBoostCheckout } from "@/app/area-partner/actions";
@@ -36,7 +37,10 @@ export default function SponsorshipsPage({ searchParams }: PageProps<"/area-part
   return (
     <Suspense fallback={<PartnerSkeleton />}>
       {searchParams.then((sp) => (
-        <Sponsorships payment={sp.pagamento === "ricevuto" ? "received" : sp.pagamento === "ok" ? "started" : null} />
+        <>
+          <Sponsorships payment={sp.pagamento === "ricevuto" ? "received" : sp.pagamento === "ok" ? "started" : null} />
+          {(sp.pagamento === "ricevuto" || sp.pagamento === "ok") && <TrackConversion event="purchase" />}
+        </>
       ))}
     </Suspense>
   );

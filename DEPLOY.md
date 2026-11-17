@@ -195,6 +195,27 @@ Il comando stampa un `whsec_...` da mettere in `STRIPE_WEBHOOK_SECRET` in `.env.
 
 **Fatture elettroniche**: Stripe emette ricevute e fatture "di cortesia". La fattura elettronica verso lo SdI non è ancora collegata: serve un provider italiano via API prima di incassare davvero.
 
+## Google Ads, pixel di Meta e banner dei cookie
+
+Il sito misura quali pubblicità portano **richieste dei clienti**, **iscrizioni delle aziende** e **pagamenti**. Gli script di Google e Meta partono solo se il visitatore preme **Accetta** nel banner dei cookie: con **Rifiuta** non si carica niente. La scelta dura 6 mesi e si cambia da "Preferenze cookie" in fondo a ogni pagina. Finché le variabili qui sotto sono vuote il banner non compare e non si carica nulla. Codice in `src/components/site/consent.tsx` e `src/lib/domain/consent.ts`.
+
+1. **Google Ads.** Strumenti → **Conversioni** → **Nuova azione di conversione** → **Sito web**, inserisci `gecoitalia.it` e scegli di configurare il tag **manualmente** (non con Google Tag Manager). Crea tre azioni: "Richiesta inviata" (categoria *Invia modulo per lead*), "Iscrizione azienda" (*Registrazione*) e "Pagamento azienda" (*Acquisto*). Per ognuna Google mostra `send_to: 'AW-123456789/AbCdEfGh'`: la parte prima della barra è l'ID dell'account, quella dopo è l'etichetta.
+2. **Meta.** Gestione eventi → **Collega origini dati** → **Web** → crea un pixel e copia l'**ID del pixel** (solo numeri). Il codice del pixel non va incollato da nessuna parte: lo carica il sito.
+3. **Vercel** → progetto → Settings → Environment Variables:
+
+   | Nome | Valore |
+   |---|---|
+   | `NEXT_PUBLIC_GOOGLE_ADS_ID` | `AW-123456789` |
+   | `NEXT_PUBLIC_GOOGLE_ADS_LEAD_LABEL` | etichetta di "Richiesta inviata" |
+   | `NEXT_PUBLIC_GOOGLE_ADS_SIGNUP_LABEL` | etichetta di "Iscrizione azienda" |
+   | `NEXT_PUBLIC_GOOGLE_ADS_PURCHASE_LABEL` | etichetta di "Pagamento azienda" |
+   | `NEXT_PUBLIC_META_PIXEL_ID` | ID del pixel |
+
+   Sono variabili "pubbliche" (finiscono nella pagina, non sono segrete) e vengono lette **durante la build**: dopo averle inserite serve un nuovo deploy.
+4. **Prova.** Apri il sito in una finestra in incognito, premi **Accetta**, invia una richiesta di prova. In Meta → Gestione eventi → **Eventi di test** compare "Lead"; in Google Ads la conversione passa da "Non verificata" a "Registrazione conversioni" entro qualche ora.
+
+Prima del lancio pubblico l'informativa (`/privacy`, sezione Cookie) va fatta rivedere dal consulente insieme al resto.
+
 ## Backup notturno del database
 
 Ogni notte alle 3 GitHub Actions ([.github/workflows/backup.yml](.github/workflows/backup.yml)) copia il database di

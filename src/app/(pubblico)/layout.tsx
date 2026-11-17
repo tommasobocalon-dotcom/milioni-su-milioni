@@ -1,3 +1,5 @@
+import { Suspense } from "react";
+import { ConsentBanner } from "@/components/site/consent";
 import { SiteFooter } from "@/components/site/footer";
 import { SiteHeader } from "@/components/site/header";
 
@@ -15,6 +17,10 @@ export default function PublicLayout({ children }: LayoutProps<"/">) {
         {children}
       </main>
       <SiteFooter />
+      {/* Legge l'indirizzo della pagina (usePathname): con Cache Components va dentro un Suspense. */}
+      <Suspense fallback={null}>
+        <ConsentBanner />
+      </Suspense>
     </>
   );
 }

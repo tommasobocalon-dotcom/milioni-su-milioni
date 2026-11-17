@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
+import { TrackConversion } from "@/components/site/consent";
 import { PartnerCard } from "@/components/site/partner-card";
 import { ButtonLink } from "@/components/ui/button";
 import { connection } from "next/server";
@@ -83,6 +84,7 @@ async function Sent({ id }: { id: string }) {
         </div>
       </section>
 
+      {!duplicate && !unavailable && <TrackConversion event="lead" />}
       {!duplicate && !unavailable && (
         <section aria-labelledby="dopo" className="flex flex-col gap-4">
           <h2 id="dopo" className="font-display text-h2">

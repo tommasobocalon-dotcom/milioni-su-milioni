@@ -1,3 +1,4 @@
+import { TrackConversion } from "@/components/site/consent";
 import { Suspense } from "react";
 import Link from "next/link";
 import { connection } from "next/server";
@@ -35,10 +36,14 @@ export default function SubscriptionPage({ searchParams }: PageProps<"/area-part
   return (
     <Suspense fallback={<PartnerSkeleton />}>
       {searchParams.then((sp) => (
-        <Subscription
-          payment={sp.pagamento === "ricevuto" ? "received" : sp.pagamento === "ok" ? "started" : sp.pagamento === "cambio" ? "changed" : null}
-          welcome={sp.benvenuto === "1"}
-        />
+        <>
+          <Subscription
+            payment={sp.pagamento === "ricevuto" ? "received" : sp.pagamento === "ok" ? "started" : sp.pagamento === "cambio" ? "changed" : null}
+            welcome={sp.benvenuto === "1"}
+          />
+          {sp.benvenuto === "1" && <TrackConversion event="signup" />}
+          {(sp.pagamento === "ricevuto" || sp.pagamento === "ok") && <TrackConversion event="purchase" />}
+        </>
       ))}
     </Suspense>
   );

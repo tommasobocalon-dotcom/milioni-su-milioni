@@ -1,3 +1,4 @@
+import { ConsentBanner } from "@/components/site/consent";
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { BellLink, UnreadBell } from "@/components/partner/bell";
@@ -48,6 +49,10 @@ export default function PartnerLayout({ children }: LayoutProps<"/area-partner">
         </Suspense>
         {children}
       </main>
+      {/* Legge l'indirizzo della pagina (usePathname): con Cache Components va dentro un Suspense. */}
+      <Suspense fallback={null}>
+        <ConsentBanner />
+      </Suspense>
     </div>
   );
 }
