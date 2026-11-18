@@ -225,6 +225,13 @@
       "when": 1794953571489,
       "tag": "0031_visite_uniche",
       "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "7",
+      "when": 1794954171489,
+      "tag": "0032_rls_area_cliente",
+      "breakpoints": true
     }
   ]
 }

@@ -9,7 +9,7 @@ import { CookiePreferencesButton } from "@/components/site/consent";
 import { ButtonLink, buttonVariants } from "@/components/ui/button";
 import { requireUser } from "@/lib/auth/session";
 import { marketingConsentOf } from "@/lib/data/client-data";
-import { db } from "@/lib/db/client";
+import { asClient } from "@/lib/db/tenant";
 import { leads, partners, users } from "@/lib/db/schema";
 
 export const metadata: Metadata = {
@@ -35,22 +35,24 @@ export default function ClientAreaPage() {
 
 async function ClientArea() {
   const user = await requireUser();
-  // Le richieste sono legate all'email: si vedono solo dopo averla confermata (vedi client-data.ts).
-  const [{ verified }] = await db.select({ verified: users.emailVerifiedAt }).from(users).where(eq(users.id, user.id)).limit(1);
-  const requests = !verified
-    ? []
-    : await db
-        .select({
-          id: leads.id,
-          requestType: leads.requestType,
-          status: leads.status,
-          createdAt: leads.createdAt,
-          partner: partners.displayName,
-        })
-        .from(leads)
-        .innerJoin(partners, eq(partners.id, leads.partnerId))
-        .where(and(eq(leads.clientEmail, user.email), isNotNull(leads.verifiedAt)))
-        .orderBy(desc(leads.createdAt));
+  // Le richieste sono legate all'email: si vedono solo dopo averla confermata (vedi client-data.ts), e la RLS di
+  // asClient lo garantisce anche nel database.
+  const { verified, requests } = await asClient(user.id, async (tx) => {
+    const [u] = await tx.select({ verified: users.emailVerifiedAt }).from(users).where(eq(users.id, user.id)).limit(1);
+    const rows = await tx
+      .select({
+        id: leads.id,
+        requestType: leads.requestType,
+        status: leads.status,
+        createdAt: leads.createdAt,
+        partner: partners.displayName,
+      })
+      .from(leads)
+      .innerJoin(partners, eq(partners.id, leads.partnerId))
+      .where(and(eq(leads.clientEmail, user.email), isNotNull(leads.verifiedAt)))
+      .orderBy(desc(leads.createdAt));
+    return { verified: u?.verified ?? null, requests: rows };
+  });
   const marketing = !!verified && (await marketingConsentOf(user.email));
 
   return (

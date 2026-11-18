@@ -7,7 +7,7 @@ import { PartnerPageHeader } from "@/components/partner/page-header";
 import { PartnerSkeleton } from "@/components/partner/skeleton";
 import { requirePartner } from "@/lib/auth/session";
 import { listLeads } from "@/lib/data/partner-area";
-import { db } from "@/lib/db/client";
+import { asPartner } from "@/lib/db/tenant";
 import { partners } from "@/lib/db/schema";
 
 export const metadata = { title: "Posta in arrivo" };
@@ -26,7 +26,7 @@ async function Inbox() {
   const now = new Date();
   const [unread, [contact]] = await Promise.all([
     listLeads(partner.id, "new"),
-    db.select({ email: partners.email }).from(partners).where(eq(partners.id, partner.id)),
+    asPartner(partner.id, (tx) => tx.select({ email: partners.email }).from(partners).where(eq(partners.id, partner.id))),
   ]);
 
   return (

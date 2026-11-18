@@ -171,8 +171,10 @@ export async function updateProfile(_prev: ActionState, formData: FormData): Pro
   const d = parsed.data;
   // Ragione sociale e partita IVA finiscono in fattura: le cambia solo il titolare dell'account.
   const fiscal = memberRole === "owner" ? { businessName: d.businessName, vatNumber: d.vatNumber } : {};
-  await db.transaction(async (tx) => {
-    await tx
+  // Il profilo dell'azienda passa dalla RLS (solo le colonne del profilo, migrazione 0032); nome e foto della persona
+  // e registro attività restano sul ruolo dell'app.
+  await asPartner(partner.id, (tx) =>
+    tx
       .update(partners)
       .set({
         ...fiscal,
@@ -187,7 +189,9 @@ export async function updateProfile(_prev: ActionState, formData: FormData): Pro
         hideDirectContacts: formData.get("hideDirectContacts") === "on",
         ...(logo && { logoUrl: logo.url }),
       })
-      .where(eq(partners.id, partner.id));
+      .where(eq(partners.id, partner.id)),
+  );
+  await db.transaction(async (tx) => {
     await tx
       .update(users)
       .set({ name: `${d.firstName} ${d.lastName}`, ...(avatar && { avatarUrl: avatar.url }) })
