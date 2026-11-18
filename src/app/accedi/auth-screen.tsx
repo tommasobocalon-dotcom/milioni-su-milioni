@@ -36,6 +36,7 @@ function oauthMessage(code: string | undefined): string | null {
 const NOTICES: Record<string, { text: string; tone: "ok" | "error" }> = {
   "email-confermata": { text: "Email confermata. Ora puoi accedere.", tone: "ok" },
   "link-scaduto": { text: "Il link non è più valido. Accedi e chiedine uno nuovo dalla tua area.", tone: "error" },
+  "account-eliminato": { text: "Il tuo account è stato eliminato insieme ai tuoi dati.", tone: "ok" },
 };
 
 async function OAuthNotice({ searchParams }: { searchParams: SearchParams }) {

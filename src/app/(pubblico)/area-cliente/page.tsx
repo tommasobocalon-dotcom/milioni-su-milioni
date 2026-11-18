@@ -4,10 +4,13 @@ import { and, desc, eq, isNotNull } from "drizzle-orm";
 import { LogOut } from "lucide-react";
 import { logout } from "@/app/accedi/actions";
 import { EmailVerifyBanner } from "@/components/site/email-verify-banner";
-import { ButtonLink } from "@/components/ui/button";
+import { DeleteAccountForm, RevokeMarketingButton } from "@/components/site/client-privacy";
+import { CookiePreferencesButton } from "@/components/site/consent";
+import { ButtonLink, buttonVariants } from "@/components/ui/button";
 import { requireUser } from "@/lib/auth/session";
+import { marketingConsentOf } from "@/lib/data/client-data";
 import { db } from "@/lib/db/client";
-import { leads, partners } from "@/lib/db/schema";
+import { leads, partners, users } from "@/lib/db/schema";
 
 export const metadata: Metadata = {
   title: "La mia area",
@@ -32,18 +35,23 @@ export default function ClientAreaPage() {
 
 async function ClientArea() {
   const user = await requireUser();
-  const requests = await db
-    .select({
-      id: leads.id,
-      requestType: leads.requestType,
-      status: leads.status,
-      createdAt: leads.createdAt,
-      partner: partners.displayName,
-    })
-    .from(leads)
-    .innerJoin(partners, eq(partners.id, leads.partnerId))
-    .where(and(eq(leads.clientEmail, user.email), isNotNull(leads.verifiedAt)))
-    .orderBy(desc(leads.createdAt));
+  // Le richieste sono legate all'email: si vedono solo dopo averla confermata (vedi client-data.ts).
+  const [{ verified }] = await db.select({ verified: users.emailVerifiedAt }).from(users).where(eq(users.id, user.id)).limit(1);
+  const requests = !verified
+    ? []
+    : await db
+        .select({
+          id: leads.id,
+          requestType: leads.requestType,
+          status: leads.status,
+          createdAt: leads.createdAt,
+          partner: partners.displayName,
+        })
+        .from(leads)
+        .innerJoin(partners, eq(partners.id, leads.partnerId))
+        .where(and(eq(leads.clientEmail, user.email), isNotNull(leads.verifiedAt)))
+        .orderBy(desc(leads.createdAt));
+  const marketing = !!verified && (await marketingConsentOf(user.email));
 
   return (
     <>
@@ -62,7 +70,9 @@ async function ClientArea() {
         <h2 className="font-display text-h2">Le tue richieste</h2>
         {requests.length === 0 ? (
           <div className="flex flex-col items-start gap-4 rounded-lg border border-line bg-surface p-6">
-            <p className="text-body">Non hai ancora inviato richieste con questa email.</p>
+            <p className="text-body">
+              {verified ? "Non hai ancora inviato richieste con questa email." : "Dopo aver confermato l'email qui vedrai le richieste inviate con questo indirizzo."}
+            </p>
             <ButtonLink href="/trova-professionista">Trova un professionista</ButtonLink>
           </div>
         ) : (
@@ -80,6 +90,42 @@ async function ClientArea() {
             ))}
           </ul>
         )}
+      </section>
+      <section aria-labelledby="privacy-title" className="flex flex-col gap-4">
+        <h2 id="privacy-title" className="font-display text-h2">
+          I tuoi dati e la privacy
+        </h2>
+        <div className="flex flex-col divide-y divide-line rounded-lg border border-line bg-surface">
+          <div className="flex flex-col gap-2 p-4">
+            <h3 className="font-semibold">Scarica i tuoi dati</h3>
+            <p className="text-body-s text-ink-2">
+              Un file con il tuo account, le richieste inviate e i messaggi all&apos;assistenza.
+              {!verified && " Le richieste compaiono dopo aver confermato l'email."}
+            </p>
+            {/* Link normale, non <Link>: la route risponde con un file da scaricare, non con una pagina. */}
+            <a href="/area-cliente/dati" download className={buttonVariants({ size: "s", variant: "secondary", className: "self-start" })}>
+              Scarica i dati
+            </a>
+          </div>
+          <div className="flex flex-col items-start gap-2 p-4">
+            <h3 className="font-semibold">Consensi</h3>
+            <p className="text-body-s text-ink-2">
+              {marketing
+                ? "Hai accettato di ricevere comunicazioni promozionali in una richiesta di contatto."
+                : "Non ricevi comunicazioni promozionali."}
+            </p>
+            {marketing && <RevokeMarketingButton />}
+            <CookiePreferencesButton className="text-body-s font-semibold text-primary underline underline-offset-2" />
+          </div>
+          <div className="flex flex-col gap-3 p-4">
+            <h3 className="font-semibold">Elimina l&apos;account</h3>
+            <p className="text-body-s text-ink-2">
+              Cancelliamo il tuo account. Le aziende a cui hai scritto tengono la richiesta, ma senza nome, contatti e
+              descrizione. Non si può annullare.
+            </p>
+            <DeleteAccountForm />
+          </div>
+        </div>
       </section>
     </>
   );

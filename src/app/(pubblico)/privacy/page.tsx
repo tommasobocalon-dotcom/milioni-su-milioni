@@ -14,7 +14,7 @@ export default function PrivacyPage() {
         ["Marketing", "Il consenso a ricevere consigli e novità è facoltativo e separato. Puoi revocarlo in qualsiasi momento."],
         ["Cookie", "Cookie tecnici, sempre attivi: quello di accesso, se entri nella tua area; \"geco_visita\", un codice casuale che decide l'ordine delle aziende dello stesso piano nei risultati e si cancella quando chiudi il browser; \"geco_consenso\", che ricorda per 6 mesi la tua scelta sui cookie. Cookie di misurazione delle pubblicità, solo se premi \"Accetta\": Google Ads (_gcl_au e simili) e pixel di Meta (_fbp), che ci dicono quali nostre pubblicità hanno portato a una richiesta o a un'iscrizione e permettono di mostrarti le nostre pubblicità su altri siti. Google e Meta possono trasferire questi dati negli Stati Uniti, con le garanzie del Data Privacy Framework UE-USA. Se rifiuti non li usiamo. Puoi cambiare scelta quando vuoi da \"Preferenze cookie\" in fondo a ogni pagina."],
         ["Dove sono conservati", "I dati delle richieste e degli account sono conservati su server nell'Unione Europea, presso fornitori con cui abbiamo accordi sul trattamento dei dati. Per i cookie di Google e Meta vedi la sezione Cookie."],
-        ["I tuoi diritti", "Puoi chiedere accesso, rettifica, cancellazione o copia dei tuoi dati, e opporti al trattamento, scrivendo al titolare del trattamento."],
+        ["I tuoi diritti", "Puoi chiedere accesso, rettifica, cancellazione o copia dei tuoi dati, e opporti al trattamento, scrivendo al titolare del trattamento. Se hai un account, dalla tua area puoi scaricare i tuoi dati, togliere il consenso alle comunicazioni promozionali ed eliminare l'account."],
       ]}
     />
   );

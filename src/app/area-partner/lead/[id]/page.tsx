@@ -121,7 +121,9 @@ async function Lead({ id }: { id: string }) {
         <aside className="flex flex-col gap-6">
           <section className="flex flex-col gap-3 rounded-lg border border-line bg-surface p-6">
             <h2 className="text-h4 font-semibold">Contatti del cliente</h2>
-            {!lead.clientPhone || !lead.clientEmail ? (
+            {lead.charge !== "locked" && !lead.clientEmail ? (
+              <p className="text-body-s text-ink-2">Il cliente ha eliminato il suo account: nome e contatti non sono più disponibili.</p>
+            ) : !lead.clientPhone || !lead.clientEmail ? (
               <>
                 <p className="inline-flex items-start gap-2 text-body-s">
                   <Lock className="mt-0.5 size-4 shrink-0" aria-hidden /> Questo mese hai già ricevuto le 3 richieste gratuite. Scegli un piano
