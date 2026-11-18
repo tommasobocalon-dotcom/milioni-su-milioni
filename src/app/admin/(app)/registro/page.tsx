@@ -40,7 +40,7 @@ async function Audit({ q }: { q?: string }) {
         {rows.length === 0 ? (
           <Empty>Nessuna attività trovata.</Empty>
         ) : (
-          <div className="overflow-x-auto border-t border-line">
+          <div tabIndex={0} role="region" aria-label="Registro attività" className="overflow-x-auto border-t border-line focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary">
             <table className="w-full min-w-[640px] text-left text-body-s">
               <thead className="bg-muted text-caption text-ink-2">
                 <tr>

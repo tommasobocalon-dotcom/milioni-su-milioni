@@ -17,6 +17,8 @@ export async function Hero({ next }: { next: string }) {
       aria-labelledby="hero-titolo"
       className="relative isolate flex min-h-dvh md:min-h-[calc(100dvh-72px)] flex-col overflow-hidden bg-black text-on-brand"
     >
+      {/* Il poster del primo video è l'elemento più grande della pagina (LCP): senza preload il browser lo scopre tardi. React lo sposta nell'head. */}
+      <link rel="preload" as="image" href={HERO_SLIDES[0].poster} fetchPriority="high" />
       <HeroSlides slides={HERO_SLIDES} next={next}>
         <div className="relative z-10 mx-auto flex w-full max-w-[946px] flex-1 flex-col justify-center px-4 py-10 min-[482px]:px-8 md:py-0 min-[1011px]:px-0">
           <div className="flex max-w-[600px] flex-col min-[482px]:max-w-[588px]">

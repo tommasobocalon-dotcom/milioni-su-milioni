@@ -149,7 +149,8 @@ export function ProfileView({ p }: { p: PartnerProfile }) {
                   Il partner non ha ancora pubblicato prezzi indicativi.
                 </p>
               ) : (
-                <div className="overflow-x-auto">
+                // Sul telefono la tabella si scorre di lato, anche da tastiera (WCAG 2.1.1).
+                <div tabIndex={0} role="region" aria-label="Listino prezzi" className="overflow-x-auto focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary">
                   <table className="w-full min-w-[560px] text-left text-body-s">
                     <thead className="bg-subtle text-caption text-ink-2">
                       <tr>

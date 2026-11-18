@@ -64,7 +64,9 @@ export function ScrollSteps({ heading, steps }: { heading: React.ReactNode; step
         <div className="container-page">{heading}</div>
         <ol
           ref={track}
-          className="flex snap-x snap-mandatory scroll-px-4 gap-5 overflow-x-auto px-4 pb-4 [scrollbar-width:none] will-change-transform sm:scroll-px-8 sm:px-8 lg:gap-8 lg:px-[max(2rem,calc((100vw-80rem)/2+2rem))] group-data-[pinned=true]/pin:overflow-visible group-data-[pinned=true]/pin:pb-0"
+          // Si scorre anche con le frecce della tastiera (WCAG 2.1.1).
+          tabIndex={0}
+          className="flex snap-x snap-mandatory scroll-px-4 gap-5 overflow-x-auto px-4 pb-4 [scrollbar-width:none] will-change-transform sm:scroll-px-8 sm:px-8 lg:gap-8 lg:px-[max(2rem,calc((100vw-80rem)/2+2rem))] focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-primary group-data-[pinned=true]/pin:overflow-visible group-data-[pinned=true]/pin:pb-0"
         >
           {steps.map((s, i) => (
             <li key={s.title} className="flex w-[82vw] shrink-0 snap-start flex-col gap-5 sm:w-[24rem] lg:w-[30rem]">

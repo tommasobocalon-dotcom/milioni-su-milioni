@@ -73,7 +73,6 @@ function SponsorRow({
           <Link
             href={s.href}
             tabIndex={copy ? -1 : undefined}
-            aria-label={`${s.displayName}, ${s.categoryName.toLowerCase()} a ${s.municipalityName} (sponsorizzato)`}
             className="group/logo flex h-24 items-center gap-3.5 rounded-lg px-6 transition-colors hover:bg-surface md:px-8"
           >
             <LogoPartner
@@ -89,6 +88,7 @@ function SponsorRow({
               <span className="text-body-s whitespace-nowrap text-ink-2">
                 {s.categoryName} · {s.municipalityName}
               </span>
+              <span className="sr-only">(sponsorizzato)</span>
             </span>
           </Link>
         </li>

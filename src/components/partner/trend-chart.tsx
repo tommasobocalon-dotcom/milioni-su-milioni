@@ -73,7 +73,7 @@ export function TrendChart({ days, metrics, boostDays }: { days: string[]; metri
 
       <div className="flex gap-2">
         {/* Asse Y: tre valori puliti */}
-        <div className="flex h-44 flex-col justify-between text-right text-caption tabular-nums text-ink-3" aria-hidden>
+        <div className="flex h-44 flex-col justify-between text-right text-caption tabular-nums text-ink-2" aria-hidden>
           <span className="-translate-y-1/2">{top}</span>
           <span>{top / 2}</span>
           <span className="translate-y-1/2">0</span>
@@ -120,7 +120,7 @@ export function TrendChart({ days, metrics, boostDays }: { days: string[]; metri
               ))}
             </div>
           </div>
-          <div className="flex justify-between text-caption text-ink-3" aria-hidden>
+          <div className="flex justify-between text-caption text-ink-2" aria-hidden>
             <span>{fmtDay(days[0])}</span>
             {days.length > 14 && <span>{fmtDay(days[Math.floor(days.length / 2)])}</span>}
             <span>{fmtDay(days[days.length - 1])}</span>
