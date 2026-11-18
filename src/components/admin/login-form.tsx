@@ -38,6 +38,8 @@ export function AdminLoginForm() {
       <Button type="submit" disabled={pending}>
         {pending ? "Accesso…" : "Entra nel gestionale"} <ArrowRight aria-hidden />
       </Button>
+      {/* <a> e non <Link>: con ADMIN_URL il recupero password sta sul sito, a un altro indirizzo (src/lib/domain/admin-host.ts). */}
+      {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
       <a href="/accedi/password" className="self-center text-body-s font-semibold text-primary hover:underline">
         Password dimenticata?
       </a>

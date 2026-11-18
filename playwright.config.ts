@@ -52,9 +52,8 @@ export default defineConfig({
       STRIPE_WEBHOOK_SECRET: E2E_STRIPE_WEBHOOK_SECRET,
       // I test non chiamano Stripe: anche con la chiave in .env.local si usa l'attivazione di prova.
       STRIPE_SECRET_KEY: "",
-      // Niente SMS ed email veri dai test anche con Brevo attivo in .env.local: codici e link restano a schermo.
+      // Niente email vere dai test anche con Brevo attivo in .env.local: codici e link restano a schermo.
       EMAIL_PROVIDER: "console",
-      SMS_PROVIDER: "console",
       INBOUND_EMAIL_TOKEN: E2E_INBOUND_EMAIL_TOKEN,
       NEXT_PUBLIC_GOOGLE_ADS_ID: E2E_GOOGLE_ADS_ID,
       NEXT_PUBLIC_GOOGLE_ADS_LEAD_LABEL: "e2eLead",

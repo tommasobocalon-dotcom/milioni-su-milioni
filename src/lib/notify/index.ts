@@ -1,15 +1,15 @@
 import "server-only";
 import { demoMode } from "@/lib/demo-mode";
-import { brevoEmailRequest, brevoSmsRequest } from "@/lib/domain/brevo";
+import { brevoEmailRequest } from "@/lib/domain/brevo";
 import { parseEmailList } from "@/lib/domain/support";
 
 /**
- * Invio di SMS ed email: il resto dell'app usa solo queste due funzioni.
+ * Invio delle email: il resto dell'app usa solo sendEmail (gli SMS sono stati tolti il 14/11/2026).
  * Provider "console" (sviluppo): i messaggi vengono stampati nel terminale.
  * Provider "brevo" (produzione): API di Brevo, chiave in BREVO_API_KEY (guida in DEPLOY.md).
  */
 
-/** L'invio non è riuscito (provider giù, credito SMS finito, configurazione sbagliata). */
+/** L'invio non è riuscito (provider giù, configurazione sbagliata). */
 export class DeliveryError extends Error {}
 
 async function brevo(kind: string, request: { url: string; init: RequestInit }) {
@@ -19,7 +19,6 @@ async function brevo(kind: string, request: { url: string; init: RequestInit }) 
   } catch (e) {
     throw new DeliveryError(`Brevo ${kind}: nessuna risposta (${e instanceof Error ? e.message : e})`);
   }
-  // 402 = credito SMS esaurito: va ricaricato dal pannello Brevo.
   if (!res.ok) throw new DeliveryError(`Brevo ${kind}: HTTP ${res.status} ${(await res.text()).slice(0, 300)}`);
 }
 
@@ -27,18 +26,6 @@ function apiKey(): string {
   const key = process.env.BREVO_API_KEY;
   if (!key) throw new DeliveryError("BREVO_API_KEY non impostata");
   return key;
-}
-
-export async function sendSms(to: string, text: string): Promise<void> {
-  const provider = process.env.SMS_PROVIDER ?? "console";
-  if (provider === "console") {
-    console.log(`\n[sms → ${to}] ${text}\n`);
-    return;
-  }
-  if (provider === "brevo") {
-    return brevo("SMS", brevoSmsRequest({ apiKey: apiKey(), sender: process.env.SMS_SENDER || "geco", to, text }));
-  }
-  throw new DeliveryError(`Provider SMS "${provider}" sconosciuto`);
 }
 
 /** `replyTo`: dove arrivano le risposte (es. la casella dell'assistenza, che apre o aggiorna i ticket). */

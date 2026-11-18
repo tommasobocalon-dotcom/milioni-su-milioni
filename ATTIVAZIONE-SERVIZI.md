@@ -20,7 +20,7 @@ Le variabili si inseriscono in due posti:
 
 ## 1. Antispam: Cloudflare Turnstile
 
-Turnstile controlla che chi invia un modulo sia una persona. Di solito non chiede nulla all'utente: compare una casella solo se il traffico sembra sospetto. Serve soprattutto sulla richiesta di contatto, perché ogni richiesta fa partire un SMS a pagamento.
+Turnstile controlla che chi invia un modulo sia una persona. Di solito non chiede nulla all'utente: compare una casella solo se il traffico sembra sospetto. Serve soprattutto sulla richiesta di contatto, perché ogni richiesta fa partire un'email con il codice di conferma.
 
 ### Passo 1.1 — Creare il widget
 1. Vai su https://dash.cloudflare.com e accedi (o crea un account gratuito). Non serve spostare il dominio su Cloudflare.
@@ -41,7 +41,7 @@ Attenzione: la Site Key entra nel codice della pagina al momento della build. Do
 
 ### Passo 1.3 — Verificare
 1. Apri una scheda partner e avvia una richiesta di contatto fino al passo "I tuoi contatti".
-2. Invia: deve arrivare al passo di verifica SMS senza errori.
+2. Invia: deve arrivare al passo del codice via email senza errori.
 3. Se compare "Non siamo riusciti a verificare che tu non sia un programma automatico", vedi *Problemi frequenti*.
 
 > Per provare in locale senza un widget vero, Cloudflare dà chiavi di prova che passano sempre:
