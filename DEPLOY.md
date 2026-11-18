@@ -16,11 +16,14 @@ Come funziona la protezione: [src/proxy.ts](src/proxy.ts) legge la variabile `SI
 
 ## Passo 1 — Database su Supabase
 
-> **Il sito online oggi** (16/11/2026) usa il database `supabase-teal-engine` (ID `daxpsckkfilslihqtghs`, Free),
-> creato dal **Marketplace di Vercel** nel team "Alvise Marchi's projects": non compare negli account
-> Supabase personali. Ci si entra da Vercel → progetto `geco` → **Storage** → `supabase-teal-engine` →
-> **Open in Supabase**. Le variabili (`POSTGRES_URL`, `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, …) le
-> gestisce l'integrazione. Bucket pubblico `uploads` (5 MB a file) e `STORAGE_PROVIDER=supabase` già impostati.
+> **Il sito online oggi** (dal 18/11/2026) gira sull'account Vercel **info@gecoitalia.it** (team "GecoItalia",
+> `geco-italia`, piano Hobby, progetto `geco`) e usa il database Supabase **`gecoitalia`** (ref
+> `jemsdfbpwuacfatququz`, Francoforte, Free) dell'account Supabase info@gecoitalia.it, organizzazione "tommaso".
+> Variabili impostate a mano su Vercel: `DATABASE_URL` (pooler transaction, porta 6543), `SUPABASE_URL`,
+> `SUPABASE_SERVICE_ROLE_KEY`. Bucket pubblico `uploads` (5 MB a file) e `STORAGE_PROVIDER=supabase`.
+> Prima del 18/11 sito e database stavano nel team Vercel "Alvise Marchi's projects" (database
+> `supabase-teal-engine` del Marketplace): copiati con `pg_dump`/`pg_restore` (schemi `public` e `drizzle`,
+> ruolo `geco_partner` creato prima), cron del vecchio progetto spento.
 > I passi qui sotto servono solo per un nuovo ambiente.
 
 1. Vai su https://supabase.com e accedi con **GitHub** (lo stesso account del repository).
@@ -245,7 +248,7 @@ tiene solo le ultime 3 copie (artifact `geco-foto-…`), perché ogni copia cont
 
 | Segreto | Valore |
 |---|---|
-| `BACKUP_DATABASE_URL` | Su Vercel, progetto `geco` → Environment Variables → `POSTGRES_URL_NON_POOLING` (o `POSTGRES_URL`: il workflow passa da solo alla porta 5432) |
+| `BACKUP_DATABASE_URL` | Supabase (info@gecoitalia.it) → progetto `gecoitalia` → **Connect** → Session pooler (porta 5432), con la password del database |
 | `BACKUP_PASSPHRASE` | Una frase lunga generata dal gestore di password. **Va conservata**: senza, i backup non si aprono |
 
 Poi Actions → **Backup database** → **Run workflow** e controllare che diventi verde.
