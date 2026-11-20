@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { accountStatusFrom, periodFromItems, planFromLookupKey, planLookupKey, subscriptionStatusFromStripe, homeSponsorFromCheckout, areaExtensionFromCheckout, searchBoostFromCheckout } from "./billing";
+import { accountStatusFrom, listingStatus, periodFromItems, planFromLookupKey, planLookupKey, subscriptionStatusFromStripe, homeSponsorFromCheckout, areaExtensionFromCheckout, searchBoostFromCheckout } from "./billing";
 
 describe("subscriptionStatusFromStripe", () => {
   it("attivo solo con pagamento in regola", () => {
@@ -114,5 +114,22 @@ describe("searchBoostFromCheckout", () => {
     expect(searchBoostFromCheckout({ ...paid, payment_status: "unpaid" })).toBeNull();
     expect(searchBoostFromCheckout({ ...paid, metadata: { ...paid.metadata, packageCode: "search-72" } })).toBeNull();
     expect(searchBoostFromCheckout({ ...paid, metadata: { kind: "home_sponsor", partnerId: "p1", packageCode: "home-7" } })).toBeNull();
+  });
+});
+
+describe("listingStatus", () => {
+  it("la scheda va online solo con il piano attivo e i dati verificati dal team", () => {
+    expect(listingStatus("active", "verified")).toBe("active");
+  });
+
+  it("con il piano attivo ma senza verifica (o con la verifica respinta) resta nascosta, in attivazione", () => {
+    expect(listingStatus("active", "pending")).toBe("activating");
+    expect(listingStatus("active", "rejected")).toBe("activating");
+  });
+
+  it("senza piano attivo vale lo stato del piano, verificata o no", () => {
+    expect(listingStatus("suspended", "verified")).toBe("suspended");
+    expect(listingStatus("cancelled", "pending")).toBe("cancelled");
+    expect(listingStatus("activating", "verified")).toBe("activating");
   });
 });

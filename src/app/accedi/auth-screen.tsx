@@ -94,14 +94,14 @@ async function FreeLaunchOffer({ className }: { className?: string }) {
 /** Cosa cambia tra l'accesso dei clienti (/accedi) e quello delle aziende (/accedi/azienda). */
 const SCREEN = {
   client: {
-    claim: "Casa e lavori di casa, con persone verificate del Veneto.",
+    claim: "Casa e lavori di casa, con aziende del Veneto.",
     points: ["Richieste dei clienti confermate via email", "Zone servite e lavori già svolti in vista", "Prezzi indicativi prima di chiamare"],
     switchText: "Hai un'attività?",
     switchLink: { href: "/accedi/azienda", label: "Vai all'accesso aziende" },
   },
   business: {
     claim: "Richieste verificate dalla tua zona, senza intermediari.",
-    points: ["Ogni richiesta arriva già confermata dal cliente", "Richieste, abbonamento e sponsorizzazioni in un'unica area", "La tua scheda compare appena il piano è attivo"],
+    points: ["Ogni richiesta arriva già confermata dal cliente", "Richieste, abbonamento e sponsorizzazioni in un'unica area", "La scheda va online dopo la verifica dei dati dell'azienda"],
     switchText: "Cerchi casa o un professionista?",
     switchLink: { href: "/accedi", label: "Vai all'accesso clienti" },
   },

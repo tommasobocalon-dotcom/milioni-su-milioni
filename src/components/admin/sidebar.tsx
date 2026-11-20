@@ -51,7 +51,7 @@ export function AdminSidebar({ ticketBadge, siteHref }: { ticketBadge: React.Rea
   return (
     <aside className="flex shrink-0 flex-col bg-brand text-on-brand lg:sticky lg:top-0 lg:h-screen lg:w-64">
       <div className="flex items-center justify-between px-4 py-4 lg:px-5 lg:py-6">
-        <span className="flex items-center gap-3">
+        <span className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
           <Wordmark className="text-xl text-on-brand" href="/admin" label="Gestionale GecoItalia, panoramica" />
           <span className="text-body-s font-semibold text-on-brand-muted">Gestionale</span>
         </span>

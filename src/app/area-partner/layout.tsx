@@ -7,6 +7,7 @@ import { CompanySwitcher } from "@/components/partner/company-switcher";
 import { PartnerSidebar } from "@/components/partner/sidebar";
 import { PartnerTabs } from "@/components/partner/tabs";
 import { EmailVerifyBanner } from "@/components/site/email-verify-banner";
+import { ListingReviewBanner } from "@/components/partner/listing-review-banner";
 import { requirePartner } from "@/lib/auth/session";
 
 export const metadata: Metadata = { title: { default: "Area Partner", template: "%s · Area Partner" }, robots: { index: false } };
@@ -38,6 +39,11 @@ export default function PartnerLayout({ children }: LayoutProps<"/area-partner">
         <Suspense fallback={null}>
           <div className="mb-6 empty:hidden">
             <EmailVerifyBanner audience="business" />
+          </div>
+        </Suspense>
+        <Suspense fallback={null}>
+          <div className="mb-6 empty:hidden">
+            <ListingReviewBanner />
           </div>
         </Suspense>
         <Suspense fallback={null}>

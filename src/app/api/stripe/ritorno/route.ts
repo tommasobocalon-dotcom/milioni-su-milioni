@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { requirePartner } from "@/lib/auth/session";
 import { confirmCheckoutReturn } from "@/lib/billing/stripe";
+import { logError } from "@/lib/domain/log";
 
 /**
  * Pagina di ritorno dal Checkout di Stripe (success_url). Conferma il pagamento rileggendo la sessione da
@@ -15,7 +16,7 @@ export async function GET(request: NextRequest) {
       result = await confirmCheckoutReturn(sessionId, partner.id);
     } catch (e) {
       // Il webhook completerà l'operazione: il partner vede comunque l'avviso di pagamento in corso.
-      console.error("[stripe] conferma al ritorno non riuscita:", sessionId, e);
+      logError(`[stripe] conferma al ritorno non riuscita: ${sessionId}`, e);
     }
   }
   const page = result?.kind === "subscription" ? "/area-partner/abbonamento" : "/area-partner/sponsorizzazioni";

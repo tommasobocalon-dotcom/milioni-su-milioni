@@ -62,7 +62,7 @@ export function AreaExtensionPicker({ comuni, mode, disabled }: { comuni: Comune
           }}
           placeholder="Cerca un comune del Veneto"
           autoComplete="off"
-          className="h-10 min-w-0 flex-1 rounded-md border border-line bg-surface px-3 text-body-s focus:border-primary focus:outline-none"
+          className="h-10 min-w-0 flex-1 rounded-md border border-line bg-surface px-3 text-body-s focus:border-primary focus:outline-none focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-primary"
         />
         <datalist id="estensione-comuni">
           {comuni.map((c) => (

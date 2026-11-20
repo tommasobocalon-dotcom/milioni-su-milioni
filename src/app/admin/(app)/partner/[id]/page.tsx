@@ -165,7 +165,7 @@ async function PartnerDetail({ id }: { id: string }) {
         <div className="flex flex-col gap-6">
           <Panel title="Verifica">
             <div className="flex flex-col gap-3 p-5">
-              <p className="text-body-s text-ink-2">Il badge &quot;Verificato&quot; compare sulla scheda pubblica dopo il controllo di P.IVA, sede e documenti.</p>
+              <p className="text-body-s text-ink-2">Dopo il controllo di P.IVA, sede e documenti. Con la verifica la scheda va online (se il piano è attivo) con il badge &quot;Verificato&quot;; senza resta nascosta.</p>
               <div className="flex flex-wrap gap-2">
                 {p.verificationStatus !== "verified" && (
                   <form action={setVerificationAction.bind(null, p.id)}>

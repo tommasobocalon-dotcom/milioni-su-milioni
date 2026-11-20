@@ -9,6 +9,8 @@ import { auditLogs, categories, municipalities, partnerMembers, partners, servic
 import { slugify } from "@/lib/domain/format";
 import { billingContactProblem, freeSlug, isValidVatNumber, normalizeVatNumber } from "@/lib/domain/partner-signup";
 import { ipRateLimited } from "@/lib/security/ip-limit";
+import { adminBaseUrl } from "@/lib/domain/admin-host";
+import { alertTeam } from "@/lib/notify";
 
 export type SignupState = { error?: string; field?: string };
 
@@ -68,14 +70,14 @@ export async function registerPartner(_prev: SignupState, formData: FormData): P
   ]);
   if (!category) return { error: "Scegli cosa fa la tua attività", field: "categoryId" };
   if (!place) return { error: "Scegli il comune della sede", field: "municipalityId" };
-  if (sameVat) return { error: "Questa partita IVA ha già una scheda su geco: scrivi all'assistenza per entrare nell'account", field: "vatNumber" };
+  if (sameVat) return { error: "Questa partita IVA ha già una scheda su GecoItalia: scrivi all'assistenza per entrare nell'account", field: "vatNumber" };
 
   const taken = await db.select({ slug: partners.slug }).from(partners).where(like(partners.slug, `${slugify(d.displayName)}%`));
   const slug = freeSlug(d.displayName, place.name, new Set(taken.map((t) => t.slug)));
 
   // ponytail: due registrazioni con lo stesso nome nello stesso istante possono scontrarsi sul vincolo
   // unique dello slug (errore generico); il nuovo tentativo dell'utente trova lo slug libero.
-  await db.transaction(async (tx) => {
+  const partnerId = await db.transaction(async (tx) => {
     const [p] = await tx
       .insert(partners)
       .values({
@@ -102,6 +104,13 @@ export async function registerPartner(_prev: SignupState, formData: FormData): P
     await tx.insert(serviceAreas).values({ partnerId: p.id, provinceId: place.provinceId });
     if (user.role === "client") await tx.update(users).set({ role: "partner" }).where(eq(users.id, user.id));
     await tx.insert(auditLogs).values({ actor: user.email, action: "partner.signup", entity: "partner", entityId: p.id, data: { slug } });
+    return p.id;
   });
+  // La scheda va online solo dopo la verifica del team (listingStatus): chi controlla deve saperlo subito.
+  await alertTeam(
+    "Nuova azienda da verificare",
+    `${d.displayName} (${d.businessName}, P.IVA ${d.vatNumber}) si è iscritta con ${user.email}.\n\n` +
+      `La scheda va online solo dopo la verifica di partita IVA e sede: ${adminBaseUrl(process.env.ADMIN_URL, process.env.APP_URL ?? "http://localhost:3000")}/partner/${partnerId}`,
+  );
   redirect("/area-partner/abbonamento?benvenuto=1");
 }

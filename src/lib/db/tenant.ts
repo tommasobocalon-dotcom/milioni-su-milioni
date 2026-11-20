@@ -16,3 +16,21 @@ export function asPartner<T>(partnerId: string, fn: (tx: PartnerTx) => Promise<T
     return fn(tx);
   });
 }
+
+export type ClientTx = PartnerTx;
+
+/**
+ * Esegue le letture dell'Area cliente come ruolo `geco_client` (migrazione 0032): il database mostra solo l'account
+ * `userId` e, se la sua email è confermata, le richieste di contatto di quell'email (sono legate all'email, non
+ * all'account). L'email confermata la legge qui, dal database, prima di cambiare ruolo: non arriva dal chiamante.
+ */
+export function asClient<T>(userId: string, fn: (tx: ClientTx) => Promise<T>): Promise<T> {
+  return db.transaction(async (tx) => {
+    await tx.execute(sql`
+      select set_config('app.user_id', ${userId}, true),
+        set_config('app.user_email', coalesce((select email from users where id = ${userId} and email_verified_at is not null), ''), true)`);
+    // Il ruolo cambia in un secondo momento: la lettura di users qui sopra è ancora quella dell'app.
+    await tx.execute(sql`select set_config('role', 'geco_client', true)`);
+    return fn(tx);
+  });
+}

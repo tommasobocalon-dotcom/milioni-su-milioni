@@ -30,7 +30,7 @@ async function Overview() {
     { n: o.partnersBy.suspended, label: ["azienda sospesa (pagamento non riuscito o a mano)", "aziende sospese (pagamento non riuscito o a mano)"], href: "/admin/partner?filtro=suspended", icon: CircleAlert },
     { n: o.leadsNotDelivered, label: ["richiesta non consegnata negli ultimi 7 giorni: l'azienda non era attiva", "richieste non consegnate negli ultimi 7 giorni: le aziende non erano attive"], href: "/admin/richieste?filtro=non-consegnate", icon: Inbox },
     { n: o.stuckActivating, label: ["azienda iscritta da più di 3 giorni senza piano: da richiamare", "aziende iscritte da più di 3 giorni senza piano: da richiamare"], href: "/admin/partner?filtro=activating", icon: Phone },
-    { n: o.toVerify, label: ["partner da verificare", "partner da verificare"], href: "/admin/partner?filtro=da-verificare", icon: BadgeCheck },
+    { n: o.toVerify, label: ["azienda da verificare: finché non la verifichi la scheda resta nascosta", "aziende da verificare: finché non le verifichi le schede restano nascoste"], href: "/admin/partner?filtro=da-verificare", icon: BadgeCheck },
     { n: o.freeAtLimit, label: ["azienda gratuita ha finito le richieste del mese: proponi un piano", "aziende gratuite hanno finito le richieste del mese: proponi un piano"], href: "/admin/abbonamenti?filtro=gratuiti", icon: Euro },
     { n: o.sponsorshipsEnding, label: ["sponsorizzazione finisce entro 3 giorni", "sponsorizzazioni finiscono entro 3 giorni"], href: "/admin/sponsorizzazioni", icon: Rocket },
     { n: o.leadsUnconfirmed, label: ["richiesta con codice mai confermato (7 giorni): se crescono, controlla le email", "richieste con codice mai confermato (7 giorni): se crescono, controlla le email"], href: "/admin/richieste?filtro=da-confermare", icon: MailWarning },
@@ -61,7 +61,7 @@ async function Overview() {
       </section>
 
       <section aria-label="Indicatori" className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <Kpi icon={Euro} label="Ricorrente mensile (MRR)" value={formatEuro(o.mrrCents)} note={`${o.activeSubscriptions} a pagamento · ${o.freeSubscriptions} gratuiti · IVA esclusa`} />
+        <Kpi icon={Euro} label="Ricorrente mensile (MRR)" value={formatEuro(o.mrrCents)} note={`${o.activeSubscriptions} a pagamento · ${o.freeSubscriptions} ${o.freeSubscriptions === 1 ? "gratuito" : "gratuiti"} · IVA esclusa`} />
         <Kpi
           icon={Store}
           label="Partner attivi"

@@ -1,0 +1,29 @@
+# Aggiornamenti delle dipendenze con pull request settimanali, raggruppate per non riempire la lista di PR.
+# Le correzioni di sicurezza arrivano a parte e subito: GitHub → Settings → Advanced Security → Dependabot security
+# updates (gratis sui repository pubblici). Ogni PR passa dalla CI (ci.yml) prima di essere unita.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: "06:00"
+      timezone: Europe/Rome
+    open-pull-requests-limit: 5
+    groups:
+      # Versioni minori e correzioni insieme; le versioni maggiori (es. Next 17) arrivano una per PR.
+      produzione:
+        dependency-type: production
+        update-types: [minor, patch]
+      sviluppo:
+        dependency-type: development
+        update-types: [minor, patch]
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    groups:
+      azioni:
+        patterns: ["*"]

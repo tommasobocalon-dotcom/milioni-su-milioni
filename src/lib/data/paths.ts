@@ -1,8 +1,8 @@
 import "server-only";
-import { eq, sql } from "drizzle-orm";
+import { and, eq, isNotNull, sql } from "drizzle-orm";
 import { cacheLife, cacheTag } from "next/cache";
 import { db } from "@/lib/db/client";
-import { areaExtensions, categories, municipalities, partners, provinces, serviceAreas } from "@/lib/db/schema";
+import { areaExtensions, categories, municipalities, partners, portfolioItems, provinces, serviceAreas } from "@/lib/db/schema";
 
 /** Percorsi dei profili pubblici da prerenderizzare (pagine indicizzabili, PRD §5.4 e §15). */
 export async function listPublicPartnerPaths() {
@@ -43,4 +43,16 @@ export async function listCategoryPlacePaths(): Promise<{ categorySlug: string; 
     select c.slug as "categorySlug", m.slug as "municipalitySlug"
       from covered join ${categories} c on c.id = covered.category_id join ${municipalities} m on m.id = covered.municipality_id
       order by 1, 2`);
+}
+
+/** Lavori e immobili pubblici di Ispirazione (/ispirazione/[id]), con la data di pubblicazione per la sitemap. */
+export async function listPublicWorkPaths(): Promise<{ id: string; createdAt: Date }[]> {
+  "use cache";
+  cacheLife("hours");
+  cacheTag("catalog");
+  return db
+    .select({ id: portfolioItems.id, createdAt: portfolioItems.createdAt })
+    .from(portfolioItems)
+    .innerJoin(partners, eq(partners.id, portfolioItems.partnerId))
+    .where(and(eq(partners.accountStatus, "active"), isNotNull(portfolioItems.imageUrl)));
 }

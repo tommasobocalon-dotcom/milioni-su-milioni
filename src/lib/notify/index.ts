@@ -2,6 +2,8 @@ import "server-only";
 import { demoMode } from "@/lib/demo-mode";
 import { brevoEmailRequest } from "@/lib/domain/brevo";
 import { parseEmailList } from "@/lib/domain/support";
+import { logError } from "@/lib/domain/log";
+import { scrubText } from "@/lib/domain/sentry";
 
 /**
  * Invio delle email: il resto dell'app usa solo sendEmail (gli SMS sono stati tolti il 14/11/2026).
@@ -67,14 +69,15 @@ const lastAlert = new Map<string, number>();
  */
 // ponytail: limite per istanza e invio con lo stesso Brevo; se Brevo è giù l'avviso resta solo nei log. Sentry quando serve.
 export async function alertTeam(subject: string, details: string): Promise<void> {
-  console.error(`[allarme] ${subject}\n${details}`);
+  // Nel log del server senza email e dati dei moduli; l'email al team ha il testo completo.
+  console.error(`[allarme] ${subject}\n${scrubText(details)}`);
   const now = Date.now();
   if (now - (lastAlert.get(subject) ?? -Infinity) < ALERT_EVERY_MS) return;
   lastAlert.set(subject, now);
   const list = parseEmailList(process.env.ALERT_EMAILS);
   const to = list.length ? list : parseEmailList(process.env.ADMIN_EMAILS);
   const results = await Promise.allSettled((to.length ? to : ["info@gecoitalia.it"]).map((r) => sendEmail(r, `[GecoItalia] ${subject}`, details)));
-  for (const r of results) if (r.status === "rejected") console.error("[allarme] email non inviata:", r.reason);
+  for (const r of results) if (r.status === "rejected") logError("[allarme] email non inviata:", r.reason);
 }
 
 /** In sviluppo e sul sito di prova, con le email stampate in console, mostriamo il link anche a schermo. */

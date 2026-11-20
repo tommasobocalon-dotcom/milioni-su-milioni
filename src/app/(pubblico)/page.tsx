@@ -1,9 +1,12 @@
+import type { Metadata } from "next";
 import { Suspense } from "react";
 import { EntryBlocks } from "@/components/site/home/entry-blocks";
 import { Hero } from "@/components/site/home/hero";
 import { HowItWorks } from "@/components/site/home/how-it-works";
 import { ProvinceExplorer } from "@/components/site/home/province-explorer";
 import { SponsorStrip } from "@/components/site/home/sponsor-strip";
+
+export const metadata: Metadata = { alternates: { canonical: "/" } };
 
 /**
  * Home, sul modello di thumbtack.com (navbar e hero), con i blocchi pensati per geco:

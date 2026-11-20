@@ -223,14 +223,18 @@ Prima del lancio pubblico l'informativa (`/privacy`, sezione Cookie) va fatta ri
 
 Gli errori del sito (server e browser) arrivano su [Sentry](https://sentry.io) con pagina, browser e punto del codice, e Sentry manda un'email quando ne compare uno nuovo. Senza la variabile qui sotto non parte niente. Codice in `src/instrumentation.ts`, `src/instrumentation-client.ts` e `src/lib/domain/sentry.ts`.
 
-Cosa **non** viene mandato: cookie, intestazioni di accesso, IP, email, contenuto dei moduli, token nei link, parametri delle query al database e variabili del codice (`SENTRY_DATA_COLLECTION` e `scrubEvent`). Niente registrazione dello schermo e nessun cookie nel browser, quindi non serve il consenso del banner.
+Cosa **non** viene mandato: cookie, intestazioni di accesso, IP, email, contenuto dei moduli, token nei link, parametri delle query al database e variabili del codice (`SENTRY_DATA_COLLECTION` e `scrubEvent`). La stessa pulizia vale per i breadcrumb, cioè quello che è successo prima dell'errore (cambi di pagina, chiamate di rete, messaggi della console). Niente registrazione dello schermo e nessun cookie nel browser, quindi non serve il consenso del banner.
+
+Il DSN resta in `NEXT_PUBLIC_SENTRY_DSN`, quindi visibile nel browser: è voluto. Serve al browser per mandare gli errori, permette solo di inviarne, non di leggerli (lo dice anche la documentazione di Sentry). Contro chi lo usasse per mandare errori finti: Sentry → Settings → Projects → `geco` → Client Keys (DSN) → **Allowed Domains** = `gecoitalia.it`, `*.gecoitalia.it`, e un limite di eventi al minuto nella stessa pagina.
 
 1. **Account.** Su https://sentry.io crea l'account con info@gecoitalia.it e, alla domanda sulla regione dei dati, scegli **European Union (Frankfurt)**. Va scelta alla creazione dell'organizzazione e non si cambia dopo. Il piano gratuito (Developer, un utente, 5.000 errori al mese) basta per iniziare.
 2. **Progetto.** Create Project → piattaforma **Next.js** → nome `gecoitalia`. Salta la procedura guidata (`npx @sentry/wizard`): il codice è già nel sito. Copia il **DSN**, del tipo `https://abc123@o456.ingest.de.sentry.io/789`. Deve contenere `ingest.de.sentry.io`: è l'unico indirizzo di Sentry ammesso dalla CSP.
 3. **Vercel** → Environment Variables: `NEXT_PUBLIC_SENTRY_DSN` = il DSN (non è segreto). Facoltative, per vedere nel browser il codice vero e non quello compresso: `SENTRY_ORG` (slug dell'organizzazione), `SENTRY_PROJECT` (`gecoitalia`) e `SENTRY_AUTH_TOKEN` (Settings → Auth Tokens → Create New Token, **segreto**). Poi un nuovo deploy.
-4. **Avvisi.** In Sentry → Alerts lascia l'avviso predefinito "nuovo problema" via email; aggiungi le email del team in Settings → Members, oppure inoltra da info@.
+4. **Avvisi.** In Sentry → Alerts lascia l'avviso predefinito "nuovo problema" via email; aggiungi le email del team in Settings → Members, oppure inoltra da info@. Per accorgersi di un'ondata di errori del server (risposte 500): Alerts → Create Alert → **Number of errors**, ambiente `production`, sopra 20 in 5 minuti → email.
 
-Gli allarmi via email già attivi (`alertTeam`: webhook Stripe, pagamenti falliti, codici non inviati) restano: Sentry li affianca e copre tutti gli altri errori.
+Gli allarmi via email già attivi (`alertTeam`: webhook Stripe, pagamenti falliti, codici non inviati, account bloccato dopo 10 password sbagliate in 15 minuti) restano: Sentry li affianca e copre tutti gli altri errori.
+
+Nei log del server (Vercel → Logs) gli errori passano da `logError` (`src/lib/domain/log.ts`): restano tipo, codice, messaggio e stack, senza email, token nei link e parametri delle query, con la stessa pulizia di Sentry.
 
 ## Backup notturno del database
 
@@ -299,8 +303,38 @@ Altre opzioni, sempre dalla dashboard Vercel e non dal codice:
 - In alternativa o in aggiunta, mettere **Cloudflare** davanti al dominio (proxy arancione) con
   protezione DDoS e rate limiting.
 
-La CSP e gli altri header di sicurezza sono in `next.config.ts`. La `Content-Security-Policy` usa
-`'unsafe-inline'` per gli script: come irrobustimento successivo si può passare a una CSP con nonce.
+La CSP e gli altri header di sicurezza sono in `next.config.ts` (CSP, HSTS, `X-Frame-Options: DENY`,
+`X-Content-Type-Options: nosniff`, `Referrer-Policy`, `Permissions-Policy`, `Cross-Origin-Opener-Policy`). Le immagini
+sono ammesse solo dal sito stesso (anche le foto su Supabase passano da `next/image`, che le scarica solo dal bucket
+pubblico: `images.remotePatterns`) e dai pixel di Google Ads e Meta. La `Content-Security-Policy` usa `'unsafe-inline'`
+per gli script: una CSP con nonce obbligherebbe Next a generare ogni pagina a ogni visita, perdendo il prerender
+parziale (Cache Components) su cui conta la velocità del sito. Scelta tenuta finché il sito non ospita contenuti HTML
+scritti dagli utenti (oggi React fa l'escape di tutti i testi).
+
+### Connessione al database cifrata e verificata
+
+L'app si collega a Supabase sempre in TLS. Per controllare anche che dall'altra parte ci sia davvero Supabase
+(`verify-full`, protegge da un intermediario):
+
+1. Supabase → progetto `gecoitalia` → **Database Settings → SSL Configuration**: **Enforce SSL on incoming connections**
+   attivo (rifiuta le connessioni non cifrate) e **Download certificate** (`prod-ca-2021.crt`).
+2. Vercel → Environment Variables (Production e Preview): `DATABASE_CA_CERT` = il contenuto del file, da
+   `-----BEGIN CERTIFICATE-----` a `-----END CERTIFICATE-----` compresi. Poi un nuovo deploy.
+3. Se il certificato è sbagliato la build si ferma (il sito online resta quello di prima): togliere la variabile e
+   ricontrollare. Codice in `databaseSsl` (`src/lib/db/url.ts`).
+
+I ruoli `anon` e `authenticated` della Data API di Supabase non vedono nessuna tabella (migrazione `0004`), l'Area
+Partner e l'Area cliente passano da ruoli PostgreSQL con RLS (`geco_partner`, `geco_client`).
+
+### Controlli automatici su GitHub
+
+- **CI** (`.github/workflows/ci.yml`): `npm audit --audit-level=high` si ferma con vulnerabilità alte o critiche.
+- **CodeQL** (`.github/workflows/codeql.yml`): analisi di sicurezza del codice a ogni push, sulle PR e ogni lunedì;
+  risultati in GitHub → **Security → Code scanning**.
+- **Dependabot** (`.github/dependabot.yml`): PR settimanali con gli aggiornamenti raggruppati.
+- Da attivare a mano una volta (GitHub → Settings → **Advanced Security**, gratis sui repository pubblici):
+  **Dependabot alerts**, **Dependabot security updates**, **Secret Protection** con **Push protection** (blocca un push
+  che contiene una chiave Stripe, Brevo, Supabase…).
 
 ### Storage dei file in produzione
 

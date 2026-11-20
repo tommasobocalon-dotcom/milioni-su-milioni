@@ -10,6 +10,8 @@ if (dsn) {
     environment: process.env.NEXT_PUBLIC_VERCEL_ENV ?? process.env.NODE_ENV,
     dataCollection: SENTRY_DATA_COLLECTION,
     tracesSampleRate: 0,
+    // Solo errori: niente "sessione" mandata a ogni pagina né misure delle prestazioni.
+    integrations: (defaults) => defaults.filter((i) => !["BrowserSession", "BrowserTracing"].includes(i.name)),
     beforeSend: (event) => scrubEvent(event),
   });
 }

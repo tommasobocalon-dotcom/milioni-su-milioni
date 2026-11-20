@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
 import postgres from "postgres";
 import { E2E_DATABASE_URL } from "../playwright.config";
+import { verifyPartner } from "./verify-partner";
 
 /**
  * Piano gratuito di lancio (soci, 15/11/2026): l'azienda parte gratis con il Base finché non riceve 3 richieste nello
@@ -41,13 +42,15 @@ test("un'azienda parte gratis e dalla 4ª richiesta del mese i contatti restano 
   await page.getByRole("button", { name: "Continua: scegli il piano" }).click();
   await expect(page).toHaveURL(/\/area-partner\/abbonamento\?benvenuto=1$/);
 
-  // Parte gratis: piano attivo senza pagamento, scheda pubblica, contatore a zero.
+  // Parte gratis: piano attivo senza pagamento, contatore a zero. La scheda va online dopo la verifica del team.
   await page.getByRole("button", { name: "Inizia gratis" }).click();
   await expect(page.getByRole("heading", { level: 1, name: "Piano gratuito" })).toBeVisible();
   await expect(page.getByText("0 di 3")).toBeVisible();
   const [{ id: partnerId, slug }] = await sql<{ id: string; slug: string }[]>`select id, slug from partners where display_name = ${name}`;
   const [{ free }] = await sql<{ free: boolean }[]>`select free from subscriptions where partner_id = ${partnerId} and status = 'active'`;
   expect(free).toBe(true);
+  await expect(page.getByText("La tua scheda è in verifica.")).toBeVisible();
+  await verifyPartner(browser, name);
 
   // Le 3 richieste gratuite del mese, già consegnate.
   const [category] = await sql<{ id: string }[]>`select category_id as id from partners where id = ${partnerId}`;

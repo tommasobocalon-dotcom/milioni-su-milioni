@@ -1,8 +1,8 @@
 import "server-only";
-import { and, asc, desc, eq, gt, lte } from "drizzle-orm";
+import { and, asc, desc, eq, gt, lte, sql } from "drizzle-orm";
 import { cacheLife, cacheTag } from "next/cache";
 import { db } from "@/lib/db/client";
-import { boosts, categories, municipalities, partners, provinces } from "@/lib/db/schema";
+import { boosts, categories, municipalities, partnerServices, partners, provinces, services } from "@/lib/db/schema";
 import { profileHref } from "./search";
 
 export type HomeSponsor = {
@@ -53,4 +53,31 @@ export async function getHomeSponsors(): Promise<HomeSponsor[]> {
       municipalityName: r.municipalityName,
       href: profileHref(r),
     }));
+}
+
+/**
+ * Quante aziende attive ci sono per categoria e per servizio: la Home mostra solo le scorciatoie che portano
+ * ad almeno un risultato, così nessuna tessera finisce su una pagina vuota.
+ */
+export async function getActiveCounts(): Promise<{ byCategory: Record<string, number>; byService: Record<string, number> }> {
+  "use cache";
+  cacheLife("minutes");
+  cacheTag("catalog");
+  const [cats, svcs] = await Promise.all([
+    db
+      .select({ slug: categories.slug, n: sql<number>`count(${partners.id})::int` })
+      .from(categories)
+      .innerJoin(partners, and(eq(partners.categoryId, categories.id), eq(partners.accountStatus, "active")))
+      .groupBy(categories.slug),
+    db
+      .select({ slug: services.slug, n: sql<number>`count(distinct ${partners.id})::int` })
+      .from(services)
+      .innerJoin(partnerServices, eq(partnerServices.serviceId, services.id))
+      .innerJoin(partners, and(eq(partners.id, partnerServices.partnerId), eq(partners.accountStatus, "active")))
+      .groupBy(services.slug),
+  ]);
+  return {
+    byCategory: Object.fromEntries(cats.map((c) => [c.slug, c.n])),
+    byService: Object.fromEntries(svcs.map((s) => [s.slug, s.n])),
+  };
 }

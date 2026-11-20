@@ -6,6 +6,7 @@ import { ButtonLink } from "@/components/ui/button";
 import { HOW_PHOTOS } from "@/lib/data/category-photos";
 
 export const metadata: Metadata = {
+  alternates: { canonical: "/come-funziona" },
   title: "Come funziona",
   description:
     "Come trovi agenzie, tecnici e artigiani della tua zona e chiedi di essere richiamato.",

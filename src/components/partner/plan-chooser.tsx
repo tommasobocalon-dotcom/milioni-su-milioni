@@ -80,7 +80,7 @@ export function PlanChooser({
               className={cn("relative flex flex-col gap-4 rounded-lg border bg-surface p-6", featured ? "border-2 border-primary" : "border-line")}
             >
               {featured && (
-                <span className="absolute -top-3 left-6 rounded-full bg-primary px-3 py-0.5 text-caption font-semibold text-on-brand">{current ? "Il tuo piano" : "Il più scelto"}</span>
+                <span className="absolute -top-3 left-6 rounded-full bg-primary px-3 py-0.5 text-caption font-semibold text-on-brand">{current ? "Il tuo piano" : "Consigliato"}</span>
               )}
               <h3 className="text-h3 font-semibold">{p.name}</h3>
               <PlanPrice plan={p} yearly={yearly} />

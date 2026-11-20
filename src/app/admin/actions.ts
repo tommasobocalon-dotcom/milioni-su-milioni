@@ -9,7 +9,7 @@ import { destroySession, requireAdmin } from "@/lib/auth/session";
 import { db } from "@/lib/db/client";
 import { auditLogs, leadEvents, leads, partners, subscriptions, supportMessages, supportTickets } from "@/lib/db/schema";
 
-import { accountStatusFrom } from "@/lib/domain/billing";
+import { accountStatusFrom, listingStatus } from "@/lib/domain/billing";
 import { REPORT_REASONS } from "@/lib/domain/lead-rules";
 import { MESSAGE_MAX, TICKET_STATUSES } from "@/lib/domain/support";
 
@@ -117,15 +117,32 @@ export async function toggleTicketAssigneeAction(ticketId: string) {
 
 const Verification = z.enum(["verified", "rejected", "pending"]);
 
-/** Badge "Verificato" sulla scheda pubblica, dopo il controllo del team (documenti, P.IVA, sede). */
+/** Stato dato dagli abbonamenti, prima della verifica: senza abbonamenti l'azienda è "in attivazione". */
+async function statusFromPlans(tx: Pick<typeof db, "select">, partnerId: string) {
+  const subs = await tx
+    .select({ status: subscriptions.status })
+    .from(subscriptions)
+    .where(and(eq(subscriptions.partnerId, partnerId), inArray(subscriptions.status, ["active", "suspended", "activating"])));
+  return subs.length ? accountStatusFrom(subs.map((s) => s.status)) : "activating";
+}
+
+/**
+ * Verifica del team (partita IVA, sede, documenti): dà il badge "Verificato" e, dal 20/11/2026, manda online la scheda
+ * se il piano è attivo. Togliere la verifica la nasconde di nuovo. Una sospensione a mano resta com'è.
+ */
 export async function setVerificationAction(partnerId: string, formData: FormData) {
   const admin = await requireAdmin();
   const status = Verification.safeParse(formData.get("status"));
   if (!Id.safeParse(partnerId).success || !status.success) return;
-  const [p] = await db.update(partners).set({ verificationStatus: status.data }).where(eq(partners.id, partnerId)).returning({ id: partners.id });
-  if (!p) return;
-  await db.insert(auditLogs).values({ actor: admin.email, action: "partner.verification", entity: "partner", entityId: partnerId, data: { status: status.data } });
-  await refreshPartnerPages(partnerId);
+  const done = await db.transaction(async (tx) => {
+    const [p] = await tx.select({ accountStatus: partners.accountStatus }).from(partners).where(eq(partners.id, partnerId)).for("update");
+    if (!p) return false;
+    const listing = p.accountStatus === "active" || p.accountStatus === "activating" ? listingStatus(await statusFromPlans(tx, partnerId), status.data) : p.accountStatus;
+    await tx.update(partners).set({ verificationStatus: status.data, accountStatus: listing }).where(eq(partners.id, partnerId));
+    await tx.insert(auditLogs).values({ actor: admin.email, action: "partner.verification", entity: "partner", entityId: partnerId, data: { status: status.data, accountStatus: listing } });
+    return true;
+  });
+  if (done) await refreshPartnerPages(partnerId);
 }
 
 /**
@@ -140,12 +157,12 @@ export async function setAccountStatusAction(partnerId: string, _prev: FormState
   if (action === "suspend") {
     next = "suspended";
   } else if (action === "reactivate") {
-    const subs = await db
-      .select({ status: subscriptions.status })
-      .from(subscriptions)
-      .where(and(eq(subscriptions.partnerId, partnerId), inArray(subscriptions.status, ["active", "suspended", "activating"])));
-    next = subs.length ? accountStatusFrom(subs.map((s) => s.status)) : "activating";
-    if (next !== "active") return { error: "Nessun abbonamento pagato: il partner torna attivo da solo quando paga il piano." };
+    const fromPlans = await statusFromPlans(db, partnerId);
+    if (fromPlans !== "active") return { error: "Nessun abbonamento pagato: il partner torna attivo da solo quando paga il piano." };
+    const [v] = await db.select({ verification: partners.verificationStatus }).from(partners).where(eq(partners.id, partnerId));
+    if (!v) return { error: "Partner non trovato" };
+    // Senza verifica la scheda resta nascosta, in attivazione: va online quando il team la verifica.
+    next = listingStatus(fromPlans, v.verification);
   } else {
     return { error: "Azione non valida" };
   }
@@ -153,7 +170,7 @@ export async function setAccountStatusAction(partnerId: string, _prev: FormState
   if (!p) return { error: "Partner non trovato" };
   await db.insert(auditLogs).values({ actor: admin.email, action: `partner.${action}`, entity: "partner", entityId: partnerId, data: { status: next } });
   await refreshPartnerPages(partnerId);
-  return { ok: next === "suspended" ? "Partner sospeso" : "Partner riattivato" };
+  return { ok: next === "suspended" ? "Partner sospeso" : next === "active" ? "Partner riattivato" : "Partner riattivato: la scheda va online quando lo verifichi" };
 }
 
 // ---------------------------------------------------------------------------

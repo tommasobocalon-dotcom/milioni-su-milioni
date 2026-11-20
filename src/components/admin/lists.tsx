@@ -3,6 +3,7 @@ import { ago, dateOnly } from "@/components/admin/ui";
 import { statusInfo } from "@/lib/leads/status";
 import { leadOutcome, sponsorshipState } from "@/lib/domain/admin";
 import { cn } from "@/lib/utils";
+import { aLuogo } from "@/lib/domain/format";
 
 /** Elenchi del gestionale usati in più pagine: richieste dei clienti e sponsorizzazioni. */
 
@@ -44,7 +45,7 @@ export function LeadList({ leads, now, showPartner = true }: { leads: LeadRow[];
           <li key={l.id} className="grid gap-1 px-5 py-3 text-body-s md:grid-cols-[minmax(0,1fr)_auto] md:items-center md:gap-4">
             <span className="flex min-w-0 flex-col gap-0.5">
               <span className="truncate font-semibold">
-                {l.requestType} · {l.category} a {l.municipality}
+                {l.requestType} · {l.category} {aLuogo(l.municipality)}
               </span>
               <span className="truncate text-caption text-ink-2">
                 {l.clientName} ·{" "}

@@ -29,7 +29,7 @@ export async function Hero({ next }: { next: string }) {
               Casa tua, in buone mani.
             </h1>
             <p className="hero-rise mt-4 mb-6 max-w-[460px] text-body leading-[1.3] font-normal [animation-delay:80ms]">
-              Agenzie, tecnici e artigiani verificati del Veneto, per lavori grandi e piccoli: tutto in un posto solo.
+              Agenzie, tecnici e artigiani del Veneto, per lavori grandi e piccoli: tutto in un posto solo.
             </p>
 
             <HeroSearchForm>
@@ -37,6 +37,8 @@ export async function Hero({ next }: { next: string }) {
                 {places.map((p) => (
                   <option key={p.id} value={`${p.name} (${p.provinceCode})`} />
                 ))}
+                {/* Le frazioni più cercate ("Mestre"): findPlace le riconosce già, qui compaiono anche tra i suggerimenti. */}
+                {places.flatMap((p) => p.aliases.map((a) => <option key={`${p.id}-${a}`} value={`${a} (${p.provinceCode})`} />))}
               </datalist>
             </HeroSearchForm>
 

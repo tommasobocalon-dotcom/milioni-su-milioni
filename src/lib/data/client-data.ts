@@ -1,6 +1,7 @@
 import "server-only";
 import { and, eq, inArray, sql } from "drizzle-orm";
 import { db } from "@/lib/db/client";
+import { asClient } from "@/lib/db/tenant";
 import {
   auditLogs,
   categories,
@@ -19,6 +20,8 @@ import {
  * Diritti GDPR del cliente (art. 15, 17, 20, 21): scaricare i propri dati, cancellare l'account, togliere il consenso
  * al marketing. Le richieste di contatto sono legate all'email, non all'account: contano solo se l'email è confermata,
  * altrimenti chi si registra con l'email di un altro vedrebbe (o cancellerebbe) le sue richieste.
+ * Letture e consenso passano da asClient: la RLS del database applica la stessa regola anche se una query sbaglia filtro.
+ * La cancellazione dell'account resta sul ruolo dell'app: tocca utenti, ticket e registro attività.
  */
 
 async function account(userId: string) {
@@ -32,61 +35,63 @@ async function account(userId: string) {
 
 /** Tutto quello che il sito sa del cliente, in un oggetto da scaricare come JSON. */
 export async function exportClientData(userId: string) {
-  const u = await account(userId);
-  if (!u) return null;
-  const verified = !!u.emailVerifiedAt;
-  const [logins, requests, tickets] = await Promise.all([
-    db.select({ provider: oauthAccounts.provider, createdAt: oauthAccounts.createdAt }).from(oauthAccounts).where(eq(oauthAccounts.userId, userId)),
-    verified
-      ? db
-          .select({
-            id: leads.id,
-            createdAt: leads.createdAt,
-            company: partners.displayName,
-            category: categories.name,
-            municipality: municipalities.name,
-            requestType: leads.requestType,
-            answers: leads.answers,
-            description: leads.description,
-            timing: leads.timing,
-            callbackSlot: leads.callbackSlot,
-            name: leads.clientName,
-            email: leads.clientEmail,
-            phone: leads.clientPhone,
-            privacyConsent: leads.privacyConsent,
-            marketingConsent: leads.marketingConsent,
-            verifiedAt: leads.verifiedAt,
-            deliveredAt: leads.deliveredAt,
-            clientContacted: leads.clientContacted,
-          })
-          .from(leads)
-          .innerJoin(partners, eq(partners.id, leads.partnerId))
-          .innerJoin(categories, eq(categories.id, leads.categoryId))
-          .innerJoin(municipalities, eq(municipalities.id, leads.municipalityId))
-          .where(eq(leads.clientEmail, u.email))
-          .orderBy(leads.createdAt)
-      : [],
-    db
+  return asClient(userId, async (tx) => {
+    const [u] = await tx
+      .select({ email: users.email, name: users.name, phone: users.phone, emailVerifiedAt: users.emailVerifiedAt, createdAt: users.createdAt })
+      .from(users)
+      .where(eq(users.id, userId))
+      .limit(1);
+    if (!u) return null;
+    const logins = await tx.select({ provider: oauthAccounts.provider, createdAt: oauthAccounts.createdAt }).from(oauthAccounts).where(eq(oauthAccounts.userId, userId));
+    // Con l'email non confermata la RLS non restituisce richieste.
+    const requests = await tx
+      .select({
+        id: leads.id,
+        createdAt: leads.createdAt,
+        company: partners.displayName,
+        category: categories.name,
+        municipality: municipalities.name,
+        requestType: leads.requestType,
+        answers: leads.answers,
+        description: leads.description,
+        timing: leads.timing,
+        callbackSlot: leads.callbackSlot,
+        name: leads.clientName,
+        email: leads.clientEmail,
+        phone: leads.clientPhone,
+        privacyConsent: leads.privacyConsent,
+        marketingConsent: leads.marketingConsent,
+        verifiedAt: leads.verifiedAt,
+        deliveredAt: leads.deliveredAt,
+        clientContacted: leads.clientContacted,
+      })
+      .from(leads)
+      .innerJoin(partners, eq(partners.id, leads.partnerId))
+      .innerJoin(categories, eq(categories.id, leads.categoryId))
+      .innerJoin(municipalities, eq(municipalities.id, leads.municipalityId))
+      .where(eq(leads.clientEmail, u.email))
+      .orderBy(leads.createdAt);
+    const tickets = await tx
       .select({ id: supportTickets.id, number: supportTickets.number, subject: supportTickets.subject, status: supportTickets.status, createdAt: supportTickets.createdAt })
       .from(supportTickets)
       .where(eq(supportTickets.userId, userId))
-      .orderBy(supportTickets.createdAt),
-  ]);
-  // Le note interne dell'assistenza non sono dati del cliente: restano fuori.
-  const messages = tickets.length
-    ? await db
-        .select({ ticketId: supportMessages.ticketId, kind: supportMessages.kind, author: supportMessages.authorName, body: supportMessages.body, createdAt: supportMessages.createdAt })
-        .from(supportMessages)
-        .where(and(inArray(supportMessages.ticketId, tickets.map((t) => t.id)), inArray(supportMessages.kind, ["inbound", "reply"])))
-        .orderBy(supportMessages.createdAt)
-    : [];
-  return {
-    exportedAt: new Date().toISOString(),
-    account: { email: u.email, name: u.name, phone: u.phone, emailVerifiedAt: u.emailVerifiedAt, createdAt: u.createdAt, logins },
-    requests,
-    ...(verified ? {} : { note: "Conferma la tua email per vedere anche le richieste di contatto inviate con questo indirizzo." }),
-    support: tickets.map(({ id, ...t }) => ({ ...t, messages: messages.filter((m) => m.ticketId === id).map((m) => ({ kind: m.kind, author: m.author, body: m.body, createdAt: m.createdAt })) })),
-  };
+      .orderBy(supportTickets.createdAt);
+    // Le note interne dell'assistenza non sono dati del cliente: restano fuori (anche per la RLS).
+    const messages = tickets.length
+      ? await tx
+          .select({ ticketId: supportMessages.ticketId, kind: supportMessages.kind, author: supportMessages.authorName, body: supportMessages.body, createdAt: supportMessages.createdAt })
+          .from(supportMessages)
+          .where(and(inArray(supportMessages.ticketId, tickets.map((t) => t.id)), inArray(supportMessages.kind, ["inbound", "reply"])))
+          .orderBy(supportMessages.createdAt)
+      : [];
+    return {
+      exportedAt: new Date().toISOString(),
+      account: { email: u.email, name: u.name, phone: u.phone, emailVerifiedAt: u.emailVerifiedAt, createdAt: u.createdAt, logins },
+      requests,
+      ...(u.emailVerifiedAt ? {} : { note: "Conferma la tua email per vedere anche le richieste di contatto inviate con questo indirizzo." }),
+      support: tickets.map(({ id, ...t }) => ({ ...t, messages: messages.filter((m) => m.ticketId === id).map((m) => ({ kind: m.kind, author: m.author, body: m.body, createdAt: m.createdAt })) })),
+    };
+  });
 }
 
 /** Consenso al marketing dato nelle richieste di contatto: true se almeno una richiesta lo ha. */
@@ -99,7 +104,7 @@ export async function marketingConsentOf(email: string): Promise<boolean> {
 export async function revokeMarketingConsent(userId: string): Promise<boolean> {
   const u = await account(userId);
   if (!u?.emailVerifiedAt) return false;
-  await db.update(leads).set({ marketingConsent: false }).where(eq(leads.clientEmail, u.email));
+  await asClient(userId, (tx) => tx.update(leads).set({ marketingConsent: false }).where(eq(leads.clientEmail, u.email)));
   await db.insert(auditLogs).values({ actor: `user:${userId}`, action: "consent.marketing_revoked", entity: "user", entityId: userId });
   return true;
 }
@@ -111,6 +116,13 @@ export type DeleteOutcome = "deleted" | "partner" | "admin" | "missing";
  * contatti, descrizione e risposte; i ticket dell'assistenza perdono nome, email e testo dei messaggi del cliente.
  * Chi gestisce un'azienda o il gestionale passa dall'assistenza: ci sono abbonamento, fatture e dati di altri.
  */
+/** Chi gestisce un'azienda o il gestionale non può eliminare l'account da sé: la pagina lo dice prima, invece del modulo. */
+export async function deletesViaSupport(user: { id: string; role: string }): Promise<boolean> {
+  if (user.role === "admin" || user.role === "sales") return true;
+  const [member] = await db.select({ id: partnerMembers.partnerId }).from(partnerMembers).where(eq(partnerMembers.userId, user.id)).limit(1);
+  return Boolean(member);
+}
+
 export async function deleteClientAccount(userId: string): Promise<DeleteOutcome> {
   const u = await account(userId);
   if (!u) return "missing";

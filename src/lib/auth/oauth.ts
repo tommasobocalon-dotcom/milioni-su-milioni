@@ -1,9 +1,9 @@
 import "server-only";
 import { randomBytes } from "node:crypto";
 import { createRemoteJWKSet, jwtVerify } from "jose";
-import { and, eq, sql } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { db } from "@/lib/db/client";
-import { auditLogs, oauthAccounts, users } from "@/lib/db/schema";
+import { auditLogs, oauthAccounts, sessions, users } from "@/lib/db/schema";
 import { appleClientSecret, pkceChallenge, type JwtClaims } from "@/lib/domain/oauth";
 import { normalizeEmail } from "@/lib/domain/otp";
 
@@ -182,14 +182,19 @@ export async function userForOAuthProfile(profile: OAuthProfile): Promise<string
 
   const email = profile.email;
   return db.transaction(async (tx) => {
-    const [existing] = await tx.select({ id: users.id }).from(users).where(eq(users.email, email)).limit(1);
+    const [existing] = await tx.select({ id: users.id, verifiedAt: users.emailVerifiedAt }).from(users).where(eq(users.email, email)).limit(1);
     const userId =
       existing?.id ??
       (await tx.insert(users).values({ email, name: profile.name?.trim() || email.split("@")[0], emailVerifiedAt: new Date() }).returning({ id: users.id }))[0].id;
-    // Il provider ha verificato l'email: vale come conferma anche per un account nato con la password.
-    if (existing) await tx.update(users).set({ emailVerifiedAt: sql`coalesce(${users.emailVerifiedAt}, now())` }).where(eq(users.id, userId));
+    if (existing && !existing.verifiedAt) {
+      // Account con la password ma email mai confermata: chi l'ha creato non ha dimostrato che l'email è sua, e potrebbe
+      // averlo aperto apposta con l'email di un altro per entrarci dopo. Il provider garantisce che l'email è di chi
+      // entra adesso: via la password e le sessioni di prima (se era sua, la rimette con "Password dimenticata").
+      await tx.update(users).set({ passwordHash: null, emailVerifiedAt: new Date() }).where(eq(users.id, userId));
+      await tx.delete(sessions).where(eq(sessions.userId, userId));
+    }
     await tx.insert(oauthAccounts).values({ provider: profile.provider, providerUserId: profile.subject, userId }).onConflictDoNothing();
-    await tx.insert(auditLogs).values({ actor: email, action: existing ? "auth.oauth_linked" : "auth.oauth_signup", entity: "user", entityId: userId, data: { provider: profile.provider } });
+    await tx.insert(auditLogs).values({ actor: email, action: existing ? "auth.oauth_linked" : "auth.oauth_signup", entity: "user", entityId: userId, data: { provider: profile.provider, ...(existing && !existing.verifiedAt && { unconfirmedAccountReset: true }) } });
     return userId;
   });
 }

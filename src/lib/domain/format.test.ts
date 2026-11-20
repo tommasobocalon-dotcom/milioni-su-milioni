@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { amountInput, formatEuro, formatPhone, formatPriceRange, formatResponseTime, parseAmount, safeNextPath, slugify } from "./format";
+import { aLuogo, amountInput, formatEuro, formatPhone, formatPriceRange, formatResponseTime, parseAmount, safeNextPath, slugify } from "./format";
 
 describe("formatEuro", () => {
   it("uses Italian separators and drops zero cents", () => {
@@ -102,5 +102,28 @@ describe("safeNextPath", () => {
     expect(safeNextPath("javascript:alert(1)")).toBeNull();
     expect(safeNextPath(undefined)).toBeNull();
     expect(safeNextPath("")).toBeNull();
+  });
+
+  it("rifiuta tab e a capo, che il browser toglie trasformando /<tab>/sito in //sito (?next=/%09/esempio.com)", () => {
+    expect(safeNextPath("/\t/esempio.com")).toBeNull();
+    expect(safeNextPath("/\n/esempio.com")).toBeNull();
+    expect(safeNextPath("/\r\n/esempio.com")).toBeNull();
+    expect(safeNextPath("/area-cliente\u0000")).toBeNull();
+  });
+
+  it("lascia passare i percorsi interni con caratteri codificati", () => {
+    expect(safeNextPath("/%09/esempio.com")).toBe("/%09/esempio.com");
+    expect(safeNextPath("/area-partner/sponsorizzazioni#home")).toBe("/area-partner/sponsorizzazioni#home");
+  });
+});
+
+describe("aLuogo", () => {
+  it("usa ad davanti alla a", () => {
+    expect(aLuogo("Abano Terme")).toBe("ad Abano Terme");
+    expect(aLuogo("Asolo")).toBe("ad Asolo");
+  });
+  it("usa a negli altri casi", () => {
+    expect(aLuogo("Padova")).toBe("a Padova");
+    expect(aLuogo("Este")).toBe("a Este");
   });
 });

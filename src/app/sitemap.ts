@@ -1,5 +1,5 @@
 import type { MetadataRoute } from "next";
-import { listCategoryPlacePaths, listPublicPartnerPaths } from "@/lib/data/paths";
+import { listCategoryPlacePaths, listPublicPartnerPaths, listPublicWorkPaths } from "@/lib/data/paths";
 import { profileHref } from "@/lib/data/search";
 
 const PAGES = [
@@ -16,13 +16,14 @@ const PAGES = [
   "/termini",
 ];
 
-/** Pagine pubbliche, pagine categoria × comune con aziende e schede delle aziende attive, per i motori di ricerca (PRD §15). */
+/** Pagine pubbliche, pagine categoria × comune con aziende, schede delle aziende attive e lavori di Ispirazione, per i motori di ricerca (PRD §15). */
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const base = process.env.APP_URL ?? "http://localhost:3000";
-  const [partners, places] = await Promise.all([listPublicPartnerPaths(), listCategoryPlacePaths()]);
+  const [partners, places, works] = await Promise.all([listPublicPartnerPaths(), listCategoryPlacePaths(), listPublicWorkPaths()]);
   return [
     ...PAGES.map((path) => ({ url: `${base}${path === "/" ? "" : path}` })),
     ...places.map((p) => ({ url: `${base}/${p.categorySlug}/${p.municipalitySlug}` })),
     ...partners.map((p) => ({ url: `${base}${profileHref({ partnerType: p.type, ...p })}` })),
+    ...works.map((w) => ({ url: `${base}/ispirazione/${w.id}`, lastModified: w.createdAt })),
   ];
 }

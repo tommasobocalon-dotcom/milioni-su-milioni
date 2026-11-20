@@ -366,7 +366,8 @@ export async function seed(db: Db) {
     const last = new Date(now.getTime() - messages[messages.length - 1].hoursAgo * HOUR);
     const [ticket] = await db
       .insert(s.supportTickets)
-      .values({ ...t, lastMessageAt: last, createdAt: new Date(now.getTime() - messages[0].hoursAgo * HOUR) })
+      // Aperto da dentro l'account se il primo messaggio porta l'utente: solo questi compaiono nelle aree private.
+      .values({ ...t, openedFromAccount: !!messages[0].authorUserId, lastMessageAt: last, createdAt: new Date(now.getTime() - messages[0].hoursAgo * HOUR) })
       .returning({ id: s.supportTickets.id });
     await db.insert(s.supportMessages).values(
       messages.map((m) => ({ ticketId: ticket.id, kind: m.kind, authorName: m.author, authorUserId: m.authorUserId, body: m.body, createdAt: new Date(now.getTime() - m.hoursAgo * HOUR) })),

@@ -3,6 +3,7 @@ import { Suspense } from "react";
 import { parseResultsParams, Results, ResultsSkeleton } from "@/components/site/results";
 
 export const metadata: Metadata = {
+  alternates: { canonical: "/trova-casa" },
   title: "Trova Casa",
   description: "Confronta le agenzie immobiliari della tua zona: specializzazioni e portfolio immobili.",
 };

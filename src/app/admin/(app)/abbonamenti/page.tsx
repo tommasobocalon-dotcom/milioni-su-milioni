@@ -42,7 +42,7 @@ async function Subscriptions({ filter }: { filter?: SubscriptionFilter }) {
     <div className="flex flex-col gap-6">
       <AdminPageHeader
         title="Abbonamenti"
-        subtitle={`${counts.attivi} a pagamento · ${counts.gratuiti} gratuiti · ${counts.sospesi} con pagamento non riuscito · prezzi IVA esclusa`}
+        subtitle={`${counts.attivi} a pagamento · ${counts.gratuiti} ${counts.gratuiti === 1 ? "gratuito" : "gratuiti"} · ${counts.sospesi} con pagamento non riuscito · prezzi IVA esclusa`}
       />
 
       <Panel>

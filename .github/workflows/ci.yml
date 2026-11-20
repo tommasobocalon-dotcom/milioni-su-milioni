@@ -1,4 +1,5 @@
-# Controlli a ogni push e pull request: lint, tipi, test unitari, build di produzione e test end-to-end.
+# Controlli a ogni push e pull request: vulnerabilità delle dipendenze, lint, tipi, test unitari, build di produzione e
+# test end-to-end. L'analisi di sicurezza del codice è in codeql.yml.
 # PostgreSQL gira come servizio sulla stessa porta di quello locale (54329), così gli script non cambiano.
 name: CI
 
@@ -41,6 +42,10 @@ jobs:
           cache: npm
 
       - run: npm ci
+
+      # Si ferma con vulnerabilità alte o critiche nelle dipendenze (anche quelle di sviluppo, che girano qui).
+      - name: Vulnerabilità delle dipendenze
+        run: npm audit --audit-level=high
 
       - name: Lint
         run: npm run lint

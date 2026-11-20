@@ -8,8 +8,9 @@ import { cn } from "@/lib/utils";
 type Field = "q" | "dove";
 
 /**
- * Ricerca della hero: "cosa ti serve" e comune sono obbligatori. Senza JavaScript basta `required`
- * del browser; con JavaScript il fumetto del browser è sostituito da "Campo obbligatorio" sotto il campo.
+ * Ricerca della hero: "cosa ti serve" è obbligatorio, il comune no (si può scrivere anche nella frase,
+ * "rifare il bagno a Mestre", e /cerca lo trova). Senza JavaScript basta `required` del browser; con JavaScript
+ * il fumetto del browser è sostituito da "Campo obbligatorio" sotto il campo.
  * La datalist dei comuni arriva come children dal componente server.
  */
 export function HeroSearchForm({ children }: { children: React.ReactNode }) {
@@ -30,8 +31,8 @@ export function HeroSearchForm({ children }: { children: React.ReactNode }) {
 
   const fieldProps = (name: Field) => ({
     name,
-    required: true,
-    pattern: ".*\\S.*",
+    required: name === "q",
+    pattern: name === "q" ? ".*\\S.*" : undefined,
     onInvalid,
     onInput,
     "aria-invalid": missing[name] || undefined,
@@ -50,15 +51,15 @@ export function HeroSearchForm({ children }: { children: React.ReactNode }) {
       <div className="flex flex-col">
         <label
           className={cn(
-            "flex items-center gap-2 rounded-md px-1 py-0.5",
-            missing.q && "ring-2 ring-error",
+            "flex items-center gap-2 rounded-md px-1 py-0.5 focus-within:ring-2 focus-within:ring-primary",
+            missing.q && "ring-2 ring-error focus-within:ring-error",
           )}
         >
           <Search className="size-6 shrink-0 text-ink" aria-hidden />
           <span className="sr-only">Di cosa hai bisogno?</span>
           <input
             {...fieldProps("q")}
-            placeholder="Es. rifare il bagno, vendere casa"
+            placeholder="Es. rifare il bagno a Mestre, vendere casa"
             autoComplete="off"
             className="w-full min-w-0 bg-transparent text-body text-ink placeholder:text-ink-2 focus:outline-none"
           />
@@ -66,15 +67,15 @@ export function HeroSearchForm({ children }: { children: React.ReactNode }) {
         {missing.q && <FieldError id="hero-q-errore" />}
       </div>
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start">
-        <div className="flex flex-col sm:w-36">
+        <div className="flex flex-col sm:w-56">
           <label
             className={cn(
-              "flex h-10 items-center gap-2 rounded-full border border-neutro-300 pr-2.5 pl-3 focus-within:border-primary",
+              "flex h-10 items-center gap-2 rounded-full border border-neutro-300 pr-2.5 pl-3 focus-within:border-primary focus-within:ring-2 focus-within:ring-primary",
               missing.dove && "border-error focus-within:border-error",
             )}
           >
             <MapPin className="size-4 shrink-0 text-ink-2" aria-hidden />
-            <span className="sr-only">Comune</span>
+            <span className="sr-only">Comune (facoltativo)</span>
             <input
               {...fieldProps("dove")}
               list="comuni-veneto"

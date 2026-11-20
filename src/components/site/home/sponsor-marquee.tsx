@@ -6,6 +6,7 @@ import { Plus } from "lucide-react";
 import { LogoPartner } from "@/components/ui/logo-partner";
 import type { HomeSponsor } from "@/lib/data/home";
 import { cn } from "@/lib/utils";
+import { aLuogo } from "@/lib/domain/format";
 
 /** Scelta del boost "Logo in evidenza in Home" nell'Area Partner; chi non è entrato passa prima dal login aziende. */
 export const BOOST_HREF = `/accedi/azienda?next=${encodeURIComponent("/area-partner/sponsorizzazioni#home")}`;
@@ -73,6 +74,8 @@ function SponsorRow({
           <Link
             href={s.href}
             tabIndex={copy ? -1 : undefined}
+            // Il nome letto contiene il testo visibile (WCAG 2.5.3) più "sponsorizzato".
+            aria-label={`${s.displayName}, ${s.categoryName.toLowerCase()} ${aLuogo(s.municipalityName)} (sponsorizzato)`}
             className="group/logo flex h-24 items-center gap-3.5 rounded-lg px-6 transition-colors hover:bg-surface md:px-8"
           >
             <LogoPartner
@@ -84,11 +87,10 @@ function SponsorRow({
             <span className="flex flex-col items-start text-left">
               <span className="font-display text-h3 whitespace-nowrap text-neutro-600 transition-colors group-hover/logo:text-ink">
                 {s.displayName}
-              </span>
+              </span>{" "}
               <span className="text-body-s whitespace-nowrap text-ink-2">
-                {s.categoryName} · {s.municipalityName}
+                {s.categoryName} {aLuogo(s.municipalityName)}
               </span>
-              <span className="sr-only">(sponsorizzato)</span>
             </span>
           </Link>
         </li>

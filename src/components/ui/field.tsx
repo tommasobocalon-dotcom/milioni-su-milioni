@@ -40,7 +40,7 @@ export function Field({
 }
 
 const control =
-  "w-full rounded-md border border-line bg-surface px-3.5 text-body text-ink placeholder:text-ink-3 focus:border-primary focus:outline-none focus-visible:outline-2 focus-visible:outline-primary aria-invalid:border-error";
+  "w-full rounded-md border border-line bg-surface px-3.5 text-body text-ink placeholder:text-ink-3 focus:border-primary focus:outline-none focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-offset-1 focus-visible:outline-primary aria-invalid:border-error";
 
 export function Input({ className, ...props }: ComponentProps<"input">) {
   return <input className={cn(control, "h-11", className)} {...props} />;

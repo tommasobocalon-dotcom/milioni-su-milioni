@@ -5,7 +5,7 @@ import { ExploreMenu, HeaderFrame, HeaderSearch } from "./header-client";
 import { Wordmark } from "./wordmark";
 
 const SECTIONS = [
-  { href: "/trova-professionista", label: "Trova un professionista", note: "Tecnici e artigiani verificati, con prezzi indicativi" },
+  { href: "/trova-professionista", label: "Trova un professionista", note: "Tecnici e artigiani, con prezzi indicativi" },
   { href: "/trova-casa", label: "Trova un'agenzia", note: "Comprare, vendere, affittare o far valutare casa" },
   { href: "/ispirazione", label: "Ispirazione", note: "Lavori veri delle aziende, per farti un'idea" },
   { href: "/come-funziona", label: "Come funziona", note: "Cerchi, confronti e vieni richiamato" },

@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
+import { verifyPartner } from "./verify-partner";
 
-test("un'azienda si registra, la scheda resta nascosta fino all'attivazione del piano", async ({ page, request }) => {
+test("un'azienda si registra, la scheda resta nascosta fino all'attivazione del piano e alla verifica del team", async ({ page, request, browser }) => {
   const email = `nuovo.partner.${Date.now()}@example.com`;
 
   // Dai piani pubblici alla registrazione, poi all'account con ritorno automatico.
@@ -42,13 +43,22 @@ test("un'azienda si registra, la scheda resta nascosta fino all'attivazione del 
   expect(await (await request.get(profile)).text()).not.toContain("Idraulica Verdi");
   expect(await (await request.get(results)).text()).not.toContain("Idraulica Verdi");
 
-  // Attivazione di prova (senza Stripe, solo in sviluppo): piano attivo, sponsorizzazioni sbloccate, scheda pubblica.
+  // Attivazione di prova (senza Stripe, solo in sviluppo): piano attivo e sponsorizzazioni sbloccate, ma la scheda
+  // resta nascosta finché il team non verifica partita IVA e sede (chiunque potrebbe usare la partita IVA di un altro).
   await page.getByRole("button", { name: "Scegli Normal (prova senza pagare)" }).click();
   await expect(page.getByRole("heading", { level: 1, name: "Il tuo abbonamento" })).toBeVisible();
   await expect(page.getByText("89 € al mese + IVA")).toBeVisible();
+  await expect(page.getByText("La tua scheda è in verifica.")).toBeVisible();
+  expect(await (await request.get(profile)).text()).not.toContain("Idraulica Verdi");
+  expect(await (await request.get(results)).text()).not.toContain("Idraulica Verdi");
   await page.goto("/area-partner/sponsorizzazioni");
   await expect(page.getByRole("heading", { name: "Logo in Home" })).toBeVisible();
   await expect(page.getByText("Disponibile con i piani Normal e Premium")).toHaveCount(0);
+
+  // Il team la verifica dal gestionale: la scheda va online e l'avviso sparisce.
+  await verifyPartner(browser, "Idraulica Verdi");
+  await page.goto("/area-partner");
+  await expect(page.getByText("La tua scheda è in verifica.")).toHaveCount(0);
   await page.goto(profile);
   await expect(page.getByRole("heading", { level: 1, name: "Idraulica Verdi" })).toBeVisible();
   await page.goto(results);
@@ -66,7 +76,7 @@ function newVatNumber() {
   return digits.join("") + ((10 - (sum % 10)) % 10);
 }
 
-test("un'agenzia appena registrata compare in Trova casa solo dopo l'attivazione del piano", async ({ page, request }) => {
+test("un'agenzia appena registrata compare in Trova casa solo dopo l'attivazione del piano e la verifica del team", async ({ page, request, browser }) => {
   const results = "/trova-casa?dove=Vicenza";
   await page.goto("/accedi/azienda?next=/registrazione-partner");
   await page.getByLabel(/^Nome e cognome/).fill("Paolo Neri");
@@ -92,6 +102,10 @@ test("un'agenzia appena registrata compare in Trova casa solo dopo l'attivazione
 
   await page.getByRole("button", { name: "Scegli Normal (prova senza pagare)" }).click();
   await expect(page.getByRole("heading", { level: 1, name: "Il tuo abbonamento" })).toBeVisible();
+  // Piano attivo ma non ancora verificata: ancora fuori dai risultati.
+  expect(await (await request.get(results)).text()).not.toContain("Immobiliare Berica Prova");
+
+  await verifyPartner(browser, "Immobiliare Berica Prova");
   await page.goto(results);
   await expect(page.getByText("Immobiliare Berica Prova").first()).toBeVisible();
 });

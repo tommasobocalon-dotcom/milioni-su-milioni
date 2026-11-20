@@ -26,7 +26,7 @@ export const metadata: Metadata = {
   metadataBase: new URL(process.env.APP_URL ?? "http://localhost:3000"),
   title: { default: "GecoItalia — Casa e lavori di casa in Veneto", template: "%s · GecoItalia" },
   description:
-    "Confronta agenzie immobiliari, tecnici e artigiani verificati della tua zona. Richiedi un contatto in pochi minuti, con prezzi indicativi.",
+    "Confronta agenzie immobiliari, tecnici e artigiani della tua zona. Richiedi un contatto in pochi minuti, con prezzi indicativi.",
 };
 
 export const viewport: Viewport = {

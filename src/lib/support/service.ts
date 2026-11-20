@@ -14,6 +14,7 @@ import {
 } from "@/lib/domain/support";
 import { adminBaseUrl } from "@/lib/domain/admin-host";
 import { sendEmail } from "@/lib/notify";
+import { logError } from "@/lib/domain/log";
 
 /**
  * Assistenza: un ticket nasce dal modulo del sito, dall'Area Partner o da un'email alla casella
@@ -65,7 +66,7 @@ async function quietly(what: string, send: () => Promise<void>) {
   try {
     await send();
   } catch (e) {
-    console.error(`[assistenza] ${what} non inviata:`, e);
+    logError(`[assistenza] ${what} non inviata:`, e);
   }
 }
 
@@ -94,6 +95,8 @@ export async function openTicket(input: NewTicket): Promise<{ id: string; number
         requesterEmail: email,
         userId: account.userId,
         partnerId: account.partnerId,
+        // Solo con la sessione il ticket compare in Area Partner e nell'area cliente (policy RLS, migrazione 0034).
+        openedFromAccount: !!input.sessionUserId,
         lastMessageAt: now,
         createdAt: now,
       })
@@ -111,12 +114,12 @@ export async function openTicket(input: NewTicket): Promise<{ id: string; number
     return t;
   });
 
-  const areaLink = account.partnerId ? `\nTrovi la conversazione anche nell'Area Partner: ${appUrl()}/area-partner/assistenza/${ticket.number}\n` : "";
+  const areaLink = account.partnerId && input.sessionUserId ? `\nTrovi la conversazione anche nell'Area Partner: ${appUrl()}/area-partner/assistenza/${ticket.number}\n` : "";
   await quietly("conferma al cliente", () =>
     sendEmail(
       email,
       replySubject(subject, ticket.number),
-      `Ciao ${input.requesterName.split(" ")[0]},\nabbiamo ricevuto la tua richiesta: ti rispondiamo entro un giorno lavorativo.\n\nNumero della richiesta: #${ticket.number}\nOggetto: ${subject}\n${areaLink}\nPer aggiungere dettagli rispondi a questa email lasciando ${ticketTag(ticket.number)} nell'oggetto.\n\nIl team di geco`,
+      `Ciao ${input.requesterName.split(" ")[0]},\nabbiamo ricevuto la tua richiesta: ti rispondiamo entro un giorno lavorativo.\n\nNumero della richiesta: #${ticket.number}\nOggetto: ${subject}\n${areaLink}\nPer aggiungere dettagli rispondi a questa email lasciando ${ticketTag(ticket.number)} nell'oggetto.\n\nIl team di GecoItalia`,
       { replyTo: supportEmail() },
     ),
   );
@@ -194,7 +197,7 @@ export async function replyFromPartner(partnerId: string, number: number, user: 
   const [t] = await db
     .select({ id: supportTickets.id, number: supportTickets.number, status: supportTickets.status })
     .from(supportTickets)
-    .where(and(eq(supportTickets.number, number), eq(supportTickets.partnerId, partnerId)))
+    .where(and(eq(supportTickets.number, number), eq(supportTickets.partnerId, partnerId), eq(supportTickets.openedFromAccount, true)))
     .limit(1);
   if (!t) return false;
   await appendInbound(t, { authorName: user.name, authorEmail: user.email, authorUserId: user.id, body, emailMessageId: null });
@@ -207,7 +210,7 @@ export async function replyFromPartner(partnerId: string, number: number, user: 
  */
 export async function replyToTicket(ticketId: string, admin: { id: string; name: string; email: string }, body: string): Promise<{ emailError?: string } | null> {
   const [t] = await db
-    .select({ id: supportTickets.id, number: supportTickets.number, subject: supportTickets.subject, status: supportTickets.status, requesterEmail: supportTickets.requesterEmail, partnerId: supportTickets.partnerId })
+    .select({ id: supportTickets.id, number: supportTickets.number, subject: supportTickets.subject, status: supportTickets.status, requesterEmail: supportTickets.requesterEmail, partnerId: supportTickets.partnerId, openedFromAccount: supportTickets.openedFromAccount })
     .from(supportTickets)
     .where(eq(supportTickets.id, ticketId))
     .limit(1);
@@ -219,7 +222,8 @@ export async function replyToTicket(ticketId: string, admin: { id: string; name:
     await tx.insert(auditLogs).values({ actor: admin.email, action: "support.reply", entity: "support_ticket", entityId: t.id, data: { number: t.number } });
   });
 
-  const areaLink = t.partnerId ? `\n\nTrovi tutta la conversazione anche nell'Area Partner: ${appUrl()}/area-partner/assistenza/${t.number}` : "";
+  // Il link solo se il ticket compare davvero in Area Partner (aperto da dentro l'account).
+  const areaLink = t.partnerId && t.openedFromAccount ? `\n\nTrovi tutta la conversazione anche nell'Area Partner: ${appUrl()}/area-partner/assistenza/${t.number}` : "";
   try {
     await sendEmail(
       t.requesterEmail,
@@ -228,7 +232,7 @@ export async function replyToTicket(ticketId: string, admin: { id: string; name:
       { replyTo: supportEmail() },
     );
   } catch (e) {
-    console.error("[assistenza] risposta non inviata per email:", e);
+    logError("[assistenza] risposta non inviata per email:", e);
     return { emailError: e instanceof Error ? e.message : String(e) };
   }
   return {};

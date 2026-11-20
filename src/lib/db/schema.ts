@@ -641,6 +641,11 @@ export const supportTickets = pgTable(
     /** Account e azienda di chi scrive, riconosciuti dall'email o dalla sessione. */
     userId: uuid("user_id").references(() => users.id, { onDelete: "set null" }),
     partnerId: uuid("partner_id").references(() => partners.id, { onDelete: "set null" }),
+    /**
+     * Aperto da dentro l'account (sessione), quindi con l'identità verificata. Solo questi compaiono in Area Partner e
+     * nell'area cliente: dal modulo pubblico o per email chiunque può scrivere con l'email di un altro (20/11/2026).
+     */
+    openedFromAccount: boolean("opened_from_account").notNull().default(false),
     assigneeId: uuid("assignee_id").references(() => users.id, { onDelete: "set null" }),
     lastMessageAt: timestamp("last_message_at", { withTimezone: true }).notNull().defaultNow(),
     createdAt: createdAt(),

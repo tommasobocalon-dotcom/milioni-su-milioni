@@ -61,7 +61,7 @@ export function PlanPicker({ plans }: { plans: PlanCard[] }) {
             >
               {featured && (
                 <span className="absolute -top-3 left-6 rounded-full bg-primary px-3 py-0.5 text-caption font-semibold text-on-brand">
-                  Il più scelto
+                  Consigliato
                 </span>
               )}
               <h3 className="text-h3 font-semibold">{p.name}</h3>

@@ -164,3 +164,49 @@ Oppure contro una **preview di Vercel** (mai sulla produzione con dati reali):
 ```bash
 npx autocannon -c 50 -d 30 https://<tua-preview>.vercel.app/
 ```
+
+---
+
+## 10. Aggiornamento del 20 novembre 2026: controllo sui 10 punti di un report esterno
+
+Un report generato da uno strumento esterno elencava 10 punti. Esito punto per punto, con quello che è stato
+cambiato. Verifiche: 336 test unitari passati (26 saltati perché vogliono il database), `tsc` e `eslint` puliti,
+`next build` riuscita, header e ottimizzatore di immagini provati su `next start`.
+
+| # | Punto del report | Stato prima | Cosa è stato fatto |
+|---|---|---|---|
+| 1 | Chiave `GOOGLE_GENAI_API_KEY` | Il progetto non la usa: compare solo dentro il codice della libreria Sentry (`node_modules/@sentry`), che sa misurare le chiamate a Gemini se un'app le fa | Niente da fare |
+| 2 | DSN di Sentry con `NEXT_PUBLIC_` | Corretto così: il DSN serve al browser per mandare gli errori e permette solo di inviarne. Toglierlo spegnerebbe gli errori del browser | Pulizia estesa ai **breadcrumb** (link con token, chiamate di rete, console) e al corpo delle richieste; `tracesSampleRate: 0` c'era già. In `DEPLOY.md` gli "Allowed Domains" del DSN |
+| 3 | Database | Query tutte parametrizzate (Drizzle; `sql.unsafe` solo negli script locali con testo fisso), Data API di Supabase chiusa (migrazione 0004), RLS per Area Partner e Area cliente, TLS `require` (cifrato ma senza verifica del certificato) | **`verify-full` facoltativo** con `DATABASE_CA_CERT` (`databaseSsl` in `src/lib/db/url.ts`, 5 test). Va attivato su Vercel (`DEPLOY.md`) |
+| 4 | Header di sicurezza | Già tutti presenti (CSP, HSTS, `nosniff`, `X-Frame-Options: DENY` che è più stretto di `SAMEORIGIN`, `Referrer-Policy`) | Niente da fare; `next-secure-headers` e `helmet` non servono con `headers()` di Next |
+| 5 | Rate limit sull'accesso | Già attivo: 10 password sbagliate in 15 minuti per email, 50 tentativi per IP, limiti per IP su registrazione, recupero password, richieste e assistenza, Turnstile, regola nel Firewall di Vercel. Non esiste `/api/auth/*` | Niente da aggiungere |
+| 6 | Segreti e cifratura | Nessun segreto nel repository né nella storia di git (controllato con un'espressione per chiavi Stripe, Brevo, Resend, Supabase, Google), segreti su Vercel cifrati. Supabase cifra i dischi (AES-256), le carte non passano mai dal database (Stripe), password e token salvati come hash, backup cifrati | Niente da fare; Google Secret Manager non serve con Vercel. Da attivare su GitHub la **push protection** (`DEPLOY.md`) |
+| 7 | Dipendenze | Produzione: 0 vulnerabilità. Sviluppo: 7 moderate (`autocannon`, `esbuild` vecchio dentro `drizzle-kit`, che non lo usa) | `autocannon` 9, `overrides` per l'esbuild di `@esbuild-kit/core-utils` → **0 vulnerabilità**. `npm audit --audit-level=high` nella CI, **Dependabot** settimanale |
+| 8 | Log e allarmi | Errori stampati così come sono: un errore di Drizzle porta nei log di Vercel i parametri della query (nomi, email, testo delle richieste) | **`logError`** (`src/lib/domain/log.ts`, 2 test) toglie email, token e parametri; **allarme al team** quando un account si blocca per 10 password sbagliate; avviso Sentry sui picchi di errori in `DEPLOY.md`. `pino`/`winston` e un SIEM sono di troppo per un solo sviluppatore: bastano Vercel Logs e Sentry |
+| 9 | CSP delle immagini | `img-src` ammetteva qualunque sito `https:` | `img-src` solo dal sito e dai pixel di Google Ads e Meta, `media-src 'self'`; le foto di Supabase passano da `next/image` con `remotePatterns` limitato al bucket pubblico (prima mancava: le foto caricate in produzione non si sarebbero viste, risposta 400). Elenco host di Google Ads completato (mancavano `google.it`, `pagead2`, `ad.doubleclick.net`). Nonce non adottato: renderebbe dinamiche tutte le pagine (vedi `DEPLOY.md`) |
+| 10 | Test di sicurezza | Test unitari della validazione degli input già presenti (richieste, profilo, registrazione azienda, password, OTP, assistenza) più i test end-to-end | **CodeQL** (`.github/workflows/codeql.yml`, regole `security-extended`). OWASP ZAP non aggiunto: andrebbe lanciato contro un sito di prova, non contro quello vero |
+
+---
+
+## 11. Revisione di permessi e logica (20 novembre 2026)
+
+Riletti a mano tutte le azioni del server (Area Partner, gestionale, area cliente, richieste, registrazione,
+assistenza, accesso), le API (webhook Stripe e email, ritorno dal Checkout, cron, statistiche, export dei dati),
+sessioni, OAuth, link monouso, OTP e le pagine con un id nell'indirizzo. Non è un test dall'esterno.
+
+**Già a posto:** ogni pagina e azione dell'Area Partner passa da `requirePartner()` con l'azienda presa dalla sessione
+(il cookie dell'azienda scelta vale solo tra quelle dell'account) e dalla RLS; ogni pagina e azione del gestionale da
+`requireAdmin()`; i lead bloccati del piano gratuito nascondono i dati già nella query; il ritorno dal Checkout
+controlla che la sessione Stripe sia dell'azienda; i pacchetti si attivano solo con `payment_status = paid` e una volta
+sola; webhook firmati (Stripe, Svix con finestra anti-replay); link monouso consumati in modo atomico; nuova password =
+tutte le sessioni chiuse; pagine `/richiesta/inviata/[id]` e `/richiesta/com-e-andata/[id]` senza dati personali;
+nessun link costruito con dati scritti dagli utenti; JSON-LD con `<` escapato.
+
+| # | Falla | Gravità | Stato |
+|---|---|---|---|
+| 1 | **Redirect verso un altro sito dopo l'accesso**: `/accedi?next=/%09/sito-falso.it` superava `safeNextPath` (tab e a capo vengono tolti dal browser, e `/<tab>/sito` diventa `//sito`). Utile per il phishing: dopo il login vero si finiva su una copia del sito | Media | **Corretta**: caratteri di controllo rifiutati e controllo finale con il parser `URL` (`src/lib/domain/format.ts`, 2 test) |
+| 2 | **Account preparato con l'email di un altro**: chi si registra con l'email di qualcun altro (senza confermarla) teneva password e sessione anche dopo che il vero proprietario entrava con Google, che conferma l'email. Da lì vedeva le sue richieste; con un'email di `ADMIN_EMAILS` non ancora registrata diventava amministratore | Media | **Corretta**: collegando Google/Apple a un account mai confermato si tolgono password e sessioni (`userForOAuthProfile`, 2 test sul database). Un'azienda vera mai confermata che entra con Google dal lato clienti rimette la password con "Password dimenticata" |
+| 3 | **Chiunque può registrare un'azienda con la partita IVA di un'altra** (basta che sia valida) e, col piano gratuito, la scheda va online subito, senza controllo del team: riceve i contatti dei clienti a nome di quell'azienda e blocca la registrazione di quella vera | Media | **Corretta** (deciso il 20/11/2026): la scheda va online solo con il piano attivo **e** la verifica del team (`listingStatus` in `src/lib/domain/billing.ts`, usata da webhook Stripe, piano gratuito, attivazione di prova e gestionale). Avviso "Nuova azienda da verificare" al team a ogni iscrizione, avviso "La tua scheda è in verifica" in Area Partner. La migrazione `0033` nasconde le schede già online ma mai verificate |
+| 4 | **Ticket dell'assistenza a nome di altri**: dal modulo pubblico, senza accesso, con l'email di un'azienda il ticket finisce nella sua Area Partner e nell'area cliente (testo e nome scelti da chi scrive). Il gestionale lo segna "non verificato" | Bassa | **Corretta** (20/11/2026): colonna `support_tickets.opened_from_account`, vera solo con la sessione; le policy RLS di Area Partner e area cliente (migrazione `0034`) mostrano solo quei ticket, e l'azienda risponde solo a quelli. Gli altri restano nel gestionale ("Mittente non verificato") e proseguono per email, senza il link all'Area Partner. Test in `src/lib/support/ticket-visibility.test.ts` |
+| 5 | **Cron `/api/cron/esito-richieste` senza `CRON_SECRET`** chiamabile da chiunque (manda solo prima le email "Com'è andata?", una volta sola per richiesta) | Bassa | **Già a posto**: controllato il 20/11/2026, `CRON_SECRET` è su Vercel (Production e Preview) dal 18/11/2026 e l'ultimo deploy di produzione è successivo, quindi la route accetta solo il cron |
+| 6 | Restano by design: chi clicca il link di conferma arrivato per una registrazione fatta da altri conferma quell'account (l'email dice di ignorarla); 10 password sbagliate bloccano l'accesso di quell'email per 15 minuti anche se le prova un estraneo | Bassa | Note |

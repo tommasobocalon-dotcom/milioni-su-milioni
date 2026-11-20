@@ -85,7 +85,7 @@ test("accesso aziende e accesso clienti sono separati", async ({ page }) => {
   // Entrato come azienda, l'Area cliente chiede comunque il login clienti.
   await page.goto("/area-cliente");
   await expect(page).toHaveURL(/\/accedi$/);
-  await expect(page.getByRole("heading", { level: 1, name: "Bentornato su geco" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: "Bentornato su GecoItalia" })).toBeVisible();
   // Stesse credenziali dall'accesso clienti: si entra nell'Area cliente, non nell'Area Partner.
   // Pagina ricaricata per intero: dopo il redirect il modulo può non essere ancora pronto a ricevere il testo.
   await page.goto("/accedi");

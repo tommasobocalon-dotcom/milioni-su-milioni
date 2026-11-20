@@ -11,6 +11,7 @@ import { alternativesTo } from "@/lib/data/search";
 import { db } from "@/lib/db/client";
 import { categories, leads, municipalities, partners } from "@/lib/db/schema";
 import { answer } from "./actions";
+import { aLuogo } from "@/lib/domain/format";
 
 export const metadata: Metadata = { title: "Com'è andata?", robots: { index: false } };
 
@@ -61,7 +62,7 @@ async function FollowUp({ id }: { id: string }) {
       <section className="mx-auto flex max-w-xl flex-col items-center gap-6 text-center">
         <h1 className="font-display text-h1">Com&apos;è andata con {lead.partnerName}?</h1>
         <p className="text-body-l text-ink-2">
-          Hai chiesto a {lead.partnerName} di ricontattarti per “{lead.requestType}” a {lead.municipality}. Ti ha richiamato?
+          Hai chiesto a {lead.partnerName} di ricontattarti per “{lead.requestType}” {aLuogo(lead.municipality)}. Ti ha richiamato?
         </p>
         <div className="flex flex-wrap justify-center gap-3">
           <form action={answer.bind(null, id, true)}>
@@ -105,7 +106,7 @@ async function FollowUp({ id }: { id: string }) {
       {alternatives.length > 0 && (
         <section aria-labelledby="alternative" className="flex flex-col gap-4">
           <h2 id="alternative" className="font-display text-h2">
-            Altri {lead.categoryPlural.toLowerCase()} vicino a {lead.municipality}
+            Altri {lead.categoryPlural.toLowerCase()} vicino {aLuogo(lead.municipality)}
           </h2>
           {alternatives.map((p) => (
             <PartnerCard key={p.id} p={p} />

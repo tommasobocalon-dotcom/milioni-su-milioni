@@ -16,7 +16,7 @@ export async function SearchBar({ defaultWhat, defaultWhere, className }: { defa
         className,
       )}
     >
-      <label className="flex flex-1 items-center gap-3 px-3 py-1.5">
+      <label className="flex flex-1 items-center gap-3 rounded-lg px-3 py-1.5 focus-within:ring-2 focus-within:ring-primary">
         <Search className="size-5 shrink-0 text-ink-2" aria-hidden />
         <span className="flex flex-1 flex-col">
           <span className="text-caption font-semibold text-ink-2">Cosa ti serve?</span>
@@ -30,7 +30,7 @@ export async function SearchBar({ defaultWhat, defaultWhere, className }: { defa
         </span>
       </label>
       <span aria-hidden className="hidden h-10 w-px bg-line md:block" />
-      <label className="flex flex-1 items-center gap-3 px-3 py-1.5 md:max-w-xs">
+      <label className="flex flex-1 items-center gap-3 rounded-lg px-3 py-1.5 focus-within:ring-2 focus-within:ring-primary md:max-w-xs">
         <MapPin className="size-5 shrink-0 text-ink-2" aria-hidden />
         <span className="flex flex-1 flex-col">
           <span className="text-caption font-semibold text-ink-2">Dove?</span>

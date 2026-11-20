@@ -9,6 +9,7 @@ import { REPORT_WINDOW_HOURS } from "@/lib/domain/lead-rules";
 import { planFeatures } from "@/lib/domain/plan-features";
 
 export const metadata: Metadata = {
+  alternates: { canonical: "/per-i-professionisti" },
   title: "Per artigiani, tecnici e agenzie",
   description:
     "Richieste di clienti della tua zona gratis e illimitate, confermate dal cliente via email. Tre piani, con le promo di lancio.",
@@ -41,7 +42,7 @@ const faq = (free: boolean) => [
   },
   {
     q: "Chi paga di più compare più in alto?",
-    a: 'Sì, ed è dichiarato. Nella tua zona compaiono prima i Premium, poi i Normal, poi i Base; con un boost sali in cima al tuo gruppo per 24, 48 o 72 ore. Tra pari grado l\'ordine ruota. I posti a pagamento hanno sempre la scritta "Sponsorizzato".',
+    a: 'Sì, ed è dichiarato. Nella tua zona compaiono prima i Premium, poi i Normal, poi i Base; con un boost (24 ore 15 €, 48 ore 25 €, + IVA) sali in cima al tuo gruppo. Il piano Base non può comprare pacchetti. Tra pari grado l\'ordine ruota. I posti a pagamento hanno sempre la scritta "Sponsorizzato".',
   },
   {
     q: "Come pago? Posso disdire?",
@@ -52,8 +53,8 @@ const faq = (free: boolean) => [
   {
     q: "Quanto ci metto a partire?",
     a: free
-      ? "Pochi minuti: crei l'account, inserisci i dati dell'attività (partita IVA, codice SDI o PEC) e scegli se partire gratis o con un piano. La scheda compare appena il piano è attivo."
-      : "Pochi minuti: crei l'account, inserisci i dati dell'attività (partita IVA, codice SDI o PEC), scegli il piano e paghi. La scheda compare appena il pagamento è confermato.",
+      ? "Pochi minuti: crei l'account, inserisci i dati dell'attività (partita IVA, codice SDI o PEC) e scegli se partire gratis o con un piano. La scheda compare quando il piano è attivo e abbiamo verificato i dati dell'azienda."
+      : "Pochi minuti: crei l'account, inserisci i dati dell'attività (partita IVA, codice SDI o PEC), scegli il piano e paghi. La scheda compare quando il pagamento è confermato e abbiamo verificato i dati dell'azienda.",
   },
 ];
 

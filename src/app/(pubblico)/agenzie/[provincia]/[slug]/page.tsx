@@ -5,6 +5,7 @@ import { ProfileView } from "@/components/site/profile";
 import { TrackEvent } from "@/components/site/track-event";
 import { getPartnerProfile } from "@/lib/data/partners";
 import { listPublicPartnerPaths } from "@/lib/data/paths";
+import { aLuogo } from "@/lib/domain/format";
 
 export async function generateStaticParams() {
   const paths = await listPublicPartnerPaths();
@@ -15,9 +16,9 @@ export async function generateMetadata({ params }: PageProps<"/agenzie/[provinci
   const { slug } = await params;
   const p = await getPartnerProfile(slug);
   // Schede non attive (in attivazione, sospese): nessun dato nel titolo, come per la pagina 404.
-  if (!p || p.accountStatus !== "active") return {};
+  if (!p || p.accountStatus !== "active") return { title: "Pagina non trovata" };
   return {
-    title: `${p.displayName} — agenzia immobiliare a ${p.municipalityName}`,
+    title: `${p.displayName} — agenzia immobiliare ${aLuogo(p.municipalityName)}`,
     description: `${p.tagline}. Specializzazioni, portfolio immobili e richiesta di contatto gratuita.`,
     alternates: { canonical: p.href },
   };

@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import Stripe from "stripe";
 import { handleStripeEvent } from "@/lib/billing/stripe";
 import { alertTeam } from "@/lib/notify";
+import { logError } from "@/lib/domain/log";
 
 /**
  * Webhook Stripe. La firma si verifica sul corpo grezzo prima di leggere qualsiasi campo; gli effetti
@@ -22,7 +23,7 @@ export async function POST(request: NextRequest) {
   try {
     await handleStripeEvent(event);
   } catch (e) {
-    console.error("[stripe] evento non gestito:", event.type, event.id, e);
+    logError(`[stripe] evento non gestito: ${event.type} ${event.id}`, e);
     await alertTeam(
       "Webhook Stripe non elaborato",
       `Evento ${event.type} (${event.id}): ${e instanceof Error ? e.message : String(e)}\n\nStripe lo riproverà da solo per qualche giorno. Controllare i log di Vercel e, se serve, rimandarlo da Stripe → Sviluppatori → Webhook.`,

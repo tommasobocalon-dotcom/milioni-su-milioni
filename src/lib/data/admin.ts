@@ -85,7 +85,8 @@ export async function getAdminOverview(now: Date) {
         (select count(*) from partners where account_status = 'cancelled')::int as cancelled,
         (select count(*) from partners where verification_status = 'pending' and account_status <> 'cancelled')::int as to_verify,
         (select count(*) from partners where created_at > ${at(-30 * DAY)})::int as new_partners,
-        (select count(*) from partners where account_status = 'activating' and created_at < ${at(-3 * DAY)})::int as stuck_activating,
+        (select count(*) from partners p where p.account_status = 'activating' and p.created_at < ${at(-3 * DAY)}
+           and not exists (select 1 from subscriptions s where s.partner_id = p.id and s.status = 'active'))::int as stuck_activating,
         (select count(*) from subscriptions where status = 'active' and free)::int as free_subs,
         (select coalesce(json_agg(json_build_object('period', s.period, 'monthlyPriceCents', p.monthly_price_cents, 'yearlyPriceCents', p.yearly_price_cents)), '[]')
            from subscriptions s join plans p on p.id = s.plan_id where s.status = 'active' and not s.free) as paid_subs,
@@ -107,7 +108,8 @@ export async function getAdminOverview(now: Date) {
              and l.report_status is distinct from 'accepted') >= ${FREE_LEADS_PER_MONTH})::int as free_at_limit,
         (select coalesce(json_agg(x order by x.n desc), '[]') from (
            select case when s.free then 'Gratuito' else p.name end as name, count(*)::int as n
-           from subscriptions s join plans p on p.id = s.plan_id where s.status = 'active' group by 1) x) as by_plan,
+           from subscriptions s join plans p on p.id = s.plan_id join partners pa on pa.id = s.partner_id
+           where s.status = 'active' and pa.account_status = 'active' group by 1) x) as by_plan,
         (select coalesce(json_agg(x order by x.n desc), '[]') from (
            select pr.name, count(*)::int as n from partners pa
            join municipalities m on m.id = pa.municipality_id join provinces pr on pr.id = m.province_id
