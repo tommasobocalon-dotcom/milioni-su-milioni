@@ -232,6 +232,13 @@
       "when": 1794954171489,
       "tag": "0032_rls_area_cliente",
       "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "7",
+      "when": 1795181072721,
+      "tag": "0033_scheda_dopo_verifica",
+      "breakpoints": true
     }
   ]
 }

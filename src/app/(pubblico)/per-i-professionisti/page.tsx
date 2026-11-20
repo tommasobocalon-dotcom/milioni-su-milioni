@@ -53,8 +53,8 @@ const faq = (free: boolean) => [
   {
     q: "Quanto ci metto a partire?",
     a: free
-      ? "Pochi minuti: crei l'account, inserisci i dati dell'attività (partita IVA, codice SDI o PEC) e scegli se partire gratis o con un piano. La scheda compare appena il piano è attivo."
-      : "Pochi minuti: crei l'account, inserisci i dati dell'attività (partita IVA, codice SDI o PEC), scegli il piano e paghi. La scheda compare appena il pagamento è confermato.",
+      ? "Pochi minuti: crei l'account, inserisci i dati dell'attività (partita IVA, codice SDI o PEC) e scegli se partire gratis o con un piano. La scheda compare quando il piano è attivo e abbiamo verificato i dati dell'azienda."
+      : "Pochi minuti: crei l'account, inserisci i dati dell'attività (partita IVA, codice SDI o PEC), scegli il piano e paghi. La scheda compare quando il pagamento è confermato e abbiamo verificato i dati dell'azienda.",
   },
 ];
 

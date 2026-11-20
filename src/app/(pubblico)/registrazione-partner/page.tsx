@@ -46,7 +46,7 @@ export default function PartnerSignupPage() {
         <p className="caps-label text-ink-2">Registrazione partner</p>
         <h1 className="font-display text-h1">Porta la tua attività su GecoItalia</h1>
         <p className="text-body text-ink-2">
-          Pochi dati per creare la scheda, poi scegli il piano. La scheda compare nei risultati appena il piano è attivo.
+          Pochi dati per creare la scheda, poi scegli il piano. La scheda compare nei risultati quando il piano è attivo e abbiamo verificato i dati dell&apos;azienda.
         </p>
       </div>
       <Suspense fallback={<Steps current={0} />}>

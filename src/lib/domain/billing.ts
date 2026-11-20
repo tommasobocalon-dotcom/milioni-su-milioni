@@ -34,6 +34,17 @@ export function accountStatusFrom(statuses: SubscriptionStatus[]): SubscriptionS
   return PRIORITY.find((s) => statuses.includes(s))!;
 }
 
+export type VerificationStatus = "pending" | "verified" | "rejected";
+
+/**
+ * Stato della scheda pubblica: online ("active") solo con un piano attivo **e** i dati dell'azienda controllati dal team
+ * (partita IVA e sede, decisione del 20/11/2026). Prima chiunque poteva registrare la partita IVA di un'altra azienda e,
+ * col piano gratuito, andare online a suo nome. Con il piano attivo ma senza verifica resta "activating", nascosta.
+ */
+export function listingStatus(fromPlans: SubscriptionStatus, verification: VerificationStatus): SubscriptionStatus {
+  return fromPlans === "active" && verification !== "verified" ? "activating" : fromPlans;
+}
+
 /** Periodo corrente dalle voci dell'abbonamento (Stripe lo tiene sulle voci, in secondi Unix). */
 export function periodFromItems(items: { current_period_start: number; current_period_end: number }[]): { start: Date; end: Date } {
   if (items.length === 0) throw new Error("Abbonamento Stripe senza voci");

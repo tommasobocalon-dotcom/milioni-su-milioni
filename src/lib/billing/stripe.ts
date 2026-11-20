@@ -4,7 +4,7 @@ import { and, eq, inArray, isNotNull, isNull, or } from "drizzle-orm";
 import Stripe from "stripe";
 import { db } from "@/lib/db/client";
 import { municipalities, partners, plans, stripeProcessed, subscriptions } from "@/lib/db/schema";
-import { accountStatusFrom, areaExtensionFromCheckout, homeSponsorFromCheckout, searchBoostFromCheckout, periodFromItems, planFromLookupKey, planLookupKey, subscriptionStatusFromStripe, TRIAL_DAYS } from "@/lib/domain/billing";
+import { accountStatusFrom, areaExtensionFromCheckout, listingStatus, homeSponsorFromCheckout, searchBoostFromCheckout, periodFromItems, planFromLookupKey, planLookupKey, subscriptionStatusFromStripe, TRIAL_DAYS } from "@/lib/domain/billing";
 import { AREA_EXTENSION_OFFER, changePromo, HOME_SPONSOR_PACKAGES, homeSponsorPrice, launchDate, municipalityIdsFrom, planPromo, type PlanPromo, SEARCH_BOOST_PACKAGES } from "@/lib/domain/offers";
 import { hadFreePlan } from "@/lib/data/partner-area";
 import { grantAreaExtensions, grantHomeSponsor, grantSearchBoost, unlockLeads } from "@/lib/leads/service";
@@ -409,8 +409,11 @@ async function syncSubscription(subscriptionId: string): Promise<{ id: string; p
         .where(and(eq(subscriptions.partnerId, partner.id), isNull(subscriptions.stripeSubscriptionId)));
       await unlockLeads(tx, partner.id);
     }
-    const all =await tx.select({ status: subscriptions.status }).from(subscriptions).where(eq(subscriptions.partnerId, partner.id));
-    await tx.update(partners).set({ accountStatus: accountStatusFrom(all.map((s) => s.status)) }).where(eq(partners.id, partner.id));
+    const all = await tx.select({ status: subscriptions.status }).from(subscriptions).where(eq(subscriptions.partnerId, partner.id));
+    // Riga bloccata: la verifica del team (setVerificationAction) e il webhook non si sovrascrivono a vicenda.
+    const [{ verification }] = await tx.select({ verification: partners.verificationStatus }).from(partners).where(eq(partners.id, partner.id)).for("update");
+    // Online solo con il piano attivo e i dati verificati dal team (listingStatus).
+    await tx.update(partners).set({ accountStatus: listingStatus(accountStatusFrom(all.map((s) => s.status)), verification) }).where(eq(partners.id, partner.id));
     return row.id;
   });
   refreshPublicPages(partner.slug);

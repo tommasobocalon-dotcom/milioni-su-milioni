@@ -136,8 +136,8 @@ async function Subscription({ payment, welcome }: { payment: "received" | "start
         {teamSuspension}
         {welcome && (
           <p role="status" className="rounded-lg bg-subtle p-4 text-body-s">
-            <strong>Scheda creata.</strong> Ultimo passo: {free ? "parti gratis o scegli un piano" : "scegli il piano"}. Appena è attivo la tua
-            scheda compare nei risultati.
+            <strong>Scheda creata.</strong> Ultimo passo: {free ? "parti gratis o scegli un piano" : "scegli il piano"}. La scheda compare nei
+            risultati quando il piano è attivo e abbiamo verificato i dati dell&apos;azienda.
           </p>
         )}
         {!notice && !welcome && <p className="rounded-lg bg-subtle p-4 text-body-s">Nessun piano attivo: la tua scheda non compare nei risultati.</p>}

@@ -22,6 +22,7 @@ import { parseAmount } from "@/lib/domain/format";
 import { parseOpeningHours, parseSpecialties } from "@/lib/domain/profile-fields";
 import { canReportLead, REPORT_REASONS } from "@/lib/domain/lead-rules";
 import { AREA_EXTENSION_OFFER, HOME_SPONSOR_PACKAGES, municipalityIdsFrom, SEARCH_BOOST_PACKAGES } from "@/lib/domain/offers";
+import { listingStatus } from "@/lib/domain/billing";
 
 import { grantAreaExtensions, grantHomeSponsor, grantSearchBoost, unlockLeads } from "@/lib/leads/service";
 import { freePlanOpen } from "@/lib/domain/free-plan";
@@ -514,6 +515,12 @@ export async function startPlanChange(planCode: string, period: "monthly" | "yea
   return billingAction((payer) => createPlanChangeSession(payer.partnerId, planCode, period), "billing.plan_change");
 }
 
+/** Stato della scheda appena attivato un piano: online solo se il team ha già verificato i dati dell'azienda. */
+async function listingWithPlan(tx: Pick<typeof db, "select">, partnerId: string) {
+  const [{ verification }] = await tx.select({ verification: partners.verificationStatus }).from(partners).where(eq(partners.id, partnerId)).for("update");
+  return listingStatus("active", verification);
+}
+
 /**
  * Solo in sviluppo e sul sito di prova, senza Stripe: attiva il piano senza pagamento, per provare il
  * percorso di registrazione. In produzione l'abbonamento nasce dal webhook di Stripe.
@@ -531,7 +538,7 @@ export async function simulateSubscription(planCode: string, period: "monthly" |
   await db.transaction(async (tx) => {
     await tx.update(subscriptions).set({ status: "cancelled" }).where(eq(subscriptions.partnerId, partner.id));
     await tx.insert(subscriptions).values({ partnerId: partner.id, planId: plan.id, period, status: "active", currentPeriodStart: start, currentPeriodEnd: end });
-    await tx.update(partners).set({ accountStatus: "active" }).where(eq(partners.id, partner.id));
+    await tx.update(partners).set({ accountStatus: await listingWithPlan(tx, partner.id) }).where(eq(partners.id, partner.id));
     await unlockLeads(tx, partner.id);
     await tx.insert(auditLogs).values({ actor: user.email, action: "billing.simulated_subscription", entity: "partner", entityId: partner.id, data: { planCode, period } });
   });
@@ -559,7 +566,7 @@ export async function startFreePlan() {
     const end = new Date(start);
     end.setFullYear(end.getFullYear() + 100);
     await tx.insert(subscriptions).values({ partnerId: partner.id, planId: plan.id, period: "monthly", status: "active", free: true, currentPeriodStart: start, currentPeriodEnd: end });
-    await tx.update(partners).set({ accountStatus: "active" }).where(eq(partners.id, partner.id));
+    await tx.update(partners).set({ accountStatus: await listingWithPlan(tx, partner.id) }).where(eq(partners.id, partner.id));
     await tx.insert(auditLogs).values({ actor: user.email, action: "billing.free_plan", entity: "partner", entityId: partner.id });
     return true;
   });
