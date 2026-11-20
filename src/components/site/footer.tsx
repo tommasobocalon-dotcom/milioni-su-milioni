@@ -1,6 +1,5 @@
 import { CookiePreferencesButton } from "@/components/site/consent";
 import Link from "next/link";
-import { ABOUT_PHOTOS, CATEGORY_PHOTOS, HOW_PHOTOS } from "@/lib/data/category-photos";
 import { Wordmark } from "./wordmark";
 
 const COLUMNS = [
@@ -36,17 +35,8 @@ const COLUMNS = [
   },
 ];
 
-const ISTAT_CREDIT = {
-  title: "Confini delle province del Veneto",
-  author: "ISTAT",
-  license: "CC BY 3.0",
-  licenseUrl: "https://creativecommons.org/licenses/by/3.0/it/",
-  page: "https://www.istat.it/it/archivio/210584",
-};
-
-/** Footer a colonne sul modello di Thumbtack, nei colori del brand, con i crediti di foto e mappa. */
+/** Footer a colonne sul modello di Thumbtack, nei colori del brand. I crediti di foto e mappa stanno in fondo a Termini (20/11/2026). */
 export function SiteFooter() {
-  const credits = [...new Map([...Object.values(CATEGORY_PHOTOS), ...Object.values(ABOUT_PHOTOS), ...Object.values(HOW_PHOTOS)].map((p) => [p.credit.page, p.credit])).values(), ISTAT_CREDIT];
   return (
     <footer className="mt-auto bg-brand text-salvia-200">
       <div className="container-page grid gap-12 pt-16 pb-12 md:grid-cols-2 md:pt-20 lg:grid-cols-[1.3fr_repeat(3,1fr)]">
@@ -72,22 +62,6 @@ export function SiteFooter() {
             <CookiePreferencesButton className="ml-3 underline underline-offset-2 hover:text-on-brand" />
           </p>
         </div>
-        <details className="container-page pb-5 text-body-s">
-          <summary className="cursor-pointer self-start hover:text-on-brand">Crediti di foto e mappe</summary>
-          <ul className="mt-3 flex flex-col gap-1.5">
-            {credits.map((cr) => (
-              <li key={cr.page}>
-                <a href={cr.page} className="underline underline-offset-2 hover:text-on-brand" rel="noopener" target="_blank">
-                  “{cr.title}”
-                </a>
-                {cr.author ? ` di ${cr.author}` : ""},{" "}
-                <a href={cr.licenseUrl} className="underline underline-offset-2 hover:text-on-brand" rel="noopener license" target="_blank">
-                  {cr.license}
-                </a>
-              </li>
-            ))}
-          </ul>
-        </details>
       </div>
     </footer>
   );

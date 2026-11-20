@@ -1,6 +1,15 @@
 import { slugify } from "@/lib/domain/format";
 
-export function LegalDraft({ title, sections }: { title: string; sections: [heading: string, text: string][] }) {
+export function LegalDraft({
+  title,
+  sections,
+  children,
+}: {
+  title: string;
+  sections: [heading: string, text: string][];
+  /** Sezioni in più dopo quelle di testo (es. i crediti in Termini). */
+  children?: React.ReactNode;
+}) {
   return (
     <div className="container-page flex max-w-3xl flex-col gap-8 py-12">
       <h1 className="font-display text-h1">{title}</h1>
@@ -13,6 +22,7 @@ export function LegalDraft({ title, sections }: { title: string; sections: [head
           <p className="text-body">{t}</p>
         </section>
       ))}
+      {children}
     </div>
   );
 }

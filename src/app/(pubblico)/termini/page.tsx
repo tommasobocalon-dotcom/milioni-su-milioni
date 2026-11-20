@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { MediaCredits } from "@/components/site/credits";
 import { LegalDraft } from "@/components/site/legal-draft";
 
 export const metadata: Metadata = { title: "Termini e condizioni", alternates: { canonical: "/termini" } };
@@ -16,6 +17,8 @@ export default function TermsPage() {
         ["Per i partner: pacchetti di visibilità", "Logo in Home, boost nella ricerca ed estensione ad altri comuni si acquistano a pacchetti in euro, IVA esclusa, con pagamento anticipato. Valgono per la durata indicata al momento dell'acquisto e non si rinnovano da soli."],
         ["Ordinamento e sponsorizzazioni", "I criteri di ordinamento sono spiegati nella pagina «Come ordiniamo i risultati». I contenuti sponsorizzati sono sempre etichettati."],
       ]}
-    />
+    >
+      <MediaCredits />
+    </LegalDraft>
   );
 }

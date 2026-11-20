@@ -1,6 +1,6 @@
 /**
  * Foto delle categorie in Home, da archivi aperti (scaricate con assets.mjs della taste-skill, fonti in
- * public/foto/categorie/credits.json). Mostrano il mestiere, non i partner: il credito è sotto la sezione.
+ * public/foto/categorie/credits.json). Mostrano il mestiere, non i partner: i crediti sono in fondo alla pagina Termini (MediaCredits).
  */
 export type CategoryPhoto = {
   src: string;

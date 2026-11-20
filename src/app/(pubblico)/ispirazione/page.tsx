@@ -128,7 +128,8 @@ async function Showcase({ searchParams }: { searchParams: Search }) {
       )}
       {latest.length > 0 && (
         <section aria-labelledby="ultimi-lavori" className="flex flex-col gap-4">
-          <h2 id="ultimi-lavori" className="text-h3 font-semibold">
+          {/* Titolo "Ultimi lavori" nascosto alla vista (cliente, 20/11/2026), resta per i lettori di schermo. */}
+          <h2 id="ultimi-lavori" className="sr-only">
             Ultimi lavori
           </h2>
           <ul className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
