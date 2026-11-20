@@ -55,9 +55,10 @@ test("da sospeso l'Area Partner si riduce al solo pagamento", async ({ page }) =
 });
 
 test("sospeso a mano dal gestionale: l'abbonamento spiega perché e rimanda all'assistenza", async ({ page }) => {
+  // Si parte da un account attivo: il test precedente lo lascia sospeso, e da sospeso l'accesso porta all'abbonamento.
+  await setStatus("active");
   await login(page);
   // Sospensione manuale (gestionale): l'account è sospeso ma l'abbonamento resta pagato.
-  await setStatus("active");
   const [p] = await sql<{ id: string }[]>`select id from partners where slug = 'rossi-impianti'`;
   await sql`update partners set account_status = 'suspended' where id = ${p.id}`;
 
