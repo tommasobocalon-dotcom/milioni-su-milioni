@@ -26,7 +26,7 @@ const appUrl = () => process.env.APP_URL ?? "http://localhost:3000";
 
 /** Casella dell'assistenza: indirizzo mostrato sul sito e "rispondi a" delle nostre email. */
 export function supportEmail(): string {
-  return process.env.SUPPORT_EMAIL?.trim() || "assistenza@gecoitalia.it";
+  return process.env.SUPPORT_EMAIL?.trim() || "gecoassistenza@gmail.com";
 }
 
 /** Le email che arrivano dai nostri indirizzi non aprono ticket: niente giri infiniti di risposte automatiche. */
@@ -70,10 +70,9 @@ async function quietly(what: string, send: () => Promise<void>) {
   }
 }
 
-/** Avviso al team su una casella personale (SUPPORT_ALERT_EMAIL), con il link diretto al ticket. */
+/** Avviso al team con il link diretto al ticket: a SUPPORT_ALERT_EMAIL, altrimenti alla casella dell'assistenza. */
 async function alertTeam(number: number, title: string, from: string, body: string) {
-  const to = process.env.SUPPORT_ALERT_EMAIL?.trim();
-  if (!to) return;
+  const to = process.env.SUPPORT_ALERT_EMAIL?.trim() || supportEmail();
   await quietly("email di avviso al team", () =>
     sendEmail(to, `${title} ${ticketTag(number)}`, `${from} ha scritto:\n\n${body.slice(0, 1500)}\n\nApri nel gestionale: ${adminBaseUrl(process.env.ADMIN_URL, appUrl())}/assistenza/${number}`),
   );

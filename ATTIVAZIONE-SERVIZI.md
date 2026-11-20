@@ -112,11 +112,10 @@ In locale e sul sito di prova (con `SITE_ACCESS` e `DEMO_MODE=1`) c'è già l'am
 
 ### Passo 4.2 — Indirizzo dell'assistenza e avvisi
 ```
-SUPPORT_EMAIL=assistenza@gecoitalia.it
-SUPPORT_ALERT_EMAIL=tuaemail@esempio.it
+SUPPORT_EMAIL=gecoassistenza@gmail.com
 ```
-- `SUPPORT_EMAIL` è l'indirizzo mostrato sul sito e il "rispondi a" di tutte le email dell'assistenza.
-- `SUPPORT_ALERT_EMAIL` (facoltativa) riceve un avviso con il link al ticket a ogni nuova richiesta o risposta di un cliente. Usa una casella diversa da `SUPPORT_EMAIL`.
+- `SUPPORT_EMAIL` (dal 20/11/2026 `gecoassistenza@gmail.com`, anche valore predefinito nel codice) è l'indirizzo mostrato sul sito, il "rispondi a" di tutte le email dell'assistenza e la casella che riceve un avviso con il link al ticket a ogni nuova richiesta o risposta di un cliente. Ci arriva solo l'assistenza: gli allarmi vanno ad `ALERT_EMAILS`.
+- `SUPPORT_ALERT_EMAIL` (facoltativa) manda quegli avvisi a un'altra casella al posto di `SUPPORT_EMAIL`.
 - `ALERT_EMAILS` (facoltativa, più indirizzi separati da virgola) riceve gli **allarmi**: webhook Stripe non elaborato, pagamento o addebito SEPA non riuscito, codice delle richieste non inviato ai clienti. Senza, vanno ad `ADMIN_EMAILS`, altrimenti a info@gecoitalia.it. Lo stesso allarme arriva al massimo ogni 10 minuti; partono con Brevo, quindi se è Brevo a non funzionare restano solo nei log di Vercel.
 
 ### Passo 4.3 — Far entrare le email nel gestionale
@@ -130,18 +129,18 @@ La casella `SUPPORT_EMAIL` deve inoltrare ogni email al gestionale. Il modo più
    RESEND_INBOUND_SECRET=<whsec_...>
    ```
    Il testo delle email si legge con `RESEND_API_KEY`: se nei log di Vercel compare `[assistenza] email Resend non letta` con errore 401 o 403, la chiave ha solo "Sending access": creane una con accesso completo e sostituiscila.
-4. Su Aruba (webmail → Impostazioni → Inoltro) inoltra `assistenza@gecoitalia.it` all'indirizzo di ricezione del punto 1, lasciando una copia nella casella.
+4. Su Gmail (Impostazioni → Inoltro e POP/IMAP) inoltra `gecoassistenza@gmail.com` all'indirizzo di ricezione del punto 1, lasciando una copia nella casella.
 
 **Con Postmark (alternativa)**
 1. Su Postmark crea un server e apri **Default Inbound Stream**: ti dà un indirizzo `…@inbound.postmarkapp.com`.
 2. Come *Webhook URL* metti `https://gecoitalia.it/api/assistenza/email?token=<una stringa casuale lunga>`.
 3. Su Vercel: `INBOUND_EMAIL_TOKEN=<la stessa stringa>`.
-4. Su Aruba inoltra `assistenza@gecoitalia.it` all'indirizzo di Postmark.
+4. Su Gmail inoltra `gecoassistenza@gmail.com` all'indirizzo di Postmark.
 
 Il percorso del webhook è escluso dalla password del sito di prova: è protetto dalla firma (Resend) o dal token (Postmark).
 
 ### Passo 4.4 — Verificare
-1. Scrivi da una tua casella personale a `assistenza@gecoitalia.it`.
+1. Scrivi da una tua casella personale a `gecoassistenza@gmail.com`.
 2. In `/admin/assistenza` deve comparire una nuova richiesta "Email", e alla tua casella arriva la conferma con il numero `[geco #N]`.
 3. Rispondi dal gestionale: la risposta arriva per email. Rispondi a quella email: il messaggio si aggiunge allo stesso ticket, senza la parte citata.
 
@@ -178,7 +177,7 @@ APP_URL=https://gecoitalia.it
 
 # Gestionale e assistenza
 ADMIN_EMAILS=
-SUPPORT_EMAIL=assistenza@gecoitalia.it
+SUPPORT_EMAIL=gecoassistenza@gmail.com
 SUPPORT_ALERT_EMAIL=
 ALERT_EMAILS=
 RESEND_INBOUND_SECRET=
