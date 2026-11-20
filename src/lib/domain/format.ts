@@ -63,6 +63,16 @@ export function formatPhone(e164: string): string {
 /** Pagina a cui tornare dopo l'accesso (?next=): solo percorsi di questo sito, mai un altro dominio. */
 export function safeNextPath(raw: string | undefined | null): string | null {
   if (!raw || !raw.startsWith("/") || raw.startsWith("//") || raw.includes("\\")) return null;
+  // Tab, a capo e altri caratteri di controllo: il browser li toglie dall'indirizzo, così "/<tab>/sito.com" (arriva da
+  // ?next=/%09/sito.com) diventerebbe "//sito.com", cioè un altro sito.
+  if (/[\u0000-\u001f\u007f]/.test(raw)) return null;
+  // Controllo finale con lo stesso parser del browser: l'indirizzo deve restare su questo sito.
+  const base = "https://sito.invalid";
+  try {
+    if (new URL(raw, base).origin !== base) return null;
+  } catch {
+    return null;
+  }
   return raw;
 }
 

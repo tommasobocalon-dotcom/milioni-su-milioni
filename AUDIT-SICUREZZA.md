@@ -185,3 +185,28 @@ cambiato. Verifiche: 336 test unitari passati (26 saltati perché vogliono il da
 | 8 | Log e allarmi | Errori stampati così come sono: un errore di Drizzle porta nei log di Vercel i parametri della query (nomi, email, testo delle richieste) | **`logError`** (`src/lib/domain/log.ts`, 2 test) toglie email, token e parametri; **allarme al team** quando un account si blocca per 10 password sbagliate; avviso Sentry sui picchi di errori in `DEPLOY.md`. `pino`/`winston` e un SIEM sono di troppo per un solo sviluppatore: bastano Vercel Logs e Sentry |
 | 9 | CSP delle immagini | `img-src` ammetteva qualunque sito `https:` | `img-src` solo dal sito e dai pixel di Google Ads e Meta, `media-src 'self'`; le foto di Supabase passano da `next/image` con `remotePatterns` limitato al bucket pubblico (prima mancava: le foto caricate in produzione non si sarebbero viste, risposta 400). Elenco host di Google Ads completato (mancavano `google.it`, `pagead2`, `ad.doubleclick.net`). Nonce non adottato: renderebbe dinamiche tutte le pagine (vedi `DEPLOY.md`) |
 | 10 | Test di sicurezza | Test unitari della validazione degli input già presenti (richieste, profilo, registrazione azienda, password, OTP, assistenza) più i test end-to-end | **CodeQL** (`.github/workflows/codeql.yml`, regole `security-extended`). OWASP ZAP non aggiunto: andrebbe lanciato contro un sito di prova, non contro quello vero |
+
+---
+
+## 11. Revisione di permessi e logica (20 novembre 2026)
+
+Riletti a mano tutte le azioni del server (Area Partner, gestionale, area cliente, richieste, registrazione,
+assistenza, accesso), le API (webhook Stripe e email, ritorno dal Checkout, cron, statistiche, export dei dati),
+sessioni, OAuth, link monouso, OTP e le pagine con un id nell'indirizzo. Non è un test dall'esterno.
+
+**Già a posto:** ogni pagina e azione dell'Area Partner passa da `requirePartner()` con l'azienda presa dalla sessione
+(il cookie dell'azienda scelta vale solo tra quelle dell'account) e dalla RLS; ogni pagina e azione del gestionale da
+`requireAdmin()`; i lead bloccati del piano gratuito nascondono i dati già nella query; il ritorno dal Checkout
+controlla che la sessione Stripe sia dell'azienda; i pacchetti si attivano solo con `payment_status = paid` e una volta
+sola; webhook firmati (Stripe, Svix con finestra anti-replay); link monouso consumati in modo atomico; nuova password =
+tutte le sessioni chiuse; pagine `/richiesta/inviata/[id]` e `/richiesta/com-e-andata/[id]` senza dati personali;
+nessun link costruito con dati scritti dagli utenti; JSON-LD con `<` escapato.
+
+| # | Falla | Gravità | Stato |
+|---|---|---|---|
+| 1 | **Redirect verso un altro sito dopo l'accesso**: `/accedi?next=/%09/sito-falso.it` superava `safeNextPath` (tab e a capo vengono tolti dal browser, e `/<tab>/sito` diventa `//sito`). Utile per il phishing: dopo il login vero si finiva su una copia del sito | Media | **Corretta**: caratteri di controllo rifiutati e controllo finale con il parser `URL` (`src/lib/domain/format.ts`, 2 test) |
+| 2 | **Account preparato con l'email di un altro**: chi si registra con l'email di qualcun altro (senza confermarla) teneva password e sessione anche dopo che il vero proprietario entrava con Google, che conferma l'email. Da lì vedeva le sue richieste; con un'email di `ADMIN_EMAILS` non ancora registrata diventava amministratore | Media | **Corretta**: collegando Google/Apple a un account mai confermato si tolgono password e sessioni (`userForOAuthProfile`, 2 test sul database). Un'azienda vera mai confermata che entra con Google dal lato clienti rimette la password con "Password dimenticata" |
+| 3 | **Chiunque può registrare un'azienda con la partita IVA di un'altra** (basta che sia valida) e, col piano gratuito, la scheda va online subito, senza controllo del team: riceve i contatti dei clienti a nome di quell'azienda e blocca la registrazione di quella vera | Media | **Da decidere**: per esempio scheda visibile solo dopo il badge "Verificato" del team, o controllo della partita IVA (VIES) e dell'email |
+| 4 | **Ticket dell'assistenza a nome di altri**: dal modulo pubblico, senza accesso, con l'email di un'azienda il ticket finisce nella sua Area Partner e nell'area cliente (testo e nome scelti da chi scrive). Il gestionale lo segna "non verificato" | Bassa | **Da decidere**: mostrare nelle aree private solo i ticket aperti da dentro l'account, o dopo una risposta del team |
+| 5 | **Cron `/api/cron/esito-richieste` senza `CRON_SECRET`** chiamabile da chiunque (manda solo prima le email "Com'è andata?", una volta sola per richiesta) | Bassa | Impostare `CRON_SECRET` su Vercel |
+| 6 | Restano by design: chi clicca il link di conferma arrivato per una registrazione fatta da altri conferma quell'account (l'email dice di ignorarla); 10 password sbagliate bloccano l'accesso di quell'email per 15 minuti anche se le prova un estraneo | Bassa | Note |

@@ -103,6 +103,18 @@ describe("safeNextPath", () => {
     expect(safeNextPath(undefined)).toBeNull();
     expect(safeNextPath("")).toBeNull();
   });
+
+  it("rifiuta tab e a capo, che il browser toglie trasformando /<tab>/sito in //sito (?next=/%09/esempio.com)", () => {
+    expect(safeNextPath("/\t/esempio.com")).toBeNull();
+    expect(safeNextPath("/\n/esempio.com")).toBeNull();
+    expect(safeNextPath("/\r\n/esempio.com")).toBeNull();
+    expect(safeNextPath("/area-cliente\u0000")).toBeNull();
+  });
+
+  it("lascia passare i percorsi interni con caratteri codificati", () => {
+    expect(safeNextPath("/%09/esempio.com")).toBe("/%09/esempio.com");
+    expect(safeNextPath("/area-partner/sponsorizzazioni#home")).toBe("/area-partner/sponsorizzazioni#home");
+  });
 });
 
 describe("aLuogo", () => {
