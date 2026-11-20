@@ -76,7 +76,7 @@ jobs:
           rm db.dump
           ls -l "$NAME.dump.enc"
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: ${{ env.NAME }}
           path: ${{ env.NAME }}.dump.enc
@@ -84,7 +84,7 @@ jobs:
           compression-level: 0
 
       - name: Cancella i backup più vecchi oltre il limite
-        uses: actions/github-script@v7
+        uses: actions/github-script@v9
         with:
           script: |
             const limit = Number(process.env.BACKUP_LIMIT_MB) * 1024 * 1024;
@@ -135,7 +135,7 @@ jobs:
           tar -cf - foto | openssl enc -aes-256-cbc -pbkdf2 -iter 200000 -salt -pass env:PASSPHRASE -out "$NAME.tar.enc"
           ls -l "$NAME.tar.enc"
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: ${{ env.NAME }}
           path: ${{ env.NAME }}.tar.enc
@@ -143,7 +143,7 @@ jobs:
           compression-level: 0
 
       - name: Tiene solo le ultime 3 copie delle foto
-        uses: actions/github-script@v7
+        uses: actions/github-script@v9
         with:
           script: |
             const all = await github.paginate(github.rest.actions.listArtifactsForRepo, { ...context.repo, per_page: 100 });
