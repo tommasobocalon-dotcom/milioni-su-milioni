@@ -65,7 +65,7 @@ jobs:
           PGPASSWORD: postgres
         run: |
           db="postgres://postgres@localhost:5432/postgres"
-          psql -q "$db" -c "create role geco_partner nologin" -c "drop schema public cascade"
+          psql -q "$db" -c "create role geco_partner nologin" -c "create role geco_client nologin" -c "drop schema public cascade"
           pg_restore -d "$db" --no-owner --no-privileges --exit-on-error db.dump
           psql -At "$db" -c "select 'aziende ' || (select count(*) from partners) || ', richieste ' || (select count(*) from leads) || ', utenti ' || (select count(*) from users)"
           test "$(psql -At "$db" -c 'select count(*) from partners')" -gt 0
