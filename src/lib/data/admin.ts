@@ -42,15 +42,19 @@ type OverviewCounters = {
   cancelled: number;
   to_verify: number;
   new_partners: number;
+  new_partners_prev: number;
   stuck_activating: number;
   free_subs: number;
   paid_subs: {
+    plan: string;
     period: "monthly" | "yearly";
     monthlyPriceCents: number;
     yearlyPriceCents: number;
   }[];
   leads_created: number;
   leads_verified: number;
+  leads_verified_prev: number;
+  leads_daily: { day: string; n: number }[];
   leads_delivered: number;
   leads_unconfirmed: number;
   leads_locked: number;
@@ -85,13 +89,21 @@ export async function getAdminOverview(now: Date) {
         (select count(*) from partners where account_status = 'cancelled')::int as cancelled,
         (select count(*) from partners where verification_status = 'pending' and account_status <> 'cancelled')::int as to_verify,
         (select count(*) from partners where created_at > ${at(-30 * DAY)})::int as new_partners,
+        (select count(*) from partners where created_at between ${at(-60 * DAY)} and ${at(-30 * DAY)})::int as new_partners_prev,
         (select count(*) from partners p where p.account_status = 'activating' and p.created_at < ${at(-3 * DAY)}
            and not exists (select 1 from subscriptions s where s.partner_id = p.id and s.status = 'active'))::int as stuck_activating,
         (select count(*) from subscriptions where status = 'active' and free)::int as free_subs,
-        (select coalesce(json_agg(json_build_object('period', s.period, 'monthlyPriceCents', p.monthly_price_cents, 'yearlyPriceCents', p.yearly_price_cents)), '[]')
+        (select coalesce(json_agg(json_build_object('plan', p.name, 'period', s.period, 'monthlyPriceCents', p.monthly_price_cents, 'yearlyPriceCents', p.yearly_price_cents)), '[]')
            from subscriptions s join plans p on p.id = s.plan_id where s.status = 'active' and not s.free) as paid_subs,
         (select count(*) from leads where created_at > ${at(-30 * DAY)})::int as leads_created,
         (select count(*) from leads where verified_at > ${at(-30 * DAY)})::int as leads_verified,
+        (select count(*) from leads where verified_at between ${at(-60 * DAY)} and ${at(-30 * DAY)})::int as leads_verified_prev,
+        -- Richieste confermate giorno per giorno (ora italiana), ultimi 30 giorni compreso oggi.
+        (select json_agg(json_build_object('day', d.day, 'n', coalesce(x.n, 0)) order by d.day)
+           from (select generate_series((${t}::timestamptz at time zone 'Europe/Rome')::date - 29,
+                                        (${t}::timestamptz at time zone 'Europe/Rome')::date, interval '1 day')::date as day) d
+           left join (select (verified_at at time zone 'Europe/Rome')::date as day, count(*)::int as n from leads
+                      where verified_at > ${at(-31 * DAY)} group by 1) x on x.day = d.day) as leads_daily,
         (select count(*) from leads where delivered_at > ${at(-30 * DAY)} and charge = 'quota')::int as leads_delivered,
         (select count(*) from leads where verified_at is null and created_at between ${at(-7 * DAY)} and ${at(-30 * 60_000)})::int as leads_unconfirmed,
         (select count(*) from leads where verified_at > ${at(-30 * DAY)} and charge = 'locked')::int as leads_locked,
@@ -144,13 +156,17 @@ export async function getAdminOverview(now: Date) {
     } satisfies Record<AccountStatus, number>,
     toVerify: c.to_verify,
     newPartners: c.new_partners,
+    newPartnersPrev: c.new_partners_prev,
     stuckActivating: c.stuck_activating,
     mrrCents: monthlyRecurringCents(c.paid_subs),
+    mrrByPlan: ["Premium", "Normal", "Base"].map((plan) => ({ plan, cents: monthlyRecurringCents(c.paid_subs.filter((s) => s.plan === plan)) })),
     activeSubscriptions: c.paid_subs.length,
     freeSubscriptions: c.free_subs,
     freeAtLimit: c.free_at_limit,
     leadsCreated: c.leads_created,
     leadsVerified: c.leads_verified,
+    leadsVerifiedPrev: c.leads_verified_prev,
+    leadsDaily: c.leads_daily,
     leadsDelivered: c.leads_delivered,
     leadsUnconfirmed: c.leads_unconfirmed,
     leadsLocked: c.leads_locked,
