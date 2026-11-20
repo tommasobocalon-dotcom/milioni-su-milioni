@@ -116,6 +116,13 @@ export type DeleteOutcome = "deleted" | "partner" | "admin" | "missing";
  * contatti, descrizione e risposte; i ticket dell'assistenza perdono nome, email e testo dei messaggi del cliente.
  * Chi gestisce un'azienda o il gestionale passa dall'assistenza: ci sono abbonamento, fatture e dati di altri.
  */
+/** Chi gestisce un'azienda o il gestionale non può eliminare l'account da sé: la pagina lo dice prima, invece del modulo. */
+export async function deletesViaSupport(user: { id: string; role: string }): Promise<boolean> {
+  if (user.role === "admin" || user.role === "sales") return true;
+  const [member] = await db.select({ id: partnerMembers.partnerId }).from(partnerMembers).where(eq(partnerMembers.userId, user.id)).limit(1);
+  return Boolean(member);
+}
+
 export async function deleteClientAccount(userId: string): Promise<DeleteOutcome> {
   const u = await account(userId);
   if (!u) return "missing";

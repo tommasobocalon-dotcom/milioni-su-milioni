@@ -28,7 +28,7 @@ export function useQueryParam(name: string) {
 
 const COPY = {
   client: {
-    login: { title: "Bentornato su geco", text: "Accedi per seguire le tue richieste." },
+    login: { title: "Bentornato su GecoItalia", text: "Accedi per seguire le tue richieste." },
     signup: { title: "Crea il tuo account", text: "Ti serve un minuto: nome, email e una password." },
     signupTab: "Crea account",
     signupButton: "Crea il tuo account",

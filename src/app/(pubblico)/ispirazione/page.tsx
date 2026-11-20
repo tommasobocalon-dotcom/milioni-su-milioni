@@ -12,6 +12,7 @@ import { PROPERTY_CONTRACTS } from "@/lib/domain/property-contract";
 import { parseShowcaseFilter, showcaseHref } from "@/lib/domain/showcase-filter";
 
 export const metadata: Metadata = {
+  alternates: { canonical: "/ispirazione" },
   title: "Ispirazione",
   description: "Lavori veri di artigiani, tecnici e agenzie del Veneto: bagni, cucine, facciate, case. Idee per il tuo progetto.",
 };
@@ -24,7 +25,7 @@ export default function InspirationPage({ searchParams }: PageProps<"/ispirazion
           <div className="flex max-w-2xl flex-col gap-3">
             <h1 className="font-display text-h1 md:text-display-l">Ispirazione</h1>
             <p className="text-body-l text-on-brand-muted">
-              Lavori fatti da chi trovi su geco. Apri un progetto per vedere tutte le foto e, se ti piace, chiedi un contatto all&apos;azienda.
+              Lavori fatti da chi trovi su GecoItalia. Apri un progetto per vedere tutte le foto e, se ti piace, chiedi un contatto all&apos;azienda.
             </p>
           </div>
           <Suspense fallback={<div className="h-20" aria-hidden />}>
@@ -103,7 +104,7 @@ async function Showcase({ searchParams }: { searchParams: Search }) {
     return filter.type ? (
       <p className="rounded-lg bg-subtle p-8 text-center text-body">
         Ancora nessun lavoro con questo filtro.{" "}
-        <Link href="/ispirazione" className="font-semibold text-on-brand underline underline-offset-2 hover:text-salvia-200">
+        <Link href="/ispirazione" className="font-semibold text-primary underline underline-offset-2 hover:text-bosco-700">
           Vedi tutti i lavori
         </Link>
       </p>
@@ -164,7 +165,7 @@ function ShowcaseCard({ item, large }: { item: ShowcaseItem; large?: boolean }) 
           {item.place && ` · ${item.place}`}
         </p>
         <h3 className={large ? "text-h3 font-semibold" : "text-h4 font-semibold"}>
-          <Link href={`/ispirazione/${item.id}`} className="after:absolute after:inset-0 focus-visible:outline-none after:focus-visible:rounded-lg after:focus-visible:outline-2 after:focus-visible:outline-primary">
+          <Link href={`/ispirazione/${item.id}`} className="after:absolute after:inset-0 focus-visible:outline-none after:focus-visible:rounded-lg after:focus-visible:outline-2 after:focus-visible:outline-solid after:focus-visible:outline-primary">
             {item.title}
           </Link>
         </h3>

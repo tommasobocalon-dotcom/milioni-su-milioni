@@ -61,7 +61,7 @@ async function Overview() {
       </section>
 
       <section aria-label="Indicatori" className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <Kpi icon={Euro} label="Ricorrente mensile (MRR)" value={formatEuro(o.mrrCents)} note={`${o.activeSubscriptions} a pagamento · ${o.freeSubscriptions} gratuiti · IVA esclusa`} />
+        <Kpi icon={Euro} label="Ricorrente mensile (MRR)" value={formatEuro(o.mrrCents)} note={`${o.activeSubscriptions} a pagamento · ${o.freeSubscriptions} ${o.freeSubscriptions === 1 ? "gratuito" : "gratuiti"} · IVA esclusa`} />
         <Kpi
           icon={Store}
           label="Partner attivi"

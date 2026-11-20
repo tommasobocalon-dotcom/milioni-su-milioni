@@ -68,7 +68,7 @@ export async function registerPartner(_prev: SignupState, formData: FormData): P
   ]);
   if (!category) return { error: "Scegli cosa fa la tua attività", field: "categoryId" };
   if (!place) return { error: "Scegli il comune della sede", field: "municipalityId" };
-  if (sameVat) return { error: "Questa partita IVA ha già una scheda su geco: scrivi all'assistenza per entrare nell'account", field: "vatNumber" };
+  if (sameVat) return { error: "Questa partita IVA ha già una scheda su GecoItalia: scrivi all'assistenza per entrare nell'account", field: "vatNumber" };
 
   const taken = await db.select({ slug: partners.slug }).from(partners).where(like(partners.slug, `${slugify(d.displayName)}%`));
   const slug = freeSlug(d.displayName, place.name, new Set(taken.map((t) => t.slug)));

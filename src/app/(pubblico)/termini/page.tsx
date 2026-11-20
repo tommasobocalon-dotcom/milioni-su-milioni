@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { LegalDraft } from "@/components/site/legal-draft";
 
-export const metadata: Metadata = { title: "Termini e condizioni" };
+export const metadata: Metadata = { title: "Termini e condizioni", alternates: { canonical: "/termini" } };
 
 export default function TermsPage() {
   return (
@@ -14,7 +14,7 @@ export default function TermsPage() {
         ["Per i partner: piano gratuito di lancio", "Chi si registra nei primi 6 mesi dal lancio può partire senza pagare, con le funzioni del piano Base, finché non riceve 3 richieste nello stesso mese di calendario. Dalla quarta richiesta del mese il partner vede tipo di lavoro, comune e tempi, ma non i dati del cliente, finché non sceglie un piano a pagamento; a quel punto si sbloccano tutte. Chi parte dal piano gratuito ha le promo di lancio anche dopo i 6 mesi, ma non i 7 giorni di prova."],
         ["Per i partner: richieste dei clienti", "Le richieste dei clienti sono gratuite e illimitate con tutti i piani. Conta solo una richiesta confermata dal cliente via email e consegnata; i duplicati si annullano in automatico. Una richiesta si può segnalare entro 72 ore solo per motivi oggettivi."],
         ["Per i partner: pacchetti di visibilità", "Logo in Home, boost nella ricerca ed estensione ad altri comuni si acquistano a pacchetti in euro, IVA esclusa, con pagamento anticipato. Valgono per la durata indicata al momento dell'acquisto e non si rinnovano da soli."],
-        ["Ordinamento e sponsorizzazioni", "I criteri di ordinamento sono spiegati nella pagina Come funziona. I contenuti sponsorizzati sono sempre etichettati."],
+        ["Ordinamento e sponsorizzazioni", "I criteri di ordinamento sono spiegati nella pagina «Come ordiniamo i risultati». I contenuti sponsorizzati sono sempre etichettati."],
       ]}
     />
   );

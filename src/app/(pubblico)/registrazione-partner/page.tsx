@@ -44,7 +44,7 @@ export default function PartnerSignupPage() {
     <section className="container-page flex max-w-3xl flex-col gap-8 py-12">
       <div className="flex flex-col gap-3">
         <p className="caps-label text-ink-2">Registrazione partner</p>
-        <h1 className="font-display text-h1">Porta la tua attività su geco</h1>
+        <h1 className="font-display text-h1">Porta la tua attività su GecoItalia</h1>
         <p className="text-body text-ink-2">
           Pochi dati per creare la scheda, poi scegli il piano. La scheda compare nei risultati appena il piano è attivo.
         </p>

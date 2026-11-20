@@ -54,7 +54,7 @@ export const SENTRY_DATA_COLLECTION = {
   cookies: false,
   httpHeaders: { request: { allow: ["user-agent", "referer", "content-type"] }, response: false },
   httpBodies: [],
-  urlQueryParams: true,
+  urlQueryParams: false,
   databaseQueryData: false,
   stackFrameVariables: false,
 };

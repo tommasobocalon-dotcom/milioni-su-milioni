@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { amountInput, formatEuro, formatPhone, formatPriceRange, formatResponseTime, parseAmount, safeNextPath, slugify } from "./format";
+import { aLuogo, amountInput, formatEuro, formatPhone, formatPriceRange, formatResponseTime, parseAmount, safeNextPath, slugify } from "./format";
 
 describe("formatEuro", () => {
   it("uses Italian separators and drops zero cents", () => {
@@ -102,5 +102,16 @@ describe("safeNextPath", () => {
     expect(safeNextPath("javascript:alert(1)")).toBeNull();
     expect(safeNextPath(undefined)).toBeNull();
     expect(safeNextPath("")).toBeNull();
+  });
+});
+
+describe("aLuogo", () => {
+  it("usa ad davanti alla a", () => {
+    expect(aLuogo("Abano Terme")).toBe("ad Abano Terme");
+    expect(aLuogo("Asolo")).toBe("ad Asolo");
+  });
+  it("usa a negli altri casi", () => {
+    expect(aLuogo("Padova")).toBe("a Padova");
+    expect(aLuogo("Este")).toBe("a Este");
   });
 });

@@ -3,6 +3,8 @@ import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { ButtonLink } from "@/components/ui/button";
 import { getCategories } from "@/lib/data/catalog";
+import { getActiveCounts } from "@/lib/data/home";
+import { findService } from "@/lib/domain/service-alias";
 import { cn } from "@/lib/utils";
 
 type Shortcut = { label: string; href: string };
@@ -27,17 +29,25 @@ const HOME_SHORTCUTS: Shortcut[] = [
  * Ogni blocco ha una foto del mestiere (fornita dal cliente, in `public/foto/home/`), titolo, descrizione, scorciatoie e il bottone della ricerca.
  */
 export async function EntryBlocks({ id }: { id: string }) {
-  const categories = await getCategories();
+  const [categories, counts] = await Promise.all([getCategories(), getActiveCounts()]);
 
   // Tutte le categorie di tecnici e artigiani, nell'ordine del catalogo (soci, 14/11/2026: prima erano le 3 con più partner).
-  const proShortcuts: Shortcut[] = categories
+  const proShortcuts: (Shortcut & { active: boolean })[] = categories
     .filter(
       (c) => c.partnerType === "technician" || c.partnerType === "artisan",
     )
     .map((c) => ({
       label: c.pluralName,
       href: `/trova-professionista?categoria=${c.slug}`,
+      active: (counts.byCategory[c.slug] ?? 0) > 0,
     }));
+  const serviceSlugs = Object.keys(counts.byService).map((slug) => ({ slug }));
+  const agencyShortcuts = HOME_SHORTCUTS.map((s) => {
+    const slug = new URL(s.href, "https://x").searchParams.get("servizio");
+    return { ...s, active: Boolean(findService(serviceSlugs, slug)) };
+  });
+  // Solo le scorciatoie con almeno un'azienda attiva; se non ce n'è nessuna (sito appena aperto) restano tutte.
+  const withResults = (list: (Shortcut & { active: boolean })[]) => (list.some((s) => s.active) ? list.filter((s) => s.active) : list);
 
   return (
     <section aria-labelledby={id} className="bg-surface">
@@ -67,7 +77,7 @@ export async function EntryBlocks({ id }: { id: string }) {
             label="Tecnici e artigiani"
             title="Cerca professionisti"
             text="Geometri, tecnici e artigiani della tua zona, con prezzi indicativi e lavori già svolti."
-            shortcuts={proShortcuts}
+            shortcuts={withResults(proShortcuts)}
             href="/trova-professionista"
             cta="Cerca un professionista"
           />
@@ -81,7 +91,7 @@ export async function EntryBlocks({ id }: { id: string }) {
             label="Agenzie immobiliari"
             title="Cerca agenzie"
             text="Comprare, vendere o affittare casa con le agenzie immobiliari che conoscono la zona."
-            shortcuts={HOME_SHORTCUTS}
+            shortcuts={withResults(agencyShortcuts)}
             href="/trova-casa"
             cta="Cerca un'agenzia"
           />

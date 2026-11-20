@@ -116,7 +116,7 @@ export async function openTicket(input: NewTicket): Promise<{ id: string; number
     sendEmail(
       email,
       replySubject(subject, ticket.number),
-      `Ciao ${input.requesterName.split(" ")[0]},\nabbiamo ricevuto la tua richiesta: ti rispondiamo entro un giorno lavorativo.\n\nNumero della richiesta: #${ticket.number}\nOggetto: ${subject}\n${areaLink}\nPer aggiungere dettagli rispondi a questa email lasciando ${ticketTag(ticket.number)} nell'oggetto.\n\nIl team di geco`,
+      `Ciao ${input.requesterName.split(" ")[0]},\nabbiamo ricevuto la tua richiesta: ti rispondiamo entro un giorno lavorativo.\n\nNumero della richiesta: #${ticket.number}\nOggetto: ${subject}\n${areaLink}\nPer aggiungere dettagli rispondi a questa email lasciando ${ticketTag(ticket.number)} nell'oggetto.\n\nIl team di GecoItalia`,
       { replyTo: supportEmail() },
     ),
   );

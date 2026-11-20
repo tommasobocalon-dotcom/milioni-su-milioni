@@ -6,7 +6,7 @@ import { ChipLink } from "@/components/ui/chip";
 import { getCategories, getCategoryBySlug, getMunicipalities, type Place } from "@/lib/data/catalog";
 import { listCategoryPlacePaths } from "@/lib/data/paths";
 import { searchPartners } from "@/lib/data/search";
-import { distanceKm } from "@/lib/domain/format";
+import { distanceKm, aLuogo } from "@/lib/domain/format";
 
 /**
  * Pagine "categoria × comune" per i motori di ricerca (PRD §15), es. /idraulico/padova: lo stesso elenco di Trova
@@ -24,11 +24,11 @@ async function findLanding(categoria: string, comune: string) {
 export async function generateMetadata({ params }: PageProps<"/[categoria]/[comune]">): Promise<Metadata> {
   const { categoria, comune } = await params;
   const landing = await findLanding(categoria, comune);
-  if (!landing) return {};
+  if (!landing) return { title: "Pagina non trovata" };
   const { category, place } = landing;
   return {
-    title: `${category.pluralName} a ${place.name}`,
-    description: `${category.pluralName} che lavorano a ${place.name} (${place.provinceCode}): confronta prezzi indicativi, zone servite e lavori svolti, poi chiedi un contatto gratis.`,
+    title: `${category.pluralName} ${aLuogo(place.name)}`,
+    description: `${category.pluralName} che lavorano ${aLuogo(place.name)} (${place.provinceCode}): confronta prezzi indicativi, zone servite e lavori svolti, poi chiedi un contatto gratis.`,
     alternates: { canonical: `/${category.slug}/${place.slug}` },
   };
 }
@@ -87,7 +87,7 @@ async function RelatedLinks({ category, place }: { category: { slug: string; plu
       {otherCategories.length > 0 && (
         <section aria-labelledby="altri-servizi" className="flex flex-col gap-3">
           <h2 id="altri-servizi" className="text-h4 font-semibold">
-            Altri servizi a {place.name}
+            Altri servizi {aLuogo(place.name)}
           </h2>
           <ul className="flex flex-wrap gap-2">
             {otherCategories.map((c) => (

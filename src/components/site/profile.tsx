@@ -12,6 +12,7 @@ import { Chip } from "@/components/ui/chip";
 import { LogoPartner } from "@/components/ui/logo-partner";
 import type { PartnerProfile } from "@/lib/data/partners";
 import {
+  aLuogo,
   formatEuro,
   formatPriceRange,
   PRICE_UNIT_LABEL,
@@ -41,6 +42,8 @@ export function ProfileView({ p }: { p: PartnerProfile }) {
       addressCountry: "IT",
     },
     areaServed: p.areas,
+    url: `${process.env.APP_URL ?? ""}${p.href}`,
+    ...(p.logoUrl ? { logo: p.logoUrl, image: p.logoUrl } : {}),
   };
 
   return (
@@ -63,7 +66,12 @@ export function ProfileView({ p }: { p: PartnerProfile }) {
           <div className="flex flex-1 flex-col gap-2">
             <div className="flex flex-wrap items-center gap-2">
               <h1 className="font-display text-h1">{p.displayName}</h1>
-              {p.verified && <Badge kind="verified" />}
+              {p.verified && (
+                <Link href="/come-ordiniamo-i-risultati#verificato" title="Cosa vuol dire Verificato" className="rounded-full">
+                  <Badge kind="verified" />
+                  <span className="sr-only">: cosa vuol dire</span>
+                </Link>
+              )}
               {/* Partner Elite lilla come in Trova professionista, non giallo (13/11/2026). */}
               {plan && <Badge kind={plan} className={cn(plan === "premium" && "bg-lavanda-300 [&>svg]:text-ambra-500")} />}
             </div>
@@ -301,7 +309,7 @@ export function ProfileView({ p }: { p: PartnerProfile }) {
               </ul>
               {p.localHref && (
                 <Link href={p.localHref} className="self-start text-body-s font-semibold text-primary underline">
-                  Cerca {p.categoryPlural.toLowerCase()} a {p.municipalityName}
+                  Cerca {p.categoryPlural.toLowerCase()} {aLuogo(p.municipalityName)}
                 </Link>
               )}
             </section>

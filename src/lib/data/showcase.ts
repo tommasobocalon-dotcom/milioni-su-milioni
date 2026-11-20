@@ -1,7 +1,9 @@
 import "server-only";
-import { and, desc, eq, gt, isNotNull, lte, ne, notInArray, type SQL } from "drizzle-orm";
+import { and, desc, eq, gt, isNotNull, lte, ne, notInArray, sql, type SQL } from "drizzle-orm";
+import { alias } from "drizzle-orm/pg-core";
 import { db } from "@/lib/db/client";
 import { categories, municipalities, partners, portfolioItems, provinces, showcaseFeatures } from "@/lib/db/schema";
+import type { PropertyContract } from "@/lib/domain/property-contract";
 import type { ShowcaseFilter } from "@/lib/domain/showcase-filter";
 import { profileHref } from "./search";
 
@@ -17,7 +19,11 @@ export type ShowcaseItem = {
   place: string | null;
   href: string;
   sponsored: boolean;
+  /** Immobile di un'agenzia (non un lavoro): contratto, prezzo e stato, se l'agenzia li ha scritti. */
+  property: { contract: PropertyContract; priceCents: number | null; status: "available" | "negotiating" | "sold" | null } | null;
 };
+
+const workPlace = alias(municipalities, "work_place");
 
 const columns = {
   id: portfolioItems.id,
@@ -31,7 +37,11 @@ const columns = {
   categoryName: categories.name,
   categorySlug: categories.slug,
   provinceSlug: provinces.slug,
-  place: municipalities.name,
+  // Il comune del lavoro o dell'immobile, se l'azienda l'ha scritto; altrimenti quello della sede.
+  place: sql<string>`coalesce(${workPlace.name}, ${municipalities.name})`,
+  contract: portfolioItems.contract,
+  priceCents: portfolioItems.priceCents,
+  status: portfolioItems.status,
 };
 
 function base() {
@@ -41,7 +51,8 @@ function base() {
     .innerJoin(partners, eq(partners.id, portfolioItems.partnerId))
     .innerJoin(categories, eq(categories.id, partners.categoryId))
     .innerJoin(municipalities, eq(municipalities.id, partners.municipalityId))
-    .innerJoin(provinces, eq(provinces.id, municipalities.provinceId));
+    .innerJoin(provinces, eq(provinces.id, municipalities.provinceId))
+    .leftJoin(workPlace, eq(workPlace.id, portfolioItems.municipalityId));
 }
 
 type Row = Awaited<ReturnType<typeof base>>[number];
@@ -58,6 +69,7 @@ const toItem = (r: Row, sponsored: boolean): ShowcaseItem => ({
   place: r.place,
   href: profileHref({ partnerType: r.partnerType, provinceSlug: r.provinceSlug, categorySlug: r.categorySlug, slug: r.partnerSlug }),
   sponsored,
+  property: r.partnerType === "agency" && r.contract ? { contract: r.contract, priceCents: r.priceCents, status: r.status } : null,
 });
 
 /**

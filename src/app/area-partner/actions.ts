@@ -569,7 +569,7 @@ export async function startFreePlan() {
 }
 
 // ---------------------------------------------------------------------------
-// Assistenza: richieste al team di geco dall'Area Partner (identità verificata dalla sessione)
+// Assistenza: richieste al team di GecoItalia dall'Area Partner (identità verificata dalla sessione)
 // ---------------------------------------------------------------------------
 
 const SupportMessage = z.string().trim().min(2, "Scrivi il messaggio").max(MESSAGE_MAX, "Messaggio troppo lungo");

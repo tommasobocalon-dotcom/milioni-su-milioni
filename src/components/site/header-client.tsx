@@ -75,7 +75,7 @@ export function HeaderSearch() {
       aria-label="Ricerca rapida"
       className="hidden min-w-0 flex-1 justify-center lg:hero-search-hidden:flex"
     >
-      <div className="flex h-12 w-full max-w-xl header-search-in items-center rounded-full border border-line bg-surface pr-1.5 pl-4 focus-within:border-primary">
+      <div className="flex h-12 w-full max-w-xl header-search-in items-center rounded-full border border-line bg-surface pr-1.5 pl-4 focus-within:border-primary focus-within:ring-2 focus-within:ring-primary">
         <Search className="size-4 shrink-0 text-ink-2" aria-hidden />
         <label className="sr-only" htmlFor="ricerca-compatta-q">
           Di cosa hai bisogno?
@@ -138,7 +138,15 @@ export function ExploreMenu({ sections, categories }: { sections: ExploreLink[];
   }, [open]);
 
   return (
-    <div ref={root} className="relative">
+    <div
+      ref={root}
+      className="relative"
+      // Il menu si chiude quando il fuoco della tastiera esce (Tab oltre l'ultima voce), altrimenti copre la pagina.
+      onBlur={(e) => {
+        // Solo quando il fuoco va davvero altrove: con il mouse (relatedTarget vuoto in Safari) ci pensa già onPointer.
+        if (open && e.relatedTarget && !root.current?.contains(e.relatedTarget as Node)) setOpen(false);
+      }}
+    >
       <button
         type="button"
         aria-expanded={open}

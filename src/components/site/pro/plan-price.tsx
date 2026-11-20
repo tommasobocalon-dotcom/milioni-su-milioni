@@ -39,7 +39,7 @@ export function PromoBanner({ plans, guaranteed = false }: { plans: PromoPlan[];
           </>
         )}
         {firstMonth && yearly && " "}
-        {yearly && <>Con l&apos;annuale risparmi fino a {formatEuro(yearly)}.</>}
+        {yearly && <>L&apos;annuale in promo costa fino a {formatEuro(yearly)} in meno del suo prezzo di listino.</>}
         {yearly && (
           <span className="font-normal text-on-brand-muted">
             {/* Chi è partito dal piano gratuito di lancio ha l'annuale in promo anche dopo i 6 mesi. */}

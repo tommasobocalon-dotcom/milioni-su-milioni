@@ -3,6 +3,7 @@ import { and, eq, gt, inArray, isNotNull, isNull, lte, ne, or } from "drizzle-or
 import { db } from "@/lib/db/client";
 import { leads, municipalities, partners } from "@/lib/db/schema";
 import { sendEmail } from "@/lib/notify";
+import { aLuogo } from "@/lib/domain/format";
 
 const DAY = 24 * 60 * 60 * 1000;
 /** L'email parte dopo 3 giorni dalla consegna; oltre 14 non ha più senso chiedere. */
@@ -56,7 +57,7 @@ export async function sendFollowUps(now = new Date()): Promise<number> {
         `Com'è andata con ${r.partnerName}?`,
         [
           `Ciao ${r.name},`,
-          `qualche giorno fa hai chiesto a ${r.partnerName} di ricontattarti per "${r.requestType}" a ${r.municipality}.`,
+          `qualche giorno fa hai chiesto a ${r.partnerName} di ricontattarti per "${r.requestType}" ${aLuogo(r.municipality)}.`,
           `Ti ha richiamato? Diccelo con un clic: ${appUrl}/richiesta/com-e-andata/${r.id}`,
           "Se nessuno si è fatto sentire, nella stessa pagina trovi altre aziende della tua zona a cui chiedere.",
         ].join("\n\n"),

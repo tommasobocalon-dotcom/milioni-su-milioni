@@ -7,13 +7,14 @@ import { getAnySessionUser } from "@/lib/auth/session";
 import { supportEmail } from "@/lib/support/service";
 
 export const metadata: Metadata = {
+  alternates: { canonical: "/assistenza" },
   title: "Assistenza",
-  description: "Scrivi al team di geco: ti rispondiamo per email entro un giorno lavorativo.",
+  description: "Scrivi al team di GecoItalia: ti rispondiamo per email entro un giorno lavorativo.",
 };
 
 const QUICK = [
-  { q: "Ho inviato una richiesta a un professionista", a: "Ti ricontatta lui nella fascia oraria che hai scelto. Se non succede entro due giorni, scrivici." },
-  { q: "Sono un'azienda e voglio comparire su geco", a: "Registrati da Per i professionisti: scegli il piano e la tua scheda è online appena il piano è attivo." },
+  { q: "Ho inviato una richiesta a un professionista", a: "Ti ricontatta l'azienda nella fascia oraria che hai scelto. Se non succede entro due giorni, scrivici." },
+  { q: "Sono un'azienda e voglio comparire su GecoItalia", a: "Registrati da Per i professionisti: scegli il piano e la tua scheda è online appena il piano è attivo." },
   { q: "Un lead non è valido", a: "Segnalalo entro 72 ore dalla pagina del lead nell'Area Partner: lo controlliamo noi." },
 ];
 
@@ -26,7 +27,7 @@ export default function SupportPage() {
           <h1 className="font-display text-h1">Come ti aiutiamo?</h1>
         </div>
         <p className="text-body-l text-neutro-700">
-          Scrivici qui sotto: la richiesta arriva al team di geco e ti rispondiamo per email entro un giorno lavorativo.
+          Scrivici qui sotto: la richiesta arriva al team di GecoItalia e ti rispondiamo per email entro un giorno lavorativo.
         </p>
         <p className="inline-flex flex-wrap items-center gap-2 text-body-s text-ink-2">
           <Mail className="size-4" aria-hidden /> Preferisci l&apos;email? Scrivi a{" "}

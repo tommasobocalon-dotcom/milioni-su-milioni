@@ -107,7 +107,8 @@ export async function getAdminOverview(now: Date) {
              and l.report_status is distinct from 'accepted') >= ${FREE_LEADS_PER_MONTH})::int as free_at_limit,
         (select coalesce(json_agg(x order by x.n desc), '[]') from (
            select case when s.free then 'Gratuito' else p.name end as name, count(*)::int as n
-           from subscriptions s join plans p on p.id = s.plan_id where s.status = 'active' group by 1) x) as by_plan,
+           from subscriptions s join plans p on p.id = s.plan_id join partners pa on pa.id = s.partner_id
+           where s.status = 'active' and pa.account_status = 'active' group by 1) x) as by_plan,
         (select coalesce(json_agg(x order by x.n desc), '[]') from (
            select pr.name, count(*)::int as n from partners pa
            join municipalities m on m.id = pa.municipality_id join provinces pr on pr.id = m.province_id

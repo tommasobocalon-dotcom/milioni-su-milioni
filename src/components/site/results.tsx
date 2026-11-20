@@ -12,7 +12,9 @@ import { FeaturedPartner } from "@/components/site/featured-partner";
 import { recordImpressions, searchPartners, type SortKey } from "@/lib/data/search";
 import { VISITOR_COOKIE, visitorRotation } from "@/lib/domain/ranking";
 import { pageNumbers, parsePage } from "@/lib/domain/pagination";
+import { findService } from "@/lib/domain/service-alias";
 import { cn } from "@/lib/utils";
+import { aLuogo } from "@/lib/domain/format";
 
 /**
  * Schede per pagina nei risultati: 7 dalla seconda pagina in poi; la prima è più corta (5 + il riquadro grande in evidenza) così l'elenco supera
@@ -27,13 +29,18 @@ export type ResultsParams = {
   servizio?: string;
   ordina?: string;
   pagina?: string;
+  /** Testo scritto nella ricerca libera della Home (/cerca), solo da mostrare. */
+  cerca?: string;
 };
 
-const SORTS: { value: SortKey; label: string }[] = [
+const SORTS: { value: SortKey; label: string; pro?: true }[] = [
   { value: "rilevanza", label: "Consigliati" },
   { value: "distanza", label: "Distanza" },
-  { value: "prezzo", label: "Prezzo indicativo" },
+  // Le agenzie lavorano a percentuale: ordinarle per prezzo non ha senso.
+  { value: "prezzo", label: "Prezzo indicativo", pro: true },
 ];
+
+const sortsFor = (mode: "agency" | "pro") => SORTS.filter((s) => mode === "pro" || !s.pro);
 
 const first = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v);
 
@@ -44,6 +51,7 @@ export function parseResultsParams(sp: Record<string, string | string[] | undefi
     servizio: first(sp.servizio),
     ordina: first(sp.ordina),
     pagina: first(sp.pagina),
+    cerca: first(sp.cerca)?.trim().slice(0, 80) || undefined,
   };
 }
 
@@ -66,8 +74,8 @@ async function findResults(mode: "agency" | "pro", params: ResultsParams, seed: 
   const category =
     mode === "agency" ? allCategories.find((c) => c.partnerType === "agency") ?? null : params.categoria ? await getCategoryBySlug(params.categoria) : null;
   const categoryServices = category ? await getServicesForCategory(category.id) : [];
-  const service = categoryServices.find((s) => s.slug === params.servizio) ?? null;
-  const sort = (SORTS.find((s) => s.value === params.ordina)?.value ?? "rilevanza") as SortKey;
+  const service = findService(categoryServices, params.servizio);
+  const sort = (sortsFor(mode).find((s) => s.value === params.ordina)?.value ?? "rilevanza") as SortKey;
 
   const found = await searchPartners({
     partnerType: mode,
@@ -82,7 +90,12 @@ async function findResults(mode: "agency" | "pro", params: ResultsParams, seed: 
     firstPageSize: FIRST_PAGE_SIZE,
     visitorSeed: seed,
   });
-  return { allCategories, place, province, category, categoryServices, service, sort, found };
+  // Zero risultati in un comune: proponiamo la stessa ricerca in tutta la provincia, così la pagina non resta vuota.
+  const nearby =
+    found.total === 0 && place
+      ? await searchPartners({ partnerType: mode, categoryId: category?.id, provinceId: place.provinceId, page: 1, pageSize: 3, firstPageSize: 3, visitorSeed: seed })
+      : null;
+  return { allCategories, place, province, category, categoryServices, service, sort, found, nearby };
 }
 
 async function ResultsBody({ mode, params, seed }: { mode: "agency" | "pro"; params: ResultsParams; seed: string }) {
@@ -90,7 +103,7 @@ async function ResultsBody({ mode, params, seed }: { mode: "agency" | "pro"; par
   cacheLife("minutes");
   cacheTag("catalog", "boosts");
   const basePath = mode === "agency" ? "/trova-casa" : "/trova-professionista";
-  const { allCategories, place, province, category, categoryServices, service, sort, found } = await findResults(mode, params, seed);
+  const { allCategories, place, province, category, categoryServices, service, sort, found, nearby } = await findResults(mode, params, seed);
   const { featured, results, total, page, pages } = found;
   const [places, provinceZones] = await Promise.all([getMunicipalities(), getProvinceZones()]);
 
@@ -105,8 +118,13 @@ async function ResultsBody({ mode, params, seed }: { mode: "agency" | "pro"; par
 
 
   const what = mode === "agency" ? "Agenzie immobiliari" : category?.pluralName ?? "Professionisti e artigiani";
-  const where = place ? `a ${place.name}` : province ? `in provincia di ${province.name}` : "in Veneto";
+  const where = place ? aLuogo(place.name) : province ? `in provincia di ${province.name}` : "in Veneto";
   const proCategories = allCategories.filter((c) => c.partnerType !== "agency");
+  // Comune scritto ma non riconosciuto (fuori dal Veneto o con un errore): lo diciamo invece di ignorarlo in silenzio.
+  const unknownPlace = params.dove?.trim() && !place && !province ? params.dove.trim() : null;
+  // Ricerca libera senza nessuna categoria né servizio riconosciuti.
+  const notUnderstood = params.cerca && !service && !(mode === "pro" && category) ? params.cerca : null;
+  const nearbyList = nearby ? [...(nearby.featured ? [nearby.featured] : []), ...nearby.results].slice(0, 3) : [];
 
   return (
     <div className="container-page flex flex-col gap-6 py-8">
@@ -138,9 +156,26 @@ async function ResultsBody({ mode, params, seed }: { mode: "agency" | "pro"; par
         </h1>
         <p className="text-body text-ink-2">
           {total} {total === 1 ? "risultato" : "risultati"}
-          {mode === "pro" && " · prezzi indicativi nel profilo di ogni partner"}
-          {mode === "agency" && " · specializzazioni e portfolio immobili"}
+          {total > 0 && mode === "pro" && " · prezzi indicativi nel profilo di ogni partner"}
+          {total > 0 && mode === "agency" && " · specializzazioni e portfolio immobili"}
+          {params.cerca && !notUnderstood && <> · hai cercato «{params.cerca}»</>}
         </p>
+        {(unknownPlace || notUnderstood) && (
+          <div role="status" className="mt-2 flex flex-col gap-1 rounded-md border border-line bg-subtle p-3 text-body-s text-ink">
+            {notUnderstood && (
+              <p>
+                Non abbiamo capito «{notUnderstood}». Scegli {mode === "agency" ? "cosa ti serve" : "il tipo di professionista"} nei filtri, oppure
+                riprova con parole semplici come «idraulico» o «vendere casa».
+              </p>
+            )}
+            {unknownPlace && (
+              <p>
+                Non troviamo «{unknownPlace}» tra i comuni del Veneto: ti mostriamo {province || place ? "la zona scelta" : "tutta la regione"}. Controlla come è
+                scritto o scegli un comune dall&apos;elenco del campo Zona.
+              </p>
+            )}
+          </div>
+        )}
       </div>
 
       <div className="grid grid-cols-1 gap-8 lg:grid-cols-[280px_minmax(0,1fr)]">
@@ -174,7 +209,7 @@ async function ResultsBody({ mode, params, seed }: { mode: "agency" | "pro"; par
                 Ordina per
               </label>
               <Select id="ordina" name="ordina" defaultValue={sort}>
-                {SORTS.map((s) => (
+                {sortsFor(mode).map((s) => (
                   <option key={s.value} value={s.value}>
                     {s.label}
                   </option>
@@ -224,9 +259,10 @@ async function ResultsBody({ mode, params, seed }: { mode: "agency" | "pro"; par
             <p id="ordinamento" className="flex gap-2 rounded-md bg-subtle p-3 text-caption text-ink-2">
               <Info className="size-4 shrink-0" aria-hidden />
               <span>
-                Come ordiniamo: mostriamo solo chi lavora nella zona cercata, poi prima i piani più alti (Partner Elite, fascia lilla; Partner Pro, fascia verde; poi gli altri)
-                e chi ha comprato più visibilità: la sua fascia è più piena e porta l&apos;etichetta &quot;Sponsorizzato&quot;. Tra aziende dello stesso piano l&apos;ordine cambia a
-                ogni visita.{" "}
+                Come ordiniamo: mostriamo solo chi lavora nella zona cercata, poi prima le aziende con l&apos;abbonamento a pagamento più alto (Partner Elite,
+                fascia lavanda; Partner Pro, fascia verde; poi gli altri). Chi ha comprato più visibilità sale nel suo gruppo e porta l&apos;etichetta
+                &quot;Sponsorizzato&quot;, come il riquadro grande in cima, che è uno spazio a pagamento dei Partner Elite. Tra aziende dello stesso piano
+                l&apos;ordine cambia a ogni visita.{" "}
                 <Link href="/come-ordiniamo-i-risultati" className="font-semibold text-primary underline">
                   Dettagli
                 </Link>
@@ -242,6 +278,7 @@ async function ResultsBody({ mode, params, seed }: { mode: "agency" | "pro"; par
           >
             <SlidersHorizontal className="size-4" aria-hidden /> Filtri e ordinamento
           </a>
+          <h2 className="sr-only">Risultati</h2>
           {featured && <FeaturedPartner p={featured} />}
           {results.map((p) => (
             <PartnerCard key={p.id} p={p} />
@@ -249,13 +286,28 @@ async function ResultsBody({ mode, params, seed }: { mode: "agency" | "pro"; par
           {pages > 1 && <Pagination page={page} pages={pages} href={(n) => href({ pagina: n > 1 ? String(n) : undefined })} />}
           {total === 0 && (
             <div className="flex flex-col items-center gap-4 rounded-lg border border-line bg-surface p-10 text-center">
-              <h2 className="text-h3 font-semibold">Nessun risultato con questi filtri</h2>
+              <h3 className="text-h3 font-semibold">Nessun risultato con questi filtri</h3>
               <p className="max-w-md text-body-s text-ink-2">
                 Prova ad allargare la zona o a togliere un filtro. Stiamo attivando nuovi partner in tutto il Veneto.
               </p>
-              <Link href={basePath} className="font-semibold text-primary underline">
-                Azzera i filtri
-              </Link>
+              <div className="flex flex-wrap justify-center gap-4">
+                {(place || province) && (
+                  <Link href={href({ dove: undefined })} className="font-semibold text-primary underline">
+                    Cerca in tutto il Veneto
+                  </Link>
+                )}
+                <Link href={basePath} className="font-semibold text-primary underline">
+                  Azzera i filtri
+                </Link>
+              </div>
+            </div>
+          )}
+          {nearbyList.length > 0 && place && (
+            <div className="flex flex-col gap-4">
+              <h3 className="text-h4 font-semibold">Vicino {aLuogo(place.name)}, in provincia di {place.provinceName}</h3>
+              {nearbyList.map((p) => (
+                <PartnerCard key={p.id} p={p} />
+              ))}
             </div>
           )}
         </section>

@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = {
+  alternates: { canonical: "/come-ordiniamo-i-risultati" },
   title: "Come ordiniamo i risultati",
   description:
     "Con quali criteri ordiniamo agenzie, tecnici e artigiani nei risultati e quali posti sono a pagamento. Contenuti sponsorizzati sempre etichettati.",
@@ -53,7 +54,7 @@ const SPONSORED = [
   {
     figure: "24 o 48 ore",
     title: "In evidenza nella ricerca",
-    text: "L'azienda sale tra quelle del suo gruppo nella sua categoria e provincia. Il riquadro grande in cima va a un Partner Elite, a rotazione.",
+    text: "L'azienda sale tra quelle del suo gruppo nella sua categoria e provincia. Il riquadro grande in cima va a un Partner Elite: prima a chi ha comprato questo pacchetto, poi a rotazione tra gli altri.",
   },
   {
     figure: "7 o 30 giorni",
@@ -106,6 +107,16 @@ export default function RankingPage() {
                 zona che cerchi. Poi vengono prima i Partner Elite, poi i
                 Partner Pro, poi le altre aziende; dentro ogni gruppo salgono
                 quelle in evidenza.
+              </p>
+              <p className="text-body">
+                Partner Elite e Partner Pro sono abbonamenti a pagamento delle aziende (piani Premium e Normal): il
+                posto in classifica dipende dall&apos;abbonamento, non da un giudizio sulla qualità del lavoro. Il riquadro
+                grande in cima è uno spazio a pagamento dei Partner Elite e porta sempre l&apos;etichetta
+                &quot;Sponsorizzato&quot;.
+              </p>
+              <p id="verificato" className="scroll-mt-24 text-body">
+                Il badge <strong>Verificato</strong> vuol dire che il nostro team ha controllato i dati dell&apos;azienda,
+                partita IVA compresa. Non dipende dall&apos;abbonamento e non cambia l&apos;ordine dei risultati.
               </p>
               <p className="text-body">
                 Tra aziende dello stesso gruppo l&apos;ordine cambia da un

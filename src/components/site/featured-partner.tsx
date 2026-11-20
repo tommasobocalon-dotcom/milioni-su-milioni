@@ -54,11 +54,11 @@ export function FeaturedPartner({ p }: { p: PartnerListItem }) {
           {p.coverUrl && (
             <LogoPartner name={p.displayName} src={p.logoUrl} size={48} />
           )}
-          <h2 className="font-display text-h2">
+          <h3 className="font-display text-h2">
             <Link href={p.href} className="hover:text-primary hover:underline">
               {p.displayName}
             </Link>
-          </h2>
+          </h3>
         </div>
         <p className="text-body text-ink-2">
           {p.categoryName} · {p.tagline}

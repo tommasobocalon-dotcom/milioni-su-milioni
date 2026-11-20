@@ -8,6 +8,7 @@ import { ButtonLink } from "@/components/ui/button";
 import { ABOUT_PHOTOS } from "@/lib/data/category-photos";
 
 export const metadata: Metadata = {
+  alternates: { canonical: "/chi-siamo" },
   title: "Chi siamo",
   description:
     "GecoItalia è il servizio online, nato in Veneto, che aiuta privati e famiglie a trovare agenzie immobiliari, studi tecnici e imprese artigiane della propria zona e a mettersi in contatto con loro.",
@@ -32,17 +33,17 @@ const WHAT_WE_DO = [
 ];
 
 const STEPS = [
-  { title: "Descrivere l'esigenza", text: "Indicare il lavoro o il servizio di cui si ha bisogno e il comune o la provincia in cui si trova l'immobile." },
-  { title: "Scegliere l'impresa", text: "Consultare le schede delle imprese che operano in quella zona e individuare quella più adatta." },
-  { title: "Inviare la richiesta", text: "Compilare la richiesta di contatto e confermarla con un codice ricevuto via email." },
-  { title: "Essere ricontattati", text: "L'impresa richiama il cliente nella fascia oraria indicata nella richiesta." },
+  { title: "Descrivi cosa ti serve", text: "Scrivi il lavoro o il servizio che cerchi e il comune o la provincia in cui si trova la casa." },
+  { title: "Scegli l'impresa", text: "Guarda le schede delle imprese che lavorano in quella zona e scegli quella che fa per te." },
+  { title: "Invia la richiesta", text: "Compila la richiesta di contatto e confermala con il codice che ti arriva via email." },
+  { title: "Vieni ricontattato", text: "L'impresa ti richiama nella fascia oraria che hai indicato nella richiesta." },
 ];
 
 const COMMITMENTS: { icon: LucideIcon; title: string; body: ReactNode }[] = [
   {
     icon: ShieldCheck,
     title: "Richieste autentiche",
-    body: "Ogni richiesta di contatto è confermata dal cliente tramite email, affinché le imprese ricevano soltanto richieste reali e possano rispondere con la dovuta attenzione.",
+    body: "Ogni richiesta di contatto è confermata con un codice via email: così le imprese ricevono solo richieste vere e possono risponderti con attenzione.",
   },
   {
     icon: Scale,
@@ -62,7 +63,7 @@ const COMMITMENTS: { icon: LucideIcon; title: string; body: ReactNode }[] = [
     title: "Riservatezza",
     body: (
       <>
-        I dati inseriti nella richiesta servono a mettere in contatto il cliente con l&apos;impresa scelta e sono trattati nel
+        I dati che scrivi nella richiesta servono solo a metterti in contatto con l&apos;impresa che hai scelto e li trattiamo nel
         rispetto della normativa sulla protezione dei dati personali.{" "}
         <Link href="/privacy" className="font-semibold text-primary underline">
           Informativa privacy

@@ -102,3 +102,8 @@ export function parseAmount(input: string): number | null {
 export function amountInput(cents: number | null): string {
   return cents === null ? "" : String(cents / 100).replace(".", ",");
 }
+
+/** "a Padova", ma "ad Abano Terme": la d eufonica davanti ai nomi che iniziano per a. */
+export function aLuogo(name: string): string {
+  return /^\s*[aàAÀ]/.test(name) ? `ad ${name.trim()}` : `a ${name.trim()}`;
+}

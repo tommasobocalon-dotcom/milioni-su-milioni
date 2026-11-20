@@ -44,6 +44,8 @@ export function LeadWizard({ ctx, places, initialServiceSlug }: Props) {
   const [devCode, setDevCode] = useState<string | undefined>();
   const [code, setCode] = useState("");
   const [error, setError] = useState<string | null>(null);
+  // Campo da sistemare (per aria-invalid e per portarci il fuoco): l'errore sta in fondo, il campo può essere più in alto.
+  const [invalidField, setInvalidField] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
   const headingRef = useRef<HTMLHeadingElement>(null);
 
@@ -54,12 +56,24 @@ export function LeadWizard({ ctx, places, initialServiceSlug }: Props) {
   const requestOptions = isAgency ? [...AGENCY_REQUEST_TYPES] : [...ctx.services.map((s) => s.name), OTHER_REQUEST];
   const serviceId = ctx.services.find((s) => s.name === requestType)?.id ?? null;
 
-  function next() {
+  function fail(message: string, fieldId?: string) {
+    setError(message);
+    setInvalidField(fieldId ?? null);
+    if (fieldId) document.getElementById(fieldId)?.focus();
+  }
+
+  // Appena si sistema il campo l'errore sparisce (prima restava visibile anche dopo aver scelto).
+  function clearError() {
     setError(null);
-    if (step === 0 && !requestType) return setError("Scegli il tipo di richiesta");
+    setInvalidField(null);
+  }
+
+  function next() {
+    clearError();
+    if (step === 0 && !requestType) return fail("Scegli il tipo di richiesta");
     if (step === 1) {
       const missing = ctx.questions.find((q) => q.required && !answers[q.key]);
-      if (missing) return setError(`Rispondi a: ${missing.label}`);
+      if (missing) return fail(`Rispondi a: ${missing.label}`, `q-${missing.key}`);
     }
     if (step === 2) {
       if (!municipality.trim()) return setError("Scrivi il comune dell'intervento");
@@ -150,10 +164,19 @@ export function LeadWizard({ ctx, places, initialServiceSlug }: Props) {
       </h2>
 
       {step === 0 && (
-        <fieldset className="flex flex-col gap-2">
+        <fieldset className="flex flex-col gap-2" aria-describedby={error ? "errore-richiesta" : undefined}>
           <legend className="sr-only">Tipo di richiesta</legend>
           {requestOptions.map((opt) => (
-            <RadioCard key={opt} name="requestType" value={opt} checked={requestType === opt} onChange={setRequestType} />
+            <RadioCard
+              key={opt}
+              name="requestType"
+              value={opt}
+              checked={requestType === opt}
+              onChange={(v) => {
+                setRequestType(v);
+                clearError();
+              }}
+            />
           ))}
         </fieldset>
       )}
@@ -163,11 +186,20 @@ export function LeadWizard({ ctx, places, initialServiceSlug }: Props) {
           {ctx.questions.map((q) => {
             const id = `q-${q.key}`;
             const value = answers[q.key] ?? "";
-            const set = (v: string) => setAnswers((a) => ({ ...a, [q.key]: v }));
+            const set = (v: string) => {
+              setAnswers((a) => ({ ...a, [q.key]: v }));
+              if (invalidField === id) clearError();
+            };
             return (
               <Field key={q.key} label={q.label} htmlFor={id} help={q.help ?? undefined} required={q.required}>
                 {q.type === "select" ? (
-                  <Select id={id} value={value} onChange={(e) => set(e.target.value)}>
+                  <Select
+                    id={id}
+                    value={value}
+                    onChange={(e) => set(e.target.value)}
+                    aria-invalid={invalidField === id || undefined}
+                    aria-describedby={invalidField === id ? "errore-richiesta" : undefined}
+                  >
                     <option value="">Scegli…</option>
                     {q.options?.map((o) => (
                       <option key={o.value} value={o.value}>
@@ -178,6 +210,8 @@ export function LeadWizard({ ctx, places, initialServiceSlug }: Props) {
                 ) : (
                   <Input
                     id={id}
+                    aria-invalid={invalidField === id || undefined}
+                    aria-describedby={invalidField === id ? "errore-richiesta" : undefined}
                     inputMode={q.type === "number" ? "numeric" : undefined}
                     value={value}
                     onChange={(e) => set(q.type === "number" ? e.target.value.replace(/\D/g, "") : e.target.value)}
@@ -296,7 +330,7 @@ export function LeadWizard({ ctx, places, initialServiceSlug }: Props) {
         </div>
       )}
 
-      <p role="alert" aria-live="assertive" className={cn("text-body-s text-error", !error && "sr-only")}>
+      <p id="errore-richiesta" role="alert" aria-live="assertive" className={cn("text-body-s text-error", !error && "sr-only")}>
         {error}
       </p>
 
