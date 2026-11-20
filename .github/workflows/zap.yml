@@ -1,0 +1,41 @@
+# Scansione dall'esterno (DAST) con OWASP ZAP, modalità "baseline": segue i link del sito e controlla risposte e
+# intestazioni senza attaccarlo (niente moduli inviati, niente tentativi di accesso). Solo a mano: GitHub → Actions →
+# "OWASP ZAP" → Run workflow, con l'indirizzo da scansionare. Il rapporto è tra gli artifact dell'esecuzione (zap_scan).
+# Con SITE_ACCESS (sito di prova riservato al team) serve il segreto ZAP_AUTH_HEADER_VALUE = "Basic " + base64 di
+# "nome:password" (DEPLOY.md, "Controlli automatici su GitHub"). Il segreto va solo all'indirizzo scansionato.
+name: OWASP ZAP
+
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: "Indirizzo da scansionare (es. https://gecoitalia.it)"
+        required: true
+        default: "https://gecoitalia.it"
+
+permissions:
+  contents: read
+
+jobs:
+  baseline:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      # L'intestazione di accesso vale solo per l'host scansionato, mai per i siti esterni linkati.
+      - name: Host da scansionare
+        env:
+          TARGET: ${{ inputs.target }}
+        run: |
+          host=$(printf '%s' "$TARGET" | sed -E 's#^https?://([^/:]+).*#\1#')
+          echo "ZAP_AUTH_HEADER_SITE=$host" >> "$GITHUB_ENV"
+
+      - uses: zaproxy/action-baseline@v0.15.0
+        env:
+          ZAP_AUTH_HEADER: Authorization
+          ZAP_AUTH_HEADER_VALUE: ${{ secrets.ZAP_AUTH_HEADER_VALUE }}
+        with:
+          target: ${{ inputs.target }}
+          # Lo spider non invia i moduli: niente richieste, ticket o tentativi di accesso finti sul sito.
+          cmd_options: '-z "-config spider.processForm=false -config spider.postForm=false"'
+          allow_issue_writing: false
+          fail_action: false

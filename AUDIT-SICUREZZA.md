@@ -184,7 +184,7 @@ cambiato. Verifiche: 336 test unitari passati (26 saltati perché vogliono il da
 | 7 | Dipendenze | Produzione: 0 vulnerabilità. Sviluppo: 7 moderate (`autocannon`, `esbuild` vecchio dentro `drizzle-kit`, che non lo usa) | `autocannon` 9, `overrides` per l'esbuild di `@esbuild-kit/core-utils` → **0 vulnerabilità**. `npm audit --audit-level=high` nella CI, **Dependabot** settimanale |
 | 8 | Log e allarmi | Errori stampati così come sono: un errore di Drizzle porta nei log di Vercel i parametri della query (nomi, email, testo delle richieste) | **`logError`** (`src/lib/domain/log.ts`, 2 test) toglie email, token e parametri; **allarme al team** quando un account si blocca per 10 password sbagliate; avviso Sentry sui picchi di errori in `DEPLOY.md`. `pino`/`winston` e un SIEM sono di troppo per un solo sviluppatore: bastano Vercel Logs e Sentry |
 | 9 | CSP delle immagini | `img-src` ammetteva qualunque sito `https:` | `img-src` solo dal sito e dai pixel di Google Ads e Meta, `media-src 'self'`; le foto di Supabase passano da `next/image` con `remotePatterns` limitato al bucket pubblico (prima mancava: le foto caricate in produzione non si sarebbero viste, risposta 400). Elenco host di Google Ads completato (mancavano `google.it`, `pagead2`, `ad.doubleclick.net`). Nonce non adottato: renderebbe dinamiche tutte le pagine (vedi `DEPLOY.md`) |
-| 10 | Test di sicurezza | Test unitari della validazione degli input già presenti (richieste, profilo, registrazione azienda, password, OTP, assistenza) più i test end-to-end | **CodeQL** (`.github/workflows/codeql.yml`, regole `security-extended`). OWASP ZAP non aggiunto: andrebbe lanciato contro un sito di prova, non contro quello vero |
+| 10 | Test di sicurezza | Test unitari della validazione degli input già presenti (richieste, profilo, registrazione azienda, password, OTP, assistenza) più i test end-to-end | **CodeQL** (`.github/workflows/codeql.yml`, regole `security-extended`). OWASP ZAP (DAST) aggiunto il 20/11/2026 come scansione "baseline" da lanciare a mano (`.github/workflows/zap.yml`): segue i link senza inviare moduli |
 
 ---
 
@@ -210,3 +210,23 @@ nessun link costruito con dati scritti dagli utenti; JSON-LD con `<` escapato.
 | 4 | **Ticket dell'assistenza a nome di altri**: dal modulo pubblico, senza accesso, con l'email di un'azienda il ticket finisce nella sua Area Partner e nell'area cliente (testo e nome scelti da chi scrive). Il gestionale lo segna "non verificato" | Bassa | **Corretta** (20/11/2026): colonna `support_tickets.opened_from_account`, vera solo con la sessione; le policy RLS di Area Partner e area cliente (migrazione `0034`) mostrano solo quei ticket, e l'azienda risponde solo a quelli. Gli altri restano nel gestionale ("Mittente non verificato") e proseguono per email, senza il link all'Area Partner. Test in `src/lib/support/ticket-visibility.test.ts` |
 | 5 | **Cron `/api/cron/esito-richieste` senza `CRON_SECRET`** chiamabile da chiunque (manda solo prima le email "Com'è andata?", una volta sola per richiesta) | Bassa | **Già a posto**: controllato il 20/11/2026, `CRON_SECRET` è su Vercel (Production e Preview) dal 18/11/2026 e l'ultimo deploy di produzione è successivo, quindi la route accetta solo il cron |
 | 6 | Restano by design: chi clicca il link di conferma arrivato per una registrazione fatta da altri conferma quell'account (l'email dice di ignorarla); 10 password sbagliate bloccano l'accesso di quell'email per 15 minuti anche se le prova un estraneo | Bassa | Note |
+
+---
+
+## 12. Risposta al "Report di Sicurezza – 2" (Antigravity, 20 novembre 2026)
+
+Il secondo report automatico ripete in gran parte il primo (§10) e non tiene conto di quanto fatto dopo. Esito:
+
+| # | Richiesta del report | Esito |
+|---|---|---|
+| 1 | Togliere `NEXT_PUBLIC_SENTRY_DSN`, usarlo solo sul server | **No, per scelta**: il DSN serve al browser per mandare gli errori e permette solo di inviarne. Senza, gli errori del browser non arrivano più. Difesa vera: "Allowed Domains" del DSN in Sentry (`DEPLOY.md`, "Errori con Sentry") |
+| 2 | Rate limit su tutti gli endpoint sensibili | **Già fatto**: limiti per IP e per email su accesso, registrazioni, recupero password, richieste e assistenza (`src/lib/security/ip-limit.ts`), Turnstile, regola nel Firewall di Vercel. Le route `/api/*` sono webhook firmati (Stripe, email), il cron con `CRON_SECRET`, il ritorno dal Checkout con la sessione; `/api/evento` scrive al massimo una riga per visitatore, azienda e giorno |
+| 3 | `sameSite: "strict"` sui cookie di accesso | **No, per scelta**: con Strict il cookie non parte quando si arriva da un altro sito, quindi si uscirebbe dall'account tornando da Google, da Stripe (pagamento) e aprendo i link delle email. I cookie di sessione sono `httpOnly`, `secure` e `lax`, che basta contro il CSRF insieme al punto 6. `geco_azienda` non dà accesso a nulla: sceglie solo tra le aziende dell'account, ricontrollate sul database |
+| 4 | Secret Manager | **Non serve**: i segreti stanno nelle variabili di Vercel (cifrate, tipo "Secret", non rileggibili), nessuno nel repository né nella sua storia (§10) |
+| 5 | TLS verso PostgreSQL | **Già fatto**: `ssl: "require"` sempre fuori dal locale, e verifica del certificato con `DATABASE_CA_CERT` (`src/lib/db/url.ts`) |
+| 6 | Protezione CSRF | **Già coperta**: le Server Action di Next accettano solo POST con `Origin` uguale all'host, i cookie sono `SameSite=Lax`, le route con effetti sono firmate o protette da segreto |
+| 7 | Validazione Zod di tutti gli endpoint | **Già fatto**: Zod nelle azioni del server; le route API validano con funzioni dedicate e testate (`parseTrackEvent`, `parseInboundEmail`, firma Stripe, formato di `session_id`) |
+| 8 | Log strutturati con masking (pino/winston) | **Già fatto in modo più semplice**: `logError` toglie email, token e parametri delle query (§10); Vercel Logs e Sentry bastano per un solo sviluppatore |
+| 9 | Dependabot / Renovate | **Già fatto**: `.github/dependabot.yml` |
+| 10 | DAST (ZAP) e SAST (CodeQL) | CodeQL **già fatto**; ZAP **aggiunto ora** (`.github/workflows/zap.yml`, a mano) |
+| 11 | Upload: whitelist e storage fuori dalla webroot | **Già fatto**: formato riconosciuto dai primi byte (solo JPG, PNG, WebP), 2 MB al massimo, nomi casuali, in produzione su Supabase Storage (fuori dall'app); `public/uploads` solo in sviluppo |

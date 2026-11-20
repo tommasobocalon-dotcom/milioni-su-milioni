@@ -332,6 +332,11 @@ Partner e l'Area cliente passano da ruoli PostgreSQL con RLS (`geco_partner`, `g
 - **CodeQL** (`.github/workflows/codeql.yml`): analisi di sicurezza del codice a ogni push, sulle PR e ogni lunedì;
   risultati in GitHub → **Security → Code scanning**.
 - **Dependabot** (`.github/dependabot.yml`): PR settimanali con gli aggiornamenti raggruppati.
+- **OWASP ZAP** (`.github/workflows/zap.yml`, solo a mano): GitHub → Actions → **OWASP ZAP** → Run workflow con
+  l'indirizzo da scansionare. Scansione "baseline": segue i link e controlla risposte e intestazioni, senza inviare
+  moduli. Con `SITE_ACCESS` attivo serve prima il segreto **`ZAP_AUTH_HEADER_VALUE`** (Settings → Secrets and
+  variables → Actions) = `Basic ` seguito dal base64 di `nome:password` del sito di prova (nel Terminale:
+  `printf 'nome:password' | base64`). Il rapporto è tra gli artifact dell'esecuzione (`zap_scan`).
 - Da attivare a mano una volta (GitHub → Settings → **Advanced Security**, gratis sui repository pubblici):
   **Dependabot alerts**, **Dependabot security updates**, **Secret Protection** con **Push protection** (blocca un push
   che contiene una chiave Stripe, Brevo, Supabase…).
