@@ -61,7 +61,7 @@ async function Support() {
               Le tue richieste
             </h2>
             {tickets.length === 0 ? (
-              <p className="p-8 text-center text-body-s text-ink-2">Le richieste che invii all&apos;assistenza compariranno qui.</p>
+              <p className="p-8 text-center text-body-s text-ink-2">Le richieste che apri da qui compariranno in questo elenco. Quelle mandate per email proseguono per email.</p>
             ) : (
               <ul className="divide-y divide-line">
                 {tickets.map((t) => (

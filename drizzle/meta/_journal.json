@@ -239,6 +239,13 @@
       "when": 1795181072721,
       "tag": "0033_scheda_dopo_verifica",
       "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "7",
+      "when": 1795182723971,
+      "tag": "0034_ticket_da_dentro",
+      "breakpoints": true
     }
   ]
 }

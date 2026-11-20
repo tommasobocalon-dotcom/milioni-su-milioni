@@ -48,7 +48,8 @@ describe.skipIf(!UP)("RLS dell'Area cliente e del profilo dell'azienda", () => {
     myLead = await lead(mine);
     otherLead = await lead(other);
     [{ id: ticket }] = await owner<{ id: string }[]>`
-      insert into support_tickets (subject, channel, requester_name, requester_email, user_id) values ('Aiuto', 'web', 'Io', ${mine}, ${me}) returning id`;
+      insert into support_tickets (subject, channel, requester_name, requester_email, user_id, opened_from_account)
+      values ('Aiuto', 'web', 'Io', ${mine}, ${me}, true) returning id`;
     await owner`insert into support_messages (ticket_id, kind, author_name, body) values
       (${ticket}, 'inbound', 'Io', 'domanda'), (${ticket}, 'note', 'Team', 'nota del team')`;
   });
