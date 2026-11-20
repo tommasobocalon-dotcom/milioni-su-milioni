@@ -28,8 +28,10 @@ export async function Hero({ next }: { next: string }) {
             >
               Casa tua, in buone mani.
             </h1>
-            <p className="hero-rise mt-4 mb-6 max-w-[460px] text-body leading-[1.3] font-normal [animation-delay:80ms]">
-              Agenzie, tecnici e artigiani del Veneto, per lavori grandi e piccoli: tutto in un posto solo.
+            {/* Sempre su due righe (cliente, 20/11/2026): sul telefono il testo si stringe con lo schermo, fino a 16 px. */}
+            <p className="hero-rise mt-4 mb-6 text-[min(1rem,calc((100vw-2rem)/24))] leading-[1.3] font-normal [animation-delay:80ms]">
+              <span className="block whitespace-nowrap">Agenzie immobiliari, tecnici e artigiani del Veneto,</span>
+              <span className="block whitespace-nowrap">per lavori grandi e piccoli: tutto in un posto solo.</span>
             </p>
 
             <HeroSearchForm>
