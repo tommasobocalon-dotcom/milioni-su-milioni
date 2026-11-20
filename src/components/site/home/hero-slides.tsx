@@ -20,8 +20,9 @@ export function HeroSlides({ slides, next, children }: { slides: HeroSlide[]; ne
   useEffect(() => {
     videos.current.forEach((v, i) => {
       if (!v) return;
-      // play() fallisce se il browser blocca l'autoplay: resta il poster.
-      if (i === index && playing) v.play().catch(() => {});
+      // Se il browser blocca l'autoplay (es. iPhone con il risparmio energetico) resta il poster
+      // e il pulsante passa a "Riproduci": un tocco lo fa partire.
+      if (i === index && playing) v.play().catch((e: unknown) => e instanceof DOMException && e.name === "NotAllowedError" && setPaused(true));
       else v.pause();
     });
   }, [index, playing]);
@@ -66,7 +67,11 @@ export function HeroSlides({ slides, next, children }: { slides: HeroSlide[]; ne
       {!reduced && (
         <button
           type="button"
-          onClick={() => setPaused((p) => !p)}
+          onClick={() => {
+            // play() dentro il tocco: così parte anche dove l'autoplay è bloccato.
+            if (!playing) videos.current[index]?.play().catch(() => {});
+            setPaused(playing);
+          }}
           className="absolute right-4 bottom-6 z-10 inline-flex size-10 items-center justify-center rounded-full text-on-brand/70 transition-colors hover:bg-white/10 hover:text-on-brand md:right-6"
         >
           {playing ? <Pause className="size-5" aria-hidden /> : <Play className="size-5" aria-hidden />}
