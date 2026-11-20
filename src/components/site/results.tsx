@@ -259,9 +259,9 @@ async function ResultsBody({ mode, params, seed }: { mode: "agency" | "pro"; par
             <p id="ordinamento" className="flex gap-2 rounded-md bg-subtle p-3 text-caption text-ink-2">
               <Info className="size-4 shrink-0" aria-hidden />
               <span>
-                Come ordiniamo: mostriamo solo chi lavora nella zona cercata, poi prima le aziende con l&apos;abbonamento a pagamento più alto (Partner Elite,
-                fascia lavanda; Partner Pro, fascia verde; poi gli altri). Chi ha comprato più visibilità sale nel suo gruppo e porta l&apos;etichetta
-                &quot;Sponsorizzato&quot;, come il riquadro grande in cima, che è uno spazio a pagamento dei Partner Elite. Tra aziende dello stesso piano
+                Come ordiniamo: mostriamo solo chi lavora nella zona cercata, poi prima le aziende con l&apos;abbonamento a pagamento più alto (Premium,
+                fascia lavanda; Normal, fascia verde; poi gli altri). Chi ha comprato più visibilità sale nel suo gruppo e porta l&apos;etichetta
+                &quot;Sponsorizzato&quot;, come il riquadro grande in cima, che è uno spazio a pagamento delle aziende Premium. Tra aziende dello stesso piano
                 l&apos;ordine cambia a ogni visita.{" "}
                 <Link href="/come-ordiniamo-i-risultati" className="font-semibold text-primary underline">
                   Dettagli

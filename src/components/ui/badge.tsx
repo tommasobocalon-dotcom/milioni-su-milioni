@@ -15,9 +15,9 @@ export type BadgeKind = keyof typeof STYLES;
 const LABEL: Record<BadgeKind, string> = {
   verified: "Verificato",
   sponsored: "Sponsorizzato",
-  // Badge dei piani (documento del 4/11/2026; "Partner Pro" al posto di "Professionista Verificato", che si confondeva con "Verificato").
-  premium: "Partner Elite",
-  normal: "Partner Pro",
+  // Badge dei piani: col nome del piano (cliente, 20/11/2026; prima "Partner Elite" e "Partner Pro"). Il Base non ha badge.
+  premium: "Premium",
+  normal: "Normal",
   base: "Base",
   new: "Nuovo",
 };

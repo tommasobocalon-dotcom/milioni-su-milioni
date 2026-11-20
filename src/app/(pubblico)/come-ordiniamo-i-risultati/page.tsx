@@ -14,28 +14,28 @@ export const metadata: Metadata = {
 /** I gradi della classifica, con gli stessi colori delle schede nei risultati (PartnerCard). */
 const TIERS = [
   {
-    plan: "Partner Elite",
+    plan: "Premium",
     note: "in evidenza",
     premium: true,
     boosted: true,
     width: "w-full",
   },
   {
-    plan: "Partner Elite",
+    plan: "Premium",
     note: "",
     premium: true,
     boosted: false,
     width: "w-[92%]",
   },
   {
-    plan: "Partner Pro",
+    plan: "Normal",
     note: "in evidenza",
     premium: false,
     boosted: true,
     width: "w-[84%]",
   },
   {
-    plan: "Partner Pro",
+    plan: "Normal",
     note: "",
     premium: false,
     boosted: false,
@@ -54,7 +54,7 @@ const SPONSORED = [
   {
     figure: "24 o 48 ore",
     title: "In evidenza nella ricerca",
-    text: "L'azienda sale tra quelle del suo gruppo nella sua categoria e provincia. Il riquadro grande in cima va a un Partner Elite: prima a chi ha comprato questo pacchetto, poi a rotazione tra gli altri.",
+    text: "L'azienda sale tra quelle del suo gruppo nella sua categoria e provincia. Il riquadro grande in cima va a un'azienda Premium: prima a chi ha comprato questo pacchetto, poi a rotazione tra gli altri.",
   },
   {
     figure: "7 o 30 giorni",
@@ -104,14 +104,14 @@ export default function RankingPage() {
             <div data-reveal className="flex flex-col gap-5">
               <p className="text-body-l">
                 Mostriamo solo le aziende che lavorano nella categoria e nella
-                zona che cerchi. Poi vengono prima i Partner Elite, poi i
-                Partner Pro, poi le altre aziende; dentro ogni gruppo salgono
+                zona che cerchi. Poi vengono prima le aziende Premium, poi le
+                Normal, poi le altre aziende; dentro ogni gruppo salgono
                 quelle in evidenza.
               </p>
               <p className="text-body">
-                Partner Elite e Partner Pro sono abbonamenti a pagamento delle aziende (piani Premium e Normal): il
+                Premium e Normal sono abbonamenti a pagamento delle aziende: il
                 posto in classifica dipende dall&apos;abbonamento, non da un giudizio sulla qualità del lavoro. Il riquadro
-                grande in cima è uno spazio a pagamento dei Partner Elite e porta sempre l&apos;etichetta
+                grande in cima è uno spazio a pagamento delle aziende Premium e porta sempre l&apos;etichetta
                 &quot;Sponsorizzato&quot;.
               </p>
               <p id="verificato" className="scroll-mt-24 text-body">
@@ -143,7 +143,7 @@ export default function RankingPage() {
                       ? t.boosted
                         ? "bg-lavanda-300"
                         : "bg-tertiary"
-                      : t.plan === "Partner Pro"
+                      : t.plan === "Normal"
                         ? t.boosted
                           ? "bg-brand-soft/80"
                           : "bg-brand-soft/40"
@@ -163,7 +163,7 @@ export default function RankingPage() {
                           className="size-4 fill-ambra-500 text-ambra-500"
                           aria-hidden
                         />
-                      ) : t.plan === "Partner Pro" ? (
+                      ) : t.plan === "Normal" ? (
                         <Award className="size-4 text-primary" aria-hidden />
                       ) : null}
                       {t.plan}

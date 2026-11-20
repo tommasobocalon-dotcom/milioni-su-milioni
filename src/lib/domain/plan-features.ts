@@ -12,7 +12,7 @@ export const PLAN_FEATURES: Record<string, string[]> = {
   ],
   normal: [
     "Richieste dei clienti illimitate e gratis",
-    "Badge \"Partner Pro\" e scheda con il bordo verde",
+    "Badge \"Normal\" e scheda con il bordo verde",
     "Sezione Prima e Dopo",
     "Fino a 25 progetti con dettagli tecnici",
     "Altri comuni a scelta, 49 € + IVA a comune ogni 30 giorni",
@@ -21,7 +21,7 @@ export const PLAN_FEATURES: Record<string, string[]> = {
   ],
   premium: [
     "Richieste dei clienti illimitate e gratis",
-    "Badge \"Partner Elite\" e scheda color lavanda",
+    "Badge \"Premium\" e scheda color lavanda",
     "Posizione prioritaria nelle ricerche",
     "Portfolio illimitato con foto HD e video",
     "Altri comuni a scelta, 49 € + IVA a comune ogni 30 giorni",

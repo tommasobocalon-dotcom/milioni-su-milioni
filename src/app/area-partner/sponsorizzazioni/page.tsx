@@ -283,7 +283,7 @@ function SearchPreview({ name, logoUrl, town, premium }: { name: string; logoUrl
           <span className="flex min-w-0 flex-col justify-center gap-1.5 p-3">
             <span className="caps-label inline-flex items-center gap-1 text-ink">
               <Star className="size-3 fill-ambra-500 text-ambra-500" />
-              Partner Elite
+              Premium
             </span>
             <span className="truncate font-semibold">{name}</span>
             <PreviewTown town={town} />
@@ -297,7 +297,7 @@ function SearchPreview({ name, logoUrl, town, premium }: { name: string; logoUrl
           <span className="flex items-center gap-2 bg-brand-soft/60 px-3 py-1.5">
             <span className="caps-label inline-flex items-center gap-1 text-ink">
               <Award className="size-3 text-primary" />
-              Partner Pro
+              Normal
             </span>
             <span className="ml-auto rounded-full bg-surface px-2 py-0.5 text-caption font-semibold">Sponsorizzato</span>
           </span>

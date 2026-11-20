@@ -2,8 +2,8 @@ import { Award, Star } from "lucide-react";
 import { LogoPartner } from "@/components/ui/logo-partner";
 
 const PLAN = {
-  premium: { label: "Partner Elite", icon: <Star className="size-3.5 fill-star text-star" aria-hidden /> },
-  normal: { label: "Partner Pro", icon: <Award className="size-3.5 text-primary" aria-hidden /> },
+  premium: { label: "Piano Premium", icon: <Star className="size-3.5 fill-star text-star" aria-hidden /> },
+  normal: { label: "Piano Normal", icon: <Award className="size-3.5 text-primary" aria-hidden /> },
 } as const;
 
 export function PartnerPageHeader({

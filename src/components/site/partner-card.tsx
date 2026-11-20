@@ -9,7 +9,7 @@ import { cn } from "@/lib/utils";
 
 /**
  * Componente "Card partner" di Figma. Piano e boost si riconoscono a colpo d'occhio (richieste del cliente, 5/11 e 9/11/2026):
- * ogni scheda Elite o Pro ha in alto una fascia col nome del piano; se l'azienda ha anche un boost attivo, la fascia è più
+ * ogni scheda Premium o Normal ha in alto una fascia col nome del piano; se l'azienda ha anche un boost attivo, la fascia è più
  * piena e a destra c'è "Sponsorizzato" (obbligatorio, PRD §7.3, Omnibus/P2B). Base = scheda semplice, senza fascia.
  * Premium = bordo e fascia lilla, in Trova professionista e in Trova casa (cliente, 11/11/2026). Normal = bordo e fascia verdi su scheda
  * bianca; con il boost tutta la scheda prende la velatura salvia delle card della Home (sage-wash).
@@ -56,7 +56,7 @@ export function PartnerCard({
               ) : (
                 <Award className="size-3.5 text-primary" aria-hidden />
               )}
-              {premium ? "Partner Elite" : "Partner Pro"}
+              {premium ? "Premium" : "Normal"}
             </span>
           )}
           {boosted && <Badge kind="sponsored" className="ml-auto h-7 bg-surface px-2.5 text-body-s font-semibold" />}

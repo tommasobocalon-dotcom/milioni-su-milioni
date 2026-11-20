@@ -10,7 +10,7 @@
 @theme {
   /* Primitivi */
   /* Palette definitiva del cliente (9/11/2026): bosco-800 principale, salvia-200 secondario,
-     lavanda-100 terziario (solo Trova professionista: Partner Elite e riquadro in evidenza al posto dell'oro), crema-50 sfondo che si alterna al bianco. Le altre tonalità sono ricavate da questi. */
+     lavanda-100 terziario (solo Trova professionista: schede Premium e riquadro in evidenza al posto dell'oro), crema-50 sfondo che si alterna al bianco. Le altre tonalità sono ricavate da questi. */
   --color-bosco-900: #1a2e28;
   --color-bosco-800: #243e36;
   --color-bosco-700: #2e4d43;
@@ -259,7 +259,7 @@
 }
 
 /* Velatura salvia leggera con due zone più piene (in basso a destra, in alto a sinistra): card della Home,
-   riquadro del telefono in Come funziona e schede Partner Pro in Trova professionista. Gradiente chiesto dal cliente (eccezione alla taste-skill).
+   riquadro del telefono in Come funziona e schede Normal in Trova professionista. Gradiente chiesto dal cliente (eccezione alla taste-skill).
    Intensità regolabile con --wash-base e --wash-top: le card della Home le alzano (soci, 15/11/2026). */
 @utility sage-wash {
   background-color: color-mix(in oklab, var(--color-brand-soft) var(--wash-base, 25%), transparent);

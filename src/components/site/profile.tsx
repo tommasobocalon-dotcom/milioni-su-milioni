@@ -72,7 +72,7 @@ export function ProfileView({ p }: { p: PartnerProfile }) {
                   <span className="sr-only">: cosa vuol dire</span>
                 </Link>
               )}
-              {/* Partner Elite lilla come in Trova professionista, non giallo (13/11/2026). */}
+              {/* Badge Premium lilla come in Trova professionista, non giallo (13/11/2026). */}
               {plan && <Badge kind={plan} className={cn(plan === "premium" && "bg-lavanda-300 [&>svg]:text-ambra-500")} />}
             </div>
             <p className="text-body text-ink-2">
