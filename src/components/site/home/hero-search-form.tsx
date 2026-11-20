@@ -59,9 +59,10 @@ export function HeroSearchForm({ children }: { children: React.ReactNode }) {
           <span className="sr-only">Di cosa hai bisogno?</span>
           <input
             {...fieldProps("q")}
-            placeholder="Es. rifare il bagno a Mestre, vendere casa"
+            placeholder="Es. vendere casa, rifare il bagno a Mestre"
             autoComplete="off"
-            className="w-full min-w-0 bg-transparent text-body text-ink placeholder:text-ink-2 focus:outline-none"
+            // Sul telefono l'esempio è più piccolo per stare in una riga; il testo scritto resta a 16 px (niente zoom su iPhone).
+            className="w-full min-w-0 bg-transparent text-body text-ink placeholder:text-[clamp(12px,3.4vw,16px)] placeholder:text-ink-2 focus:outline-none"
           />
         </label>
         {missing.q && <FieldError id="hero-q-errore" />}
