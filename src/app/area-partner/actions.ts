@@ -224,6 +224,7 @@ const PortfolioSchema = z.object({
   sqm: optionalInt(100_000),
   rooms: optionalInt(100),
   hasBeforeAfter: z.literal("on").optional(),
+  inInspiration: z.literal("on").optional(),
   videoUrl: z
     .string()
     .trim()
@@ -289,12 +290,26 @@ export async function addPortfolioItem(_prev: ActionState, formData: FormData): 
       imageUrl: photos[0],
       photos,
       videoUrl: d.videoUrl || null,
+      inInspiration: d.inInspiration === "on",
       sortOrder: (last ?? -1) + 1,
     });
   });
   updateTag(`partner:${partner.slug}`);
   revalidatePath("/area-partner/lavori");
-  return { ok: "Lavoro pubblicato nella tua scheda e in Ispirazione" };
+  return { ok: d.inInspiration === "on" ? "Lavoro pubblicato nella tua scheda e in Ispirazione" : "Lavoro pubblicato nella tua scheda" };
+}
+
+/** Mette o toglie un lavoro già pubblicato dalla pagina Ispirazione; nella scheda dell'azienda resta comunque. */
+export async function setPortfolioInspiration(itemId: string, show: boolean) {
+  const { partner } = await requirePartner();
+  if (!Id.safeParse(itemId).success) return;
+  await asPartner(partner.id, (tx) =>
+    tx
+      .update(portfolioItems)
+      .set({ inInspiration: show })
+      .where(and(eq(portfolioItems.id, itemId), eq(portfolioItems.partnerId, partner.id))),
+  );
+  revalidatePath("/area-partner/lavori");
 }
 
 const PropertyStatusSchema = z.enum(["available", "negotiating", "sold"]);

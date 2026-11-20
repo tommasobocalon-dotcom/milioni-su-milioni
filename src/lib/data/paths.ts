@@ -54,5 +54,5 @@ export async function listPublicWorkPaths(): Promise<{ id: string; createdAt: Da
     .select({ id: portfolioItems.id, createdAt: portfolioItems.createdAt })
     .from(portfolioItems)
     .innerJoin(partners, eq(partners.id, portfolioItems.partnerId))
-    .where(and(eq(partners.accountStatus, "active"), isNotNull(portfolioItems.imageUrl)));
+    .where(and(eq(partners.accountStatus, "active"), isNotNull(portfolioItems.imageUrl), eq(portfolioItems.inInspiration, true)));
 }

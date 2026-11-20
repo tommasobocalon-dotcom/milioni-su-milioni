@@ -120,6 +120,13 @@ export function PortfolioForm({
       <Field label="Descrizione" htmlFor="pf-description" required help="Poche righe: cosa avete fatto, materiali, tempi. Massimo 300 caratteri">
         <Textarea id="pf-description" name="description" required minLength={10} maxLength={300} />
       </Field>
+      <label className="flex items-start gap-2 text-body-s">
+        <input type="checkbox" name="inInspiration" className="mt-0.5 size-4 shrink-0" />
+        <span>
+          Mostra anche nella pagina <a href="/ispirazione" target="_blank" className="font-semibold text-primary underline">Ispirazione</a>
+          <span className="block text-caption text-ink-2">Se non la spunti, {isAgency ? "l'immobile resta" : "il lavoro resta"} solo nella tua scheda pubblica.</span>
+        </span>
+      </label>
       {(photoError ?? state.error) && (
         <p role="alert" className="text-body-s text-error">
           {photoError ?? state.error}

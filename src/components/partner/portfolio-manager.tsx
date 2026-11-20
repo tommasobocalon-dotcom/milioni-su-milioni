@@ -1,6 +1,6 @@
 import Image from "next/image";
 import { Home, Image as ImageIcon, MapPin, Trash2 } from "lucide-react";
-import { deletePortfolioItem, setPortfolioStatus } from "@/app/area-partner/actions";
+import { deletePortfolioItem, setPortfolioInspiration, setPortfolioStatus } from "@/app/area-partner/actions";
 import { PortfolioForm } from "@/components/partner/portfolio-form";
 import { Button } from "@/components/ui/button";
 import { getMunicipalities } from "@/lib/data/catalog";
@@ -55,11 +55,15 @@ export async function PortfolioManager({ partnerId, isAgency }: { partnerId: str
                     <ImageIcon className="size-8" aria-hidden />
                   )}
                 </div>
-                {(item.contract || item.photos.length > 1) && (
-                  <p className="text-caption text-ink-2">
-                    {[item.contract && contractBadge(item.contract, null), item.photos.length > 1 && `${item.photos.length} foto`].filter(Boolean).join(" · ")}
-                  </p>
-                )}
+                <p className="text-caption text-ink-2">
+                  {[
+                    item.contract && contractBadge(item.contract, null),
+                    item.photos.length > 1 && `${item.photos.length} foto`,
+                    item.inInspiration ? "Nella scheda e in Ispirazione" : "Solo nella scheda",
+                  ]
+                    .filter(Boolean)
+                    .join(" · ")}
+                </p>
                 <p className="text-body-s font-semibold">
                   {item.title}
                   {item.priceCents !== null && ` · ${formatEuro(item.priceCents)}${item.contract && isMonthlyContract(item.contract) ? "/mese" : ""}`}
@@ -91,6 +95,13 @@ export async function PortfolioManager({ partnerId, isAgency }: { partnerId: str
                       </select>
                       <Button size="s" variant="secondary">
                         Aggiorna
+                      </Button>
+                    </form>
+                  )}
+                  {item.imageUrl && (
+                    <form action={setPortfolioInspiration.bind(null, item.id, !item.inInspiration)}>
+                      <Button size="s" variant="secondary" aria-label={`${item.inInspiration ? "Togli da Ispirazione" : "Metti in Ispirazione"}: ${item.title}`}>
+                        {item.inInspiration ? "Togli da Ispirazione" : "Metti in Ispirazione"}
                       </Button>
                     </form>
                   )}

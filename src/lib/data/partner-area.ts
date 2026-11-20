@@ -219,6 +219,7 @@ export async function getPortfolio(partnerId: string) {
         imageUrl: portfolioItems.imageUrl,
         photos: portfolioItems.photos,
         hasBeforeAfter: portfolioItems.hasBeforeAfter,
+        inInspiration: portfolioItems.inInspiration,
       })
       .from(portfolioItems)
       .leftJoin(municipalities, eq(municipalities.id, portfolioItems.municipalityId))

@@ -77,7 +77,7 @@ const toItem = (r: Row, sponsored: boolean): ShowcaseItem => ({
  * sotto gli altri lavori con foto delle aziende attive, dai più recenti; `filter` dai filtri della pagina.
  */
 export async function getShowcase(now: Date, filter: ShowcaseFilter = {}): Promise<{ featured: ShowcaseItem[]; latest: ShowcaseItem[] }> {
-  const conditions: SQL[] = [eq(partners.accountStatus, "active"), isNotNull(portfolioItems.imageUrl)];
+  const conditions: SQL[] = [eq(partners.accountStatus, "active"), isNotNull(portfolioItems.imageUrl), eq(portfolioItems.inInspiration, true)];
   if (filter.type === "pro") conditions.push(ne(partners.type, "agency"));
   if (filter.type === "agency") conditions.push(eq(partners.type, "agency"));
   if (filter.categorySlug) conditions.push(eq(categories.slug, filter.categorySlug));
@@ -95,9 +95,11 @@ export async function getShowcase(now: Date, filter: ShowcaseFilter = {}): Promi
   return { featured, latest: latestRows.map((r) => toItem(r, false)) };
 }
 
-/** Un lavoro di Ispirazione per la sua pagina; null se non esiste o se l'azienda non è attiva. */
+/** Un lavoro di Ispirazione per la sua pagina; null se non esiste, se l'azienda non è attiva o se l'ha lasciato solo nella scheda. */
 export async function getShowcaseItem(id: string): Promise<ShowcaseItem | null> {
   if (!/^[0-9a-f-]{36}$/i.test(id)) return null;
-  const [row] = await base().where(and(eq(portfolioItems.id, id), eq(partners.accountStatus, "active"), isNotNull(portfolioItems.imageUrl)));
+  const [row] = await base().where(
+    and(eq(portfolioItems.id, id), eq(partners.accountStatus, "active"), isNotNull(portfolioItems.imageUrl), eq(portfolioItems.inInspiration, true)),
+  );
   return row ? toItem(row, false) : null;
 }

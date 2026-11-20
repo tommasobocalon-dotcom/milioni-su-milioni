@@ -359,6 +359,8 @@ export const portfolioItems = pgTable(
     hasBeforeAfter: boolean("has_before_after").notNull().default(false),
     /** Link YouTube o Vimeo, solo piano Premium (documento del 4/11/2026). */
     videoUrl: text("video_url"),
+    /** Anche nella pagina pubblica Ispirazione, solo se l'azienda lo sceglie (20/11/2026); altrimenti resta nella sua scheda. */
+    inInspiration: boolean("in_inspiration").notNull().default(false),
     sortOrder: smallint("sort_order").notNull().default(0),
     createdAt: createdAt(),
   },

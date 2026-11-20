@@ -73,11 +73,15 @@ async function choose(page: Page, slug: Slug) {
   await expect(page.getByLabel("Azienda", { exact: true }).locator("option[selected]")).toHaveText(COMPANIES[slug].name);
 }
 
-/** Compila e invia il modulo "Aggiungi un lavoro" (o "Aggiungi un immobile" per le agenzie). */
-async function publish(page: Page, p: { title: string; description: string; files: string[] }) {
+/**
+ * Compila e invia il modulo "Aggiungi un lavoro" (o "Aggiungi un immobile" per le agenzie).
+ * In Ispirazione solo con la casella spuntata (20/11/2026): qui spuntata, salvo `inspiration: false`.
+ */
+async function publish(page: Page, p: { title: string; description: string; files: string[]; inspiration?: boolean }) {
   await page.getByLabel(/^Titolo/).fill(p.title);
   await page.getByLabel(/^Foto/).setInputFiles(p.files);
   await page.getByLabel(/^Descrizione/).fill(p.description);
+  await page.getByRole("checkbox", { name: /Mostra anche nella pagina Ispirazione/ }).setChecked(p.inspiration ?? true);
   await page.getByRole("button", { name: "Pubblica il lavoro" }).click();
 }
 
@@ -148,6 +152,41 @@ test("un lavoro vuole da 2 a 8 foto, un titolo e una breve descrizione", async (
   await expect(page.getByRole("button", { name: "Mostra la foto 2" })).toHaveAttribute("aria-current", "true");
   // Niente prezzi: si chiede il contatto all'azienda.
   await expect(page.getByRole("link", { name: "Richiedi contatto" })).toHaveAttribute("href", "/richiesta/rossi-impianti");
+});
+
+test("senza la casella spuntata il lavoro resta solo nella scheda, e si può mettere in Ispirazione dopo", async ({ page }) => {
+  await login(page);
+  await choose(page, "rossi-impianti");
+  await publish(page, {
+    title: "Scaldabagno sostituito a Spinea",
+    description: "Scaldabagno elettrico tolto, al suo posto una pompa di calore da 200 litri.",
+    files: photos("bagno", 2),
+    inspiration: false,
+  });
+  const list = page.getByRole("region", { name: "Elementi del portfolio" });
+  const item = list.getByRole("listitem").filter({ hasText: "Scaldabagno sostituito a Spinea" });
+  await expect(item).toBeVisible({ timeout: 15_000 });
+  await expect(page.getByText("Lavoro pubblicato nella tua scheda", { exact: true })).toBeVisible();
+  await expect(item.getByText(/Solo nella scheda/)).toBeVisible();
+  const [row] = await sql<{ id: string; in_inspiration: boolean }[]>`
+    select id, in_inspiration from portfolio_items where title = 'Scaldabagno sostituito a Spinea'`;
+  expect(row.in_inspiration).toBe(false);
+
+  // Nella scheda pubblica c'è, in Ispirazione no (né in elenco né con il suo indirizzo).
+  await page.goto("/professionisti/padova/idraulico/rossi-impianti");
+  await expect(page.getByText("Scaldabagno sostituito a Spinea").first()).toBeVisible();
+  await page.goto("/ispirazione");
+  await expect(page.getByRole("heading", { name: "Scaldabagno sostituito a Spinea" })).toHaveCount(0);
+  // La pagina del lavoro arriva in streaming: notFound() dà la pagina "non c'è" (con stato 200, come per ogni id sconosciuto).
+  await page.goto(`/ispirazione/${row.id}`);
+  await expect(page.getByRole("heading", { level: 1, name: "Questa pagina non c'è" })).toBeVisible();
+
+  // Dall'elenco dei lavori si mette in Ispirazione in un secondo momento.
+  await page.goto("/area-partner/lavori");
+  await item.getByRole("button", { name: /^Metti in Ispirazione/ }).click();
+  await expect(item.getByText(/Nella scheda e in Ispirazione/)).toBeVisible();
+  await page.goto("/ispirazione");
+  await expect(page.getByRole("heading", { name: "Scaldabagno sostituito a Spinea" })).toBeVisible();
 });
 
 test("piano Base: al massimo 5 progetti", async ({ page }) => {

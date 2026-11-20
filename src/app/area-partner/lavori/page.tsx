@@ -10,7 +10,7 @@ import { getPartnerProfile } from "@/lib/data/partners";
 
 export const metadata = { title: "Lavori e foto" };
 
-/** Posto unico dove l'azienda pubblica i suoi lavori (o immobili) con foto e descrizione: vanno nella scheda e in Ispirazione. */
+/** Posto unico dove l'azienda pubblica i suoi lavori (o immobili) con foto e descrizione: vanno nella scheda e, se lo sceglie, in Ispirazione. */
 export default function WorksPage() {
   return (
     <Suspense fallback={<PartnerSkeleton />}>
@@ -38,7 +38,10 @@ async function Works() {
         <ol className="flex list-decimal flex-col gap-1 pl-5 text-body">
           <li>Scegli da 2 a 8 foto {isAgency ? "dell'immobile" : "del lavoro"}: la prima è quella principale.</li>
           <li>Scrivi un titolo e una breve descrizione (fino a 300 caratteri).</li>
-          <li>Premi &quot;Pubblica&quot;: compare subito nella tua scheda pubblica e nella pagina Ispirazione, dove i clienti ti chiedono un contatto.</li>
+          <li>
+            Premi &quot;Pubblica&quot;: compare subito nella tua scheda pubblica. Spunta &quot;Mostra anche nella pagina Ispirazione&quot; se vuoi che lo vedano anche lì,
+            dove i clienti ti chiedono un contatto.
+          </li>
         </ol>
         <div className="flex flex-wrap gap-2 pt-1">
           <ButtonLink href="/ispirazione" variant="secondary" size="s" target="_blank">
