@@ -179,8 +179,8 @@ async function ResultsBody({ mode, params, seed }: { mode: "agency" | "pro"; par
       </div>
 
       <div className="grid grid-cols-1 gap-8 lg:grid-cols-[280px_minmax(0,1fr)]">
-        {/* Colonna sinistra: filtri. */}
-        <div className="order-2 flex flex-col gap-4 self-start lg:order-1">
+        {/* Colonna sinistra: filtri. Sul telefono sopra le aziende (cliente, 20/11/2026). */}
+        <div className="flex flex-col gap-4 self-start">
           <aside
             id="filtri"
             aria-label="Filtri"
@@ -271,13 +271,7 @@ async function ResultsBody({ mode, params, seed }: { mode: "agency" | "pro"; par
           </aside>
         </div>
 
-        <section aria-label="Risultati" className="order-1 flex flex-col gap-4 lg:order-2">
-          <a
-            href="#filtri"
-            className="inline-flex items-center gap-2 self-start rounded-full border border-line bg-surface px-4 py-2 text-body-s font-semibold lg:hidden"
-          >
-            <SlidersHorizontal className="size-4" aria-hidden /> Filtri e ordinamento
-          </a>
+        <section aria-label="Risultati" className="flex flex-col gap-4">
           <h2 className="sr-only">Risultati</h2>
           {featured && <FeaturedPartner p={featured} />}
           {results.map((p) => (
