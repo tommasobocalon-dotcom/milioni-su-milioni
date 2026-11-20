@@ -3,21 +3,30 @@ import { withSentryConfig } from "@sentry/nextjs/config";
 
 // Content-Security-Policy: in sviluppo servono eval e websocket per l'hot reload di Next/React.
 const isDev = process.env.NODE_ENV !== "production";
-// Indirizzi da cui Google Ads (gtag) e Meta caricano script, mandano le conversioni e aprono iframe di misurazione.
+// Indirizzi da cui Google Ads (gtag) e Meta caricano script, mandano le conversioni (anche come immagini 1×1) e aprono
+// iframe di misurazione. Elenco di Google: developers.google.com/tag-platform/security/guides/csp, con il dominio del
+// paese (google.it) scritto per esteso perché la CSP non ammette google.*.
 const ADS_HOSTS = {
-  script: "https://www.googletagmanager.com https://www.googleadservices.com https://googleads.g.doubleclick.net https://connect.facebook.net",
+  script:
+    "https://www.googletagmanager.com https://www.googleadservices.com https://www.google.com https://googleads.g.doubleclick.net https://connect.facebook.net",
   connect:
-    "https://www.googletagmanager.com https://www.google.com https://www.googleadservices.com https://googleads.g.doubleclick.net https://*.google-analytics.com https://*.analytics.google.com https://www.facebook.com https://connect.facebook.net",
+    "https://www.googletagmanager.com https://www.google.com https://www.google.it https://www.googleadservices.com https://googleads.g.doubleclick.net https://ad.doubleclick.net https://pagead2.googlesyndication.com https://*.google-analytics.com https://*.analytics.google.com https://www.facebook.com https://connect.facebook.net",
+  img: "https://www.googletagmanager.com https://www.googleadservices.com https://googleads.g.doubleclick.net https://pagead2.googlesyndication.com https://www.google.com https://www.google.it https://www.facebook.com",
   frame: "https://td.doubleclick.net https://www.googletagmanager.com https://www.facebook.com",
 };
+// Foto caricate dalle aziende: Supabase Storage in produzione (SUPABASE_URL), su disco in sviluppo (/uploads).
+const SUPABASE_HOST = process.env.SUPABASE_URL ? new URL(process.env.SUPABASE_URL).hostname : "*.supabase.co";
 const csp = [
   "default-src 'self'",
   "base-uri 'self'",
   "object-src 'none'",
   "frame-ancestors 'none'",
   "form-action 'self'",
-  // Le foto possono arrivare dal disco locale (/uploads) o da uno storage esterno (Supabase) via https.
-  "img-src 'self' data: blob: https:",
+  // Tutte le foto passano da next/image (/_next/image, quindi 'self'), anche quelle su Supabase; blob: per l'anteprima
+  // delle foto scelte nei moduli. Fuori da qui solo i pixel delle pubblicità, caricati dopo "Accetta" nel banner.
+  `img-src 'self' data: blob: ${ADS_HOSTS.img}`,
+  // Video della Home in public/hero.
+  "media-src 'self'",
   "font-src 'self' data:",
   // Tailwind e Next iniettano stili inline: senza nonce 'unsafe-inline' evita di rompere la UI.
   "style-src 'self' 'unsafe-inline'",
@@ -64,6 +73,11 @@ const nextConfig: NextConfig = {
     },
   },
   poweredByHeader: false,
+  // next/image scarica le foto da Supabase e le serve dal sito: solo dal bucket pubblico, senza query, così
+  // l'ottimizzatore di immagini non fa da proxy verso altri indirizzi.
+  images: {
+    remotePatterns: [{ protocol: "https", hostname: SUPABASE_HOST, port: "", pathname: "/storage/v1/object/public/**", search: "" }],
+  },
   // La pagina dei pacchetti si chiamava "token" finché si pagava a crediti (tolti l'11/11/2026).
   async redirects() {
     return [{ source: "/area-partner/token", destination: "/area-partner/sponsorizzazioni", permanent: true }];

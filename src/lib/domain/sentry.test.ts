@@ -44,6 +44,37 @@ describe("scrubEvent", () => {
     ]);
   });
 
+  it("toglie il corpo della richiesta (dati dei moduli)", () => {
+    const event = scrubEvent({ request: { url: "https://gecoitalia.it/richiesta", data: "nome=Mario&email=mario@example.com" } });
+    expect(event.request?.data).toBeUndefined();
+  });
+
+  it("nasconde i token dei link scritti nel testo degli errori", () => {
+    const event = scrubEvent({ message: "Link https://gecoitalia.it/accedi/nuova-password?token=abc123&per=azienda scaduto" });
+    expect(event.message).toBe("Link https://gecoitalia.it/accedi/nuova-password?token=[nascosto]&per=azienda scaduto");
+  });
+
+  it("pulisce i breadcrumb: link con token, chiamate di rete e messaggi della console", () => {
+    const event = scrubEvent({
+      breadcrumbs: [
+        { category: "navigation", data: { from: "/accedi", to: "/accedi/nuova-password?token=abc" } },
+        { category: "fetch", data: { url: "https://gecoitalia.it/api/evento?email=mario@example.com", method: "GET", status_code: 500 } },
+        {
+          category: "console",
+          message: "[assistenza] email non salvata: Failed query: insert into \"support_tickets\"\nparams: Mario Rossi,mario@example.com",
+          data: { arguments: ["[assistenza] email non salvata:", { parameters: ["Mario Rossi", "mario@example.com"] }], logger: "console" },
+        },
+        { category: "ui.click", message: "button.invia" },
+      ],
+    });
+    expect(event.breadcrumbs).toEqual([
+      { category: "navigation", data: { from: "/accedi", to: "/accedi/nuova-password?token=%5Bnascosto%5D" } },
+      { category: "fetch", data: { url: "https://gecoitalia.it/api/evento?email=%5Bnascosto%5D", method: "GET", status_code: 500 } },
+      { category: "console", message: "[assistenza] email non salvata: Failed query: insert into \"support_tickets\"\nparams: [nascosti]", data: { logger: "console" } },
+      { category: "ui.click", message: "button.invia" },
+    ]);
+  });
+
   it("lascia stare gli eventi senza richiesta", () => {
     expect(scrubEvent({ message: "errore" })).toEqual({ message: "errore" });
   });

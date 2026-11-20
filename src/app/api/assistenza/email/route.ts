@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { parseInboundEmail } from "@/lib/domain/support";
 import { sameSecret, verifySvixSignature } from "@/lib/domain/webhook-signature";
 import { receiveEmail } from "@/lib/support/service";
+import { logError } from "@/lib/domain/log";
 
 /**
  * Email arrivate alla casella dell'assistenza (istruzioni in ATTIVAZIONE-SERVIZI.md):
@@ -28,7 +29,7 @@ export async function POST(request: NextRequest) {
       payload = { ...event.data, ...(await fetchResendEmail(String(event.data.email_id ?? ""))) };
     } catch (e) {
       // Risposta 500: Resend ripete l'evento più tardi.
-      console.error("[assistenza] email Resend non letta:", e);
+      logError("[assistenza] email Resend non letta:", e);
       return NextResponse.json({ error: "Errore temporaneo" }, { status: 500 });
     }
   } else {
@@ -48,7 +49,7 @@ export async function POST(request: NextRequest) {
   try {
     return NextResponse.json(await receiveEmail(mail));
   } catch (e) {
-    console.error("[assistenza] email non salvata:", e);
+    logError("[assistenza] email non salvata:", e);
     return NextResponse.json({ error: "Errore temporaneo" }, { status: 500 });
   }
 }

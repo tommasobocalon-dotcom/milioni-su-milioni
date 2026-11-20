@@ -3,6 +3,7 @@ import { and, eq, gt, inArray, isNotNull, isNull, lte, ne, or } from "drizzle-or
 import { db } from "@/lib/db/client";
 import { leads, municipalities, partners } from "@/lib/db/schema";
 import { sendEmail } from "@/lib/notify";
+import { logError } from "@/lib/domain/log";
 import { aLuogo } from "@/lib/domain/format";
 
 const DAY = 24 * 60 * 60 * 1000;
@@ -64,7 +65,7 @@ export async function sendFollowUps(now = new Date()): Promise<number> {
       );
       sent++;
     } catch (e) {
-      console.error("[email] com'è andata non inviata:", e instanceof Error ? e.message : e);
+      logError("[email] com'è andata non inviata:", e);
       await db.update(leads).set({ followUpSentAt: null }).where(eq(leads.id, r.id));
     }
   }

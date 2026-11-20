@@ -164,3 +164,24 @@ Oppure contro una **preview di Vercel** (mai sulla produzione con dati reali):
 ```bash
 npx autocannon -c 50 -d 30 https://<tua-preview>.vercel.app/
 ```
+
+---
+
+## 10. Aggiornamento del 20 novembre 2026: controllo sui 10 punti di un report esterno
+
+Un report generato da uno strumento esterno elencava 10 punti. Esito punto per punto, con quello che è stato
+cambiato. Verifiche: 336 test unitari passati (26 saltati perché vogliono il database), `tsc` e `eslint` puliti,
+`next build` riuscita, header e ottimizzatore di immagini provati su `next start`.
+
+| # | Punto del report | Stato prima | Cosa è stato fatto |
+|---|---|---|---|
+| 1 | Chiave `GOOGLE_GENAI_API_KEY` | Il progetto non la usa: compare solo dentro il codice della libreria Sentry (`node_modules/@sentry`), che sa misurare le chiamate a Gemini se un'app le fa | Niente da fare |
+| 2 | DSN di Sentry con `NEXT_PUBLIC_` | Corretto così: il DSN serve al browser per mandare gli errori e permette solo di inviarne. Toglierlo spegnerebbe gli errori del browser | Pulizia estesa ai **breadcrumb** (link con token, chiamate di rete, console) e al corpo delle richieste; `tracesSampleRate: 0` c'era già. In `DEPLOY.md` gli "Allowed Domains" del DSN |
+| 3 | Database | Query tutte parametrizzate (Drizzle; `sql.unsafe` solo negli script locali con testo fisso), Data API di Supabase chiusa (migrazione 0004), RLS per Area Partner e Area cliente, TLS `require` (cifrato ma senza verifica del certificato) | **`verify-full` facoltativo** con `DATABASE_CA_CERT` (`databaseSsl` in `src/lib/db/url.ts`, 5 test). Va attivato su Vercel (`DEPLOY.md`) |
+| 4 | Header di sicurezza | Già tutti presenti (CSP, HSTS, `nosniff`, `X-Frame-Options: DENY` che è più stretto di `SAMEORIGIN`, `Referrer-Policy`) | Niente da fare; `next-secure-headers` e `helmet` non servono con `headers()` di Next |
+| 5 | Rate limit sull'accesso | Già attivo: 10 password sbagliate in 15 minuti per email, 50 tentativi per IP, limiti per IP su registrazione, recupero password, richieste e assistenza, Turnstile, regola nel Firewall di Vercel. Non esiste `/api/auth/*` | Niente da aggiungere |
+| 6 | Segreti e cifratura | Nessun segreto nel repository né nella storia di git (controllato con un'espressione per chiavi Stripe, Brevo, Resend, Supabase, Google), segreti su Vercel cifrati. Supabase cifra i dischi (AES-256), le carte non passano mai dal database (Stripe), password e token salvati come hash, backup cifrati | Niente da fare; Google Secret Manager non serve con Vercel. Da attivare su GitHub la **push protection** (`DEPLOY.md`) |
+| 7 | Dipendenze | Produzione: 0 vulnerabilità. Sviluppo: 7 moderate (`autocannon`, `esbuild` vecchio dentro `drizzle-kit`, che non lo usa) | `autocannon` 9, `overrides` per l'esbuild di `@esbuild-kit/core-utils` → **0 vulnerabilità**. `npm audit --audit-level=high` nella CI, **Dependabot** settimanale |
+| 8 | Log e allarmi | Errori stampati così come sono: un errore di Drizzle porta nei log di Vercel i parametri della query (nomi, email, testo delle richieste) | **`logError`** (`src/lib/domain/log.ts`, 2 test) toglie email, token e parametri; **allarme al team** quando un account si blocca per 10 password sbagliate; avviso Sentry sui picchi di errori in `DEPLOY.md`. `pino`/`winston` e un SIEM sono di troppo per un solo sviluppatore: bastano Vercel Logs e Sentry |
+| 9 | CSP delle immagini | `img-src` ammetteva qualunque sito `https:` | `img-src` solo dal sito e dai pixel di Google Ads e Meta, `media-src 'self'`; le foto di Supabase passano da `next/image` con `remotePatterns` limitato al bucket pubblico (prima mancava: le foto caricate in produzione non si sarebbero viste, risposta 400). Elenco host di Google Ads completato (mancavano `google.it`, `pagead2`, `ad.doubleclick.net`). Nonce non adottato: renderebbe dinamiche tutte le pagine (vedi `DEPLOY.md`) |
+| 10 | Test di sicurezza | Test unitari della validazione degli input già presenti (richieste, profilo, registrazione azienda, password, OTP, assistenza) più i test end-to-end | **CodeQL** (`.github/workflows/codeql.yml`, regole `security-extended`). OWASP ZAP non aggiunto: andrebbe lanciato contro un sito di prova, non contro quello vero |

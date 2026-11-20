@@ -10,6 +10,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { COMPANY_COOKIE, partnersOfUser, requirePartner } from "@/lib/auth/session";
 import { ipRateLimited } from "@/lib/security/ip-limit";
+import { logError } from "@/lib/domain/log";
 import { putImage } from "@/lib/storage";
 import { BillingError, createAreaExtensionCheckout, createHomeSponsorCheckout, createSearchBoostCheckout, createPlanChangeSession, createPortalSession, createSubscriptionCheckout, stripeConfigured } from "@/lib/billing/stripe";
 import { db } from "@/lib/db/client";
@@ -420,7 +421,7 @@ async function billingAction(run: (payer: { partnerId: string; email: string; na
     return { url };
   } catch (e) {
     if (e instanceof BillingError) return { error: e.message };
-    console.error("[stripe]", action, e);
+    logError(`[stripe] ${action}`, e);
     return { error: "Stripe non risponde, riprova tra poco" };
   }
 }

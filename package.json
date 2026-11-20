@@ -48,7 +48,7 @@
     "@types/node": "^24.19.2",
     "@types/react": "^19",
     "@types/react-dom": "^19",
-    "autocannon": "^7.15.0",
+    "autocannon": "^9.0.0",
     "concurrently": "^10.0.6",
     "drizzle-kit": "^0.31.11",
     "embedded-postgres": "^18.4.0-beta.17",
@@ -58,6 +58,11 @@
     "tsx": "^4.23.15",
     "typescript": "^5",
     "vitest": "^5.0.5"
+  },
+  "overrides": {
+    "@esbuild-kit/core-utils": {
+      "esbuild": "^0.25.12"
+    }
   },
   "allowScripts": {
     "@embedded-postgres/darwin-arm64@18.4.0-beta.17": true,

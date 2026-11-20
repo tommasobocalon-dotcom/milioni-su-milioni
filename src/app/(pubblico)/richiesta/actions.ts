@@ -4,6 +4,7 @@ import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { issueOtp, OtpRateLimitError, verifyOtp } from "@/lib/auth/otp-service";
 import { ipRateLimited } from "@/lib/security/ip-limit";
+import { logError } from "@/lib/domain/log";
 import { TURNSTILE_ERROR, turnstileOk } from "@/lib/security/turnstile";
 import { findPlace } from "@/lib/data/catalog";
 import { getRequestContext } from "@/lib/data/partners";
@@ -120,7 +121,7 @@ function sendCode(email: string, partnerName: string, code: string) {
 const CODE_FAILED = "Non riusciamo a inviare l'email con il codice in questo momento. Riprova tra qualche minuto.";
 
 async function codeFailed(e: DeliveryError): Promise<{ ok: false; error: string }> {
-  console.error("[codice]", e.message);
+  logError("[codice] codice della richiesta non inviato:", e);
   await alertTeam("Codice delle richieste non inviato", `Un cliente non ha ricevuto il codice per confermare la richiesta: ${e.message}\n\nControllare Brevo (chiave, dominio, limiti di invio).`);
   return { ok: false, error: CODE_FAILED };
 }
@@ -130,7 +131,7 @@ async function bestEffort(what: string, send: Promise<void>) {
   try {
     await send;
   } catch (e) {
-    console.error(`[email] ${what} non inviata:`, e instanceof Error ? e.message : e);
+    logError(`[email] ${what} non inviata:`, e);
   }
 }
 

@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { CLIENT_LOGIN_PATH, finishOAuth, isOAuthProvider, OAUTH_COOKIE, OAuthError, userForOAuthProfile, type OAuthProvider } from "@/lib/auth/oauth";
 import { createSession, landingPathFor } from "@/lib/auth/session";
+import { logError } from "@/lib/domain/log";
 
 /** Google e Apple aprono solo la sessione cliente: l'Area Partner resta con email e password. */
 async function complete(
@@ -22,7 +23,7 @@ async function complete(
     await createSession(userId, audience);
     target = await landingPathFor(userId, audience);
   } catch (e) {
-    if (!(e instanceof OAuthError)) console.error("[auth] accesso con", provider, "non riuscito:", e);
+    if (!(e instanceof OAuthError)) logError(`[auth] accesso con ${provider} non riuscito:`, e);
     target = `${loginPath}?errore=${provider}-${e instanceof OAuthError ? e.code : "token"}`;
   }
   const response = NextResponse.redirect(new URL(target, request.url), 303);

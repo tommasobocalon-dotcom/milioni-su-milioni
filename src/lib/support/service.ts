@@ -14,6 +14,7 @@ import {
 } from "@/lib/domain/support";
 import { adminBaseUrl } from "@/lib/domain/admin-host";
 import { sendEmail } from "@/lib/notify";
+import { logError } from "@/lib/domain/log";
 
 /**
  * Assistenza: un ticket nasce dal modulo del sito, dall'Area Partner o da un'email alla casella
@@ -65,7 +66,7 @@ async function quietly(what: string, send: () => Promise<void>) {
   try {
     await send();
   } catch (e) {
-    console.error(`[assistenza] ${what} non inviata:`, e);
+    logError(`[assistenza] ${what} non inviata:`, e);
   }
 }
 
@@ -228,7 +229,7 @@ export async function replyToTicket(ticketId: string, admin: { id: string; name:
       { replyTo: supportEmail() },
     );
   } catch (e) {
-    console.error("[assistenza] risposta non inviata per email:", e);
+    logError("[assistenza] risposta non inviata per email:", e);
     return { emailError: e instanceof Error ? e.message : String(e) };
   }
   return {};

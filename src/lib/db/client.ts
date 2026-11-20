@@ -2,7 +2,7 @@ import "server-only";
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
 import * as schema from "./schema";
-import { databaseUrl } from "./url";
+import { databaseSsl, databaseUrl } from "./url";
 
 const url = databaseUrl();
 
@@ -13,8 +13,9 @@ const sql =
   globalForDb.sql ??
   postgres(url, {
     max: process.env.NODE_ENV === "production" ? 5 : 3,
-    // Connessione cifrata (TLS) verso Supabase anche se la stringa non lo chiede; il database locale non usa TLS.
-    ssl: /@(127\.0\.0\.1|localhost)[:/]/.test(url) ? false : "require",
+    // Connessione cifrata (TLS) verso Supabase anche se la stringa non lo chiede, con verifica del certificato se c'è
+    // DATABASE_CA_CERT; il database locale non usa TLS.
+    ssl: databaseSsl(url),
     // Il pooler di Supabase in modalità transaction non supporta i prepared statement.
     prepare: false,
     // Su Vercel le funzioni inattive vengono congelate e il pooler chiude le connessioni: senza questi limiti una

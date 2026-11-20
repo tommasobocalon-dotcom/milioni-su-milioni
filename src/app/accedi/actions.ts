@@ -6,6 +6,8 @@ import { z } from "zod";
 import { consumeAuthToken, sendEmailVerificationLink, sendPasswordResetLink } from "@/lib/auth/email-links";
 import { createSession, destroySession, getAnySessionUser, landingPathFor, type Audience } from "@/lib/auth/session";
 import { ipRateLimited } from "@/lib/security/ip-limit";
+import { logError } from "@/lib/domain/log";
+import { alertTeam } from "@/lib/notify";
 import { TURNSTILE_ERROR, turnstileOk } from "@/lib/security/turnstile";
 import { db } from "@/lib/db/client";
 import { auditLogs, oauthAccounts, sessions, users } from "@/lib/db/schema";
@@ -36,7 +38,8 @@ export async function signIn(rawEmail: string, password: string, next?: string, 
   if (!email) return { ok: false, error: "Controlla l'indirizzo email", field: "email" };
   if (!password || password.length > PASSWORD_MAX) return { ok: false, error: "Inserisci la password", field: "password" };
   if (await ipRateLimited("login", 50, 15)) return { ok: false, error: "Troppi tentativi da questo dispositivo. Riprova tra qualche minuto." };
-  if ((await recentFailures(email)) >= FAILED_LIMIT.attempts) {
+  const failures = await recentFailures(email);
+  if (failures >= FAILED_LIMIT.attempts) {
     return { ok: false, error: `Troppi tentativi sbagliati. Riprova tra ${FAILED_LIMIT.minutes} minuti.` };
   }
 
@@ -45,6 +48,13 @@ export async function signIn(rawEmail: string, password: string, next?: string, 
   const valid = user?.passwordHash ? await verifyPassword(password, user.passwordHash) : await burnPasswordCheck(password);
   if (!user || !valid) {
     await db.insert(auditLogs).values({ actor: email, action: "auth.login_failed", entity: "login", entityId: email });
+    // Con questo errore l'accesso all'email si ferma: il team lo sa subito, può essere un attacco (al massimo un'email ogni 10 minuti).
+    if (failures + 1 === FAILED_LIMIT.attempts) {
+      await alertTeam(
+        "Accesso bloccato per troppe password sbagliate",
+        `${FAILED_LIMIT.attempts} password sbagliate in ${FAILED_LIMIT.minutes} minuti per ${email}${user ? "" : " (nessun account con questa email)"}: accesso fermo per ${FAILED_LIMIT.minutes} minuti.\n\nSe arrivano molti avvisi così, controllare il Firewall di Vercel (DEPLOY.md, \"Sicurezza: protezione da flood e DDoS\").`,
+      );
+    }
     return { ok: false, error: "Email o password non corretti" };
   }
   await createSession(user.id, audience);
@@ -83,7 +93,7 @@ export async function signUp(
   if (!created) return { ok: false, error: "Esiste già un account con questa email: accedi", field: "email" };
   await db.insert(auditLogs).values({ actor: email, action: "auth.signup", entity: "user", entityId: created.id });
   // Un intoppo del provider email non deve bloccare la registrazione: il link si può rimandare dall'area personale.
-  await sendEmailVerificationLink({ id: created.id, email, name }).catch((e) => console.error("[auth] email di conferma non inviata:", e));
+  await sendEmailVerificationLink({ id: created.id, email, name }).catch((e) => logError("[auth] email di conferma non inviata:", e));
   await createSession(created.id, audience);
   redirect(await landingPathFor(created.id, audience, next));
 }
