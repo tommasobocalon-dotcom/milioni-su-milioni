@@ -196,7 +196,13 @@ async function ResultsBody({ mode, params, seed }: { mode: "agency" | "pro"; par
               <label htmlFor="dove" className="text-body-s font-semibold">
                 Zona
               </label>
-              <Input id="dove" name="dove" list="comuni-filtro" defaultValue={place?.name ?? province?.label ?? params.dove ?? ""} placeholder="Comune o provincia" />
+              <Input
+                id="dove"
+                name="dove"
+                list="comuni-filtro"
+                // Freccia nera di Chrome per il datalist: stonava accanto alla select, i suggerimenti compaiono scrivendo.
+                className="[&::-webkit-calendar-picker-indicator]:hidden"
+                defaultValue={place?.name ?? province?.label ?? params.dove ?? ""} placeholder="Comune o provincia" />
               <datalist id="comuni-filtro">
                 {provinceZones.map((p) => (
                   <option key={p.id} value={p.label} />

@@ -4,7 +4,8 @@ import type { ComponentProps } from "react";
 import { cn } from "@/lib/utils";
 
 const base =
-  "inline-flex h-9 items-center gap-1.5 rounded-full border px-3.5 text-body-s font-medium transition-colors [&_svg]:size-3.5";
+  // min-h e py: un'etichetta lunga va a capo dentro il chip invece di uscire dal bordo (filtri stretti di Trova Casa).
+  "inline-flex min-h-9 max-w-full items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-body-s leading-snug font-medium transition-colors [&_svg]:size-3.5 [&_svg]:shrink-0";
 const on = "border-salvia-500 bg-brand-soft text-brand";
 const off = "border-line bg-surface text-ink hover:border-line-strong";
 
