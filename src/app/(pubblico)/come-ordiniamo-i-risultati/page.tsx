@@ -42,7 +42,7 @@ const TIERS = [
     width: "w-[76%]",
   },
   {
-    plan: "Altre aziende",
+    plan: "Base",
     note: "",
     premium: false,
     boosted: false,
