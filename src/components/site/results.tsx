@@ -127,7 +127,7 @@ async function ResultsBody({ mode, params, seed }: { mode: "agency" | "pro"; par
   const nearbyList = nearby ? [...(nearby.featured ? [nearby.featured] : []), ...nearby.results].slice(0, 3) : [];
 
   return (
-    <div className="container-page flex flex-col gap-6 py-8">
+    <div className="container-page flex flex-col gap-6 py-8 min-[125rem]:max-w-[100rem]">
       <nav aria-label="Percorso" className="flex flex-wrap items-center gap-1 text-body-s text-ink-2">
         <Link href="/" className="hover:text-primary">
           Home
@@ -312,7 +312,7 @@ async function ResultsBody({ mode, params, seed }: { mode: "agency" | "pro"; par
 
 export function ResultsSkeleton() {
   return (
-    <div className="container-page flex flex-col gap-6 py-8" aria-busy="true" aria-label="Caricamento dei risultati">
+    <div className="container-page flex flex-col gap-6 py-8 min-[125rem]:max-w-[100rem]" aria-busy="true" aria-label="Caricamento dei risultati">
       <div className="h-5 w-64 animate-pulse rounded bg-muted" />
       <div className="h-10 w-96 max-w-full animate-pulse rounded bg-muted" />
       <div className="grid grid-cols-1 gap-8 lg:grid-cols-[280px_minmax(0,1fr)]">
