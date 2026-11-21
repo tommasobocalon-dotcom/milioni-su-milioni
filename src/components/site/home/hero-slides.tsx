@@ -13,6 +13,8 @@ import { cn } from "@/lib/utils";
 export function HeroSlides({ slides, next, children }: { slides: HeroSlide[]; next: string; children: React.ReactNode }) {
   const [index, setIndex] = useState(0);
   const [paused, setPaused] = useState(false);
+  // Autoplay bloccato dal browser (risparmio energetico, browser dentro le app): si riparte al primo tocco.
+  const [blocked, setBlocked] = useState(false);
   const reduced = useReducedMotion();
   const playing = !paused && !reduced;
   const videos = useRef<(HTMLVideoElement | null)[]>([]);
@@ -22,10 +24,27 @@ export function HeroSlides({ slides, next, children }: { slides: HeroSlide[]; ne
       if (!v) return;
       // Se il browser blocca l'autoplay (es. iPhone con il risparmio energetico) resta il poster
       // e il pulsante passa a "Riproduci": un tocco lo fa partire.
-      if (i === index && playing) v.play().catch((e: unknown) => e instanceof DOMException && e.name === "NotAllowedError" && setPaused(true));
+      if (i === index && playing)
+        v.play().catch((e: unknown) => {
+          if (e instanceof DOMException && e.name === "NotAllowedError") {
+            setPaused(true);
+            setBlocked(true);
+          }
+        });
       else v.pause();
     });
   }, [index, playing]);
+
+  // Primo tocco in qualsiasi punto della pagina: play() dentro il gesto, l'unico modo per partire dove l'autoplay è bloccato.
+  useEffect(() => {
+    if (!blocked || reduced) return;
+    const start = () => {
+      setBlocked(false);
+      videos.current[index]?.play().then(() => setPaused(false), () => {});
+    };
+    document.addEventListener("pointerup", start, { once: true });
+    return () => document.removeEventListener("pointerup", start);
+  }, [blocked, reduced, index]);
 
   return (
     <>
@@ -70,6 +89,7 @@ export function HeroSlides({ slides, next, children }: { slides: HeroSlide[]; ne
           onClick={() => {
             // play() dentro il tocco: così parte anche dove l'autoplay è bloccato.
             if (!playing) videos.current[index]?.play().catch(() => {});
+            setBlocked(false);
             setPaused(playing);
           }}
           className="absolute right-4 bottom-6 z-10 inline-flex size-10 items-center justify-center rounded-full text-on-brand/70 transition-colors hover:bg-white/10 hover:text-on-brand md:right-6"
