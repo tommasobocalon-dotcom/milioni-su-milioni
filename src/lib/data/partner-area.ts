@@ -260,11 +260,11 @@ export async function hadStripeSubscription(partnerId: string): Promise<boolean>
   });
 }
 
-/** Piano gratuito: richieste con i contatti usate nel mese e richieste in attesa senza contatti. */
-export async function getFreePlanUsage(partnerId: string, now: Date) {
+/** Piano gratuito: richieste con i contatti usate e richieste in attesa senza contatti. */
+export async function getFreePlanUsage(partnerId: string) {
   return asPartner(partnerId, async (tx) => {
     const [used, [locked]] = await Promise.all([
-      freeLeadsUsed(tx, partnerId, now),
+      freeLeadsUsed(tx, partnerId),
       tx.select({ n: count() }).from(leads).where(and(eq(leads.partnerId, partnerId), eq(leads.charge, "locked"))),
     ]);
     return { used, left: freeLeadsLeft(used), locked: locked?.n ?? 0 };

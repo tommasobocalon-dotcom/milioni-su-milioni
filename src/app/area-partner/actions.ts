@@ -542,7 +542,8 @@ async function listingWithPlan(tx: Pick<typeof db, "select">, partnerId: string)
  */
 export async function simulateSubscription(planCode: string, period: "monthly" | "yearly") {
   if (!demoMode() || stripeConfigured()) return;
-  const { user, partner, memberRole } = await requirePartner();
+  // Raggiungibile da sospesi: è così che un piano gratuito finito torna online.
+  const { user, partner, memberRole } = await requirePartner({ allowSuspended: true });
   if (memberRole !== "owner" || (period !== "monthly" && period !== "yearly")) return;
   const [plan] = await db.select({ id: plans.id, name: plans.name }).from(plans).where(eq(plans.code, planCode));
   if (!plan) return;

@@ -13,6 +13,7 @@ import { accountStatusFrom, listingStatus } from "@/lib/domain/billing";
 import { REPORT_REASONS } from "@/lib/domain/lead-rules";
 import { MESSAGE_MAX, TICKET_STATUSES } from "@/lib/domain/support";
 
+import { syncFreePlan } from "@/lib/leads/service";
 import { replyToTicket } from "@/lib/support/service";
 import type { FormState } from "@/components/ui/message-form";
 
@@ -186,9 +187,9 @@ export async function resolveLeadReportAction(leadId: string, formData: FormData
   const decision = formData.get("decision");
   if (!Id.safeParse(leadId).success || (decision !== "accept" && decision !== "reject")) return;
   const now = new Date();
-  await db.transaction(async (tx) => {
+  const restarted = await db.transaction(async (tx) => {
     const [lead] = await tx.select().from(leads).where(eq(leads.id, leadId)).for("update");
-    if (!lead || lead.reportStatus !== "open") return;
+    if (!lead || lead.reportStatus !== "open") return null;
     const reason = REPORT_REASONS.find((r) => r.value === lead.reportReason)?.label ?? lead.reportReason;
     if (decision === "reject") {
       await tx.update(leads).set({ reportStatus: "rejected" }).where(eq(leads.id, lead.id));
@@ -205,7 +206,10 @@ export async function resolveLeadReportAction(leadId: string, formData: FormData
       });
     }
     await tx.insert(auditLogs).values({ actor: admin.email, action: `lead.report_${decision}`, entity: "lead", entityId: lead.id, data: { partnerId: lead.partnerId } });
+    // Una richiesta che non conta più può far ripartire il piano gratuito finito alla 3ª.
+    return decision === "accept" && (await syncFreePlan(tx, lead.partnerId)) ? lead.partnerId : null;
   });
+  if (restarted) await refreshPartnerPages(restarted);
   revalidatePath("/admin", "layout");
   revalidatePath("/area-partner", "layout");
 }

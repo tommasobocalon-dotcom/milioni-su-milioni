@@ -53,7 +53,7 @@ async function Overview() {
     { n: o.partnersBy.suspended, label: "Aziende sospese", href: "/admin/partner?filtro=suspended", icon: CircleAlert, urgent: true },
     { n: o.leadsNotDelivered, label: "Richieste non consegnate (7 giorni)", href: "/admin/richieste?filtro=non-consegnate", icon: Inbox, urgent: true },
     { n: o.stuckActivating, label: "Iscritte da 3 giorni senza piano: da richiamare", href: "/admin/partner?filtro=activating", icon: Phone },
-    { n: o.freeAtLimit, label: "Gratuite senza richieste per il mese: proponi un piano", href: "/admin/abbonamenti?filtro=gratuiti", icon: Euro },
+    { n: o.freeAtLimit, label: "Gratuite finite dopo 3 richieste: proponi un piano", href: "/admin/abbonamenti?filtro=gratuiti", icon: Euro },
     { n: o.sponsorshipsEnding, label: "Sponsorizzazioni che finiscono entro 3 giorni", href: "/admin/sponsorizzazioni", icon: Rocket },
     { n: o.leadsUnconfirmed, label: "Codici mai confermati (7 giorni): controlla le email", href: "/admin/richieste?filtro=da-confermare", icon: MailWarning },
   ].filter((t) => t.n > 0);

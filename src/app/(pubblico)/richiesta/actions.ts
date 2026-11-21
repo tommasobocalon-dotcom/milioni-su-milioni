@@ -1,6 +1,7 @@
 "use server";
 
 import { eq } from "drizzle-orm";
+import { updateTag } from "next/cache";
 import { z } from "zod";
 import { issueOtp, OtpRateLimitError, verifyOtp } from "@/lib/auth/otp-service";
 import { ipRateLimited } from "@/lib/security/ip-limit";
@@ -157,9 +158,9 @@ export async function verifyLeadRequest(leadId: string, code: string): Promise<V
     if (check === "expired") return { ok: false, error: "Il codice è scaduto: chiedine uno nuovo." };
     if (check === "locked") return { ok: false, error: "Troppi tentativi: chiedi un nuovo codice." };
 
-    const { outcome, partnerId } = await confirmLead(lead.id);
+    const { outcome, partnerId, freeEnded } = await confirmLead(lead.id);
     if (outcome === "delivered") {
-      await bestEffort("avviso al partner", notifyPartner(partnerId, lead.id));
+      await bestEffort("avviso al partner", notifyPartner(partnerId, lead.id, freeEnded));
       await bestEffort(
         "conferma al cliente",
         sendEmail(
@@ -187,17 +188,30 @@ export async function resendLeadCode(leadId: string): Promise<{ ok: boolean; err
   }
 }
 
-async function notifyPartner(partnerId: string, leadId: string) {
-  const [p] = await db.select({ email: partners.email, name: partners.displayName }).from(partners).where(eq(partners.id, partnerId));
+async function notifyPartner(partnerId: string, leadId: string, freeEnded = false) {
+  const [p] = await db.select({ email: partners.email, name: partners.displayName, slug: partners.slug }).from(partners).where(eq(partners.id, partnerId));
+  if (freeEnded && p) {
+    // Piano gratuito finito con questa richiesta: la scheda esce subito dai risultati.
+    updateTag(`partner:${p.slug}`);
+    updateTag("catalog");
+  }
   if (!p?.email) return;
   const appUrl = process.env.APP_URL ?? "http://localhost:3000";
   const [lead] = await db.select({ charge: leads.charge }).from(leads).where(eq(leads.id, leadId));
   if (lead?.charge === "locked") {
-    // Piano gratuito oltre le 3 richieste del mese: si dice che c'è, senza dati del cliente.
+    // Piano gratuito oltre le 3 richieste: si dice che c'è, senza dati del cliente.
     await sendEmail(
       p.email,
       "Nuova richiesta di contatto: scegli un piano per vederla",
-      `Ciao ${p.name}, hai una nuova richiesta, ma questo mese hai già ricevuto le 3 gratuite. Scegli un piano per vedere i contatti del cliente: ${appUrl}/area-partner/abbonamento`,
+      `Ciao ${p.name}, hai una nuova richiesta, ma hai già ricevuto le 3 gratuite. Scegli un piano per vedere i contatti del cliente: ${appUrl}/area-partner/abbonamento`,
+    );
+    return;
+  }
+  if (freeEnded) {
+    await sendEmail(
+      p.email,
+      "Nuova richiesta di contatto: era l'ultima gratuita",
+      `Ciao ${p.name}, hai una nuova richiesta di contatto: è la 3ª e ultima del piano gratuito. Da adesso la tua scheda non compare più nei risultati: scegli un piano per tornare online e continuare a ricevere richieste, con le promo del lancio: ${appUrl}/area-partner/abbonamento`,
     );
     return;
   }

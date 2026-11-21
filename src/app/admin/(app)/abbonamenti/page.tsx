@@ -86,7 +86,7 @@ async function Subscriptions({ filter }: { filter?: SubscriptionFilter }) {
                       Stripe <ExternalLink className="size-3.5" aria-hidden />
                     </a>
                   )}
-                  <span className={cn(PILL, STATUS[s.status].style)}>{s.free && s.status === "active" ? "Gratuito" : STATUS[s.status].label}</span>
+                  <span className={cn(PILL, STATUS[s.status].style)}>{s.free && s.status === "active" ? "Gratuito" : s.free && s.status === "suspended" ? "Gratuito finito" : STATUS[s.status].label}</span>
                 </span>
               </li>
             ))}

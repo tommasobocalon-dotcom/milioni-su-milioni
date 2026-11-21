@@ -7,7 +7,7 @@ import { Wordmark } from "@/components/site/wordmark";
 import { DEMO_ACCOUNT } from "@/lib/auth/demo";
 import { getSessionUser, landingPathFor } from "@/lib/auth/session";
 import { getFreePlanOpen } from "@/lib/data/plans";
-import { FREE_LEADS_PER_MONTH } from "@/lib/domain/free-plan";
+import { FREE_LEADS } from "@/lib/domain/free-plan";
 import { demoMode } from "@/lib/demo-mode";
 import { cn } from "@/lib/utils";
 
@@ -83,7 +83,7 @@ async function FreeLaunchOffer({ className }: { className?: string }) {
           Per il lancio, la tua scheda è gratis
         </h2>
         <p className="text-body-s">
-          Non paghi nulla finché non ricevi {FREE_LEADS_PER_MONTH} richieste in un mese. Senza carta e senza vincoli: poi scegli tu il
+          Non paghi nulla finché non ricevi {FREE_LEADS} richieste. Senza carta e senza vincoli: poi scegli tu il
           piano, con le promo.
         </p>
       </div>

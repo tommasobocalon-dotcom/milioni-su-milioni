@@ -14,7 +14,7 @@ import { changePromoUsed, pendingPlanChange, stripeConfigured } from "@/lib/bill
 import { getFreePlanUsage, getSubscription, hadFreePlan, hadStripeSubscription } from "@/lib/data/partner-area";
 import { getPlansWithPromo } from "@/lib/data/plans";
 import { demoMode } from "@/lib/demo-mode";
-import { FREE_LEADS_PER_MONTH, freePlanOpen, romeMonthStart } from "@/lib/domain/free-plan";
+import { FREE_LEADS, freePlanOpen } from "@/lib/domain/free-plan";
 import { changePromo, launchDate, planPromo } from "@/lib/domain/offers";
 import { planFeatures } from "@/lib/domain/plan-features";
 import { formatEuro } from "@/lib/domain/format";
@@ -22,7 +22,6 @@ import { cn } from "@/lib/utils";
 
 export const metadata = { title: "Abbonamento" };
 
-const monthFmt = new Intl.DateTimeFormat("it-IT", { month: "long", timeZone: "Europe/Rome" });
 const dateFmt = new Intl.DateTimeFormat("it-IT", { day: "numeric", month: "long", year: "numeric", timeZone: "Europe/Rome" });
 
 const STATUS: Record<string, string> = {
@@ -148,15 +147,15 @@ async function Subscription({ payment, welcome }: { payment: "received" | "start
                 Parti gratis
               </h2>
               <p className="text-body-s text-ink-2">
-                Per il lancio la tua scheda è gratis finché non ricevi {FREE_LEADS_PER_MONTH} richieste in un mese. Poi scegli il piano che
-                preferisci, sempre con le promo.
+                Per il lancio la tua scheda è gratis finché non ricevi {FREE_LEADS} richieste. Poi scegli il piano che preferisci,
+                sempre con le promo.
               </p>
             </div>
             <ul className="flex flex-col gap-2 text-body-s">
               {[
                 "Le funzioni del piano Base, senza carta e senza pagare nulla",
-                `${FREE_LEADS_PER_MONTH} richieste al mese con i contatti del cliente`,
-                "Dalla 4ª richiesta del mese vedi zona e tipo di lavoro; i contatti si sbloccano scegliendo un piano",
+                `${FREE_LEADS} richieste con i contatti del cliente`,
+                "Dopo la 3ª la scheda esce dai risultati finché non scegli un piano",
                 "Le promo restano tue anche quando passi a pagamento",
               ].map((t) => (
                 <li key={t} className="flex items-start gap-2">
@@ -180,17 +179,29 @@ async function Subscription({ payment, welcome }: { payment: "received" | "start
     );
   }
 
-  // 2. Piano gratuito di lancio: richieste del mese, contatti in attesa e scelta del piano con le promo.
+  // 2. Piano gratuito di lancio: richieste usate, contatti in attesa e scelta del piano con le promo. Finito dopo le 3
+  // richieste (syncFreePlan, "suspended") l'Area Partner si ferma qui finché l'azienda non paga un piano.
   if (sub.free) {
-    const usage = await getFreePlanUsage(partner.id, now);
-    const used = Math.min(usage.used, FREE_LEADS_PER_MONTH);
-    // Primo giorno del mese prossimo, quando il contatore torna a zero (ora italiana).
-    const resetDay = `1° ${monthFmt.format(new Date(romeMonthStart(now).getTime() + 32 * 86_400_000))}`;
+    const usage = await getFreePlanUsage(partner.id);
+    const used = Math.min(usage.used, FREE_LEADS);
+    const ended = sub.status === "suspended";
     return (
       <div className="flex flex-col gap-6">
-        <PartnerPageHeader title="Piano gratuito" partnerName={partner.displayName} logoUrl={partner.logoUrl} planCode={sub.planCode} />
+        <PartnerPageHeader title={ended ? "Piano gratuito finito" : "Piano gratuito"} partnerName={partner.displayName} logoUrl={partner.logoUrl} planCode={sub.planCode} />
         {notice}
         {teamSuspension}
+        {ended && (
+          <section role="alert" className="flex items-start gap-4 rounded-lg border-2 border-error bg-error-soft p-6">
+            <Lock className="mt-1 size-6 shrink-0 text-error" aria-hidden />
+            <div className="flex flex-col gap-2">
+              <p className="text-h3 font-semibold">Hai ricevuto le {FREE_LEADS} richieste gratuite</p>
+              <p className="text-body">
+                La tua scheda non compare più nei risultati e l&apos;Area Partner è bloccata. Scegli uno dei piani qui sotto: torni online
+                appena il pagamento va a buon fine, con le promo del lancio.
+              </p>
+            </div>
+          </section>
+        )}
         {usage.locked > 0 && (
           <section role="alert" className="flex items-start gap-3 rounded-lg border border-primary bg-surface p-5 text-body-s">
             <Lock className="mt-0.5 size-5 shrink-0 text-primary" aria-hidden />
@@ -206,30 +217,30 @@ async function Subscription({ payment, welcome }: { payment: "received" | "start
           <div className="flex flex-col gap-4">
             <div>
               <p id="richieste-gratuite" className="text-body-s text-ink-2">
-                Richieste gratuite questo mese
+                Richieste gratuite usate
               </p>
               <p className="font-display text-h1">
-                {used} di {FREE_LEADS_PER_MONTH}
+                {used} di {FREE_LEADS}
               </p>
             </div>
-            {/* Una tacca per richiesta: si riempie a ogni richiesta con i contatti arrivata nel mese. */}
+            {/* Una tacca per richiesta: si riempie a ogni richiesta arrivata con i contatti. */}
             <div
               role="progressbar"
               aria-labelledby="richieste-gratuite"
               aria-valuemin={0}
-              aria-valuemax={FREE_LEADS_PER_MONTH}
+              aria-valuemax={FREE_LEADS}
               aria-valuenow={used}
-              aria-valuetext={`${used} richieste su ${FREE_LEADS_PER_MONTH}`}
+              aria-valuetext={`${used} richieste su ${FREE_LEADS}`}
               className="flex gap-1.5"
             >
-              {Array.from({ length: FREE_LEADS_PER_MONTH }, (_, i) => (
+              {Array.from({ length: FREE_LEADS }, (_, i) => (
                 <span key={i} className={cn("h-3 flex-1 rounded-full transition-colors", i < used ? "bg-primary" : "bg-muted")} />
               ))}
             </div>
             <p className="text-body-s">
               {usage.left > 0
-                ? `Ne puoi ricevere ancora ${usage.left} con i contatti del cliente. Il conteggio riparte il ${resetDay}.`
-                : `Hai usato le richieste gratuite di questo mese: le prossime ti mostrano zona e tipo di lavoro, e i contatti si sbloccano scegliendo un piano. Il conteggio riparte il ${resetDay}.`}
+                ? `Ne puoi ricevere ancora ${usage.left}. Dopo la ${FREE_LEADS}ª la scheda esce dai risultati finché non scegli un piano.`
+                : "Hai usato tutte le richieste gratuite: scegli un piano per tornare nei risultati."}
             </p>
           </div>
           <div className="flex flex-col gap-3 rounded-md bg-subtle p-5">

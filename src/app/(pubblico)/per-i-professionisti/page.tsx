@@ -4,7 +4,7 @@ import { BadgeCheck, Check, Inbox, PhoneCall, Search } from "lucide-react";
 import { PlanPicker, type PlanCard } from "@/components/site/pro/plan-picker";
 import { ButtonLink } from "@/components/ui/button";
 import { getFreePlanOpen, getPlansWithPromo } from "@/lib/data/plans";
-import { FREE_LEADS_PER_MONTH } from "@/lib/domain/free-plan";
+import { FREE_LEADS } from "@/lib/domain/free-plan";
 import { REPORT_WINDOW_HOURS } from "@/lib/domain/lead-rules";
 import { planFeatures } from "@/lib/domain/plan-features";
 
@@ -28,7 +28,7 @@ const faq = (free: boolean) => [
     ? [
         {
           q: "Posso provare senza pagare?",
-          a: `Sì. Per il lancio la tua scheda è gratis, con le funzioni del piano Base, finché non ricevi ${FREE_LEADS_PER_MONTH} richieste nello stesso mese. Dalla ${FREE_LEADS_PER_MONTH + 1}ª richiesta del mese vedi zona e tipo di lavoro, e per vedere i contatti del cliente scegli un piano: le promo restano valide anche per te.`,
+          a: `Sì. Per il lancio la tua scheda è gratis, con le funzioni del piano Base, finché non ricevi ${FREE_LEADS} richieste. Poi, per restare nei risultati e ricevere altre richieste, scegli un piano: le promo restano valide anche per te.`,
         },
       ]
     : []),
@@ -85,7 +85,7 @@ export default async function ForProfessionalsPage() {
               {[
                 "Richieste dei clienti gratis e illimitate",
                 "Richieste confermate dal cliente via email",
-                free ? `Per il lancio parti gratis, fino a ${FREE_LEADS_PER_MONTH} richieste al mese` : "7 giorni di prova gratis, poi disdici quando vuoi",
+                free ? `Per il lancio parti gratis, fino a ${FREE_LEADS} richieste` : "7 giorni di prova gratis, poi disdici quando vuoi",
               ].map((t) => (
                 <li key={t} className="flex items-center gap-2">
                   <Check className="size-5 shrink-0 text-salvia-300" aria-hidden /> {t}
@@ -144,7 +144,7 @@ export default async function ForProfessionalsPage() {
               <div className="flex max-w-2xl flex-col gap-1">
                 <h3 className="text-h3 font-semibold">Per il lancio, parti gratis</h3>
                 <p className="text-body-s text-ink-2">
-                  La tua scheda non costa nulla finché non ricevi {FREE_LEADS_PER_MONTH} richieste in un mese, con le funzioni del piano Base e
+                  La tua scheda non costa nulla finché non ricevi {FREE_LEADS} richieste, con le funzioni del piano Base e
                   senza carta. Poi scegli il piano che preferisci, sempre con le promo qui sotto.
                 </p>
               </div>

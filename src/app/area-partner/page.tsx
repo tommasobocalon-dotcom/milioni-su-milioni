@@ -8,7 +8,7 @@ import { PartnerSkeleton } from "@/components/partner/skeleton";
 import { ButtonLink } from "@/components/ui/button";
 import { requirePartner } from "@/lib/auth/session";
 import { getBoostEnd, getFreePlanUsage, getOverview } from "@/lib/data/partner-area";
-import { FREE_LEADS_PER_MONTH } from "@/lib/domain/free-plan";
+import { FREE_LEADS } from "@/lib/domain/free-plan";
 
 export const metadata = { title: "Home" };
 
@@ -27,7 +27,7 @@ function nextStep(newLeads: number, completeness: number, lockedLeads: number) {
   if (lockedLeads > 0)
     return {
       title: lockedLeads === 1 ? "Hai 1 richiesta senza contatti" : `Hai ${lockedLeads} richieste senza contatti`,
-      text: `Questo mese hai già ricevuto le ${FREE_LEADS_PER_MONTH} richieste gratuite. Scegli un piano per vedere chi ti ha scritto.`,
+      text: `Hai già ricevuto le ${FREE_LEADS} richieste gratuite. Scegli un piano per vedere chi ti ha scritto.`,
       href: "/area-partner/abbonamento",
       cta: "Scegli un piano",
     };
@@ -58,7 +58,7 @@ async function Dashboard() {
   await connection();
   const now = new Date();
   const [o, homeEnd] = await Promise.all([getOverview(partner.id), getBoostEnd(partner.id, "home", now)]);
-  const free = o.sub?.free && o.sub.status === "active" ? await getFreePlanUsage(partner.id, now) : null;
+  const free = o.sub?.free && o.sub.status === "active" ? await getFreePlanUsage(partner.id) : null;
   const hour = Number(new Intl.DateTimeFormat("it-IT", { hour: "numeric", hour12: false, timeZone: "Europe/Rome" }).format(now));
   const greeting = hour < 13 ? "Buongiorno" : hour < 18 ? "Buon pomeriggio" : "Buonasera";
   const step = nextStep(o.counts.new ?? 0, o.completeness, free?.locked ?? 0);
@@ -89,7 +89,7 @@ async function Dashboard() {
             <>
               <p className="font-display text-h1">Gratuito</p>
               <p className="text-caption text-ink-2">
-                {Math.min(free.used, FREE_LEADS_PER_MONTH)} di {FREE_LEADS_PER_MONTH} richieste gratuite usate questo mese
+                {Math.min(free.used, FREE_LEADS)} di {FREE_LEADS} richieste gratuite usate
               </p>
               <Link href="/area-partner/abbonamento" className="text-body-s font-semibold text-primary hover:underline">
                 Scegli un piano

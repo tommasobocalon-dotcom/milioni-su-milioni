@@ -17,7 +17,6 @@ import {
 import { profileHref } from "@/lib/data/search";
 import { listTickets } from "@/lib/data/support";
 import { monthlyRecurringCents } from "@/lib/domain/admin";
-import { FREE_LEADS_PER_MONTH, romeMonthStart } from "@/lib/domain/free-plan";
 
 /** Nome del piano nel gestionale: il piano gratuito di lancio è un Base senza pagamento. */
 const planLabel = sql<string>`case when ${subscriptions.free} then 'Gratuito' else ${plans.name} end`;
@@ -78,8 +77,6 @@ type OverviewCounters = {
 export async function getAdminOverview(now: Date) {
   const at = (ms: number) => new Date(now.getTime() + ms).toISOString();
   const t = now.toISOString();
-  // Come freeLeadsUsed() in src/lib/leads/service.ts.
-  const monthStart = romeMonthStart(now).toISOString();
   const [counters, openTickets, recentPartners] = await Promise.all([
     db.execute<OverviewCounters>(sql`
       select
@@ -115,9 +112,8 @@ export async function getAdminOverview(now: Date) {
         (select count(*) from area_extensions where starts_at <= ${t} and ends_at > ${t})::int as extensions_active,
         ((select count(*) from boosts where ends_at > ${t} and ends_at <= ${at(3 * DAY)})
           + (select count(*) from area_extensions where ends_at > ${t} and ends_at <= ${at(3 * DAY)}))::int as sponsorships_ending,
-        (select count(*) from subscriptions s where s.status = 'active' and s.free and (
-           select count(*) from leads l where l.partner_id = s.partner_id and l.charge = 'quota' and l.delivered_at >= ${monthStart}
-             and l.report_status is distinct from 'accepted') >= ${FREE_LEADS_PER_MONTH})::int as free_at_limit,
+        -- Gratuiti finiti dopo le 3 richieste (syncFreePlan): aspettano che l'azienda scelga un piano.
+        (select count(*) from subscriptions s where s.status = 'suspended' and s.free)::int as free_at_limit,
         (select coalesce(json_agg(x order by x.n desc), '[]') from (
            select case when s.free then 'Gratuito' else p.name end as name, count(*)::int as n
            from subscriptions s join plans p on p.id = s.plan_id join partners pa on pa.id = s.partner_id
@@ -500,8 +496,9 @@ export type SubscriptionFilter = (typeof SUBSCRIPTION_FILTERS)[number]["value"];
 const subscriptionFilterSql = (f: SubscriptionFilter): SQL =>
   ({
     attivi: and(eq(subscriptions.status, "active"), eq(subscriptions.free, false))!,
-    gratuiti: and(eq(subscriptions.status, "active"), eq(subscriptions.free, true))!,
-    sospesi: eq(subscriptions.status, "suspended"),
+    // Anche i gratuiti finiti dopo le 3 richieste (syncFreePlan), che non sono pagamenti non riusciti.
+    gratuiti: and(inArray(subscriptions.status, ["active", "suspended"]), eq(subscriptions.free, true))!,
+    sospesi: and(eq(subscriptions.status, "suspended"), eq(subscriptions.free, false))!,
     "da-pagare": eq(subscriptions.status, "activating"),
     disdetti: eq(subscriptions.status, "cancelled"),
   })[f];

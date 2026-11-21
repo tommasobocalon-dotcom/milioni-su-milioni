@@ -1,9 +1,10 @@
 import "server-only";
-import { and, count, desc, eq, gt, gte, inArray, isNotNull, ne, or, isNull } from "drizzle-orm";
+import { and, count, desc, eq, gt, inArray, isNotNull, ne, or, isNull } from "drizzle-orm";
 import { db } from "@/lib/db/client";
 import { areaExtensions, boosts, leadEvents, leads, municipalities, partners, subscriptions, type LeadAnswer } from "@/lib/db/schema";
 import { type BoostPlacement } from "@/lib/domain/offers";
-import { freeLeadsLeft, romeMonthStart } from "@/lib/domain/free-plan";
+import { FREE_LEADS, freeLeadsLeft } from "@/lib/domain/free-plan";
+import { listingStatus } from "@/lib/domain/billing";
 import { decideLeadCharge, isDuplicateLead, DUPLICATE_WINDOW_DAYS } from "@/lib/domain/lead-rules";
 
 export type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
@@ -34,10 +35,10 @@ export async function createPendingLead(input: NewLead): Promise<string> {
 export type ConfirmOutcome = "delivered" | "duplicate" | "redirect";
 
 /**
- * Richieste del mese di calendario (ora italiana) consegnate con i contatti: sono quelle che il piano gratuito conta.
- * Una segnalazione accolta non conta.
+ * Richieste consegnate con i contatti: sono quelle che il piano gratuito conta (in tutto, non al mese, dal 21/11/2026).
+ * Una segnalazione accolta non conta. Il gratuito è solo per chi non ha mai avuto un abbonamento, quindi basta contarle tutte.
  */
-export async function freeLeadsUsed(tx: Tx | typeof db, partnerId: string, now = new Date()): Promise<number> {
+export async function freeLeadsUsed(tx: Tx | typeof db, partnerId: string): Promise<number> {
   const [row] = await tx
     .select({ n: count() })
     .from(leads)
@@ -45,11 +46,32 @@ export async function freeLeadsUsed(tx: Tx | typeof db, partnerId: string, now =
       and(
         eq(leads.partnerId, partnerId),
         eq(leads.charge, "quota"),
-        gte(leads.deliveredAt, romeMonthStart(now)),
         or(isNull(leads.reportStatus), ne(leads.reportStatus, "accepted")),
       ),
     );
   return row?.n ?? 0;
+}
+
+/**
+ * Piano gratuito arrivato alle 3 richieste (soci, 21/11/2026): finisce, l'abbonamento gratuito e la scheda passano a
+ * "suspended", così la scheda sparisce dalla ricerca e l'Area Partner si riduce alla pagina Abbonamento (requirePartner)
+ * finché l'azienda non paga un piano (syncSubscription chiude il gratuito). Se una segnalazione accolta lo riporta sotto
+ * le 3, riparte. Restituisce true se lo stato è cambiato.
+ */
+export async function syncFreePlan(tx: Tx, partnerId: string): Promise<boolean> {
+  const [sub] = await tx
+    .select({ id: subscriptions.id, status: subscriptions.status })
+    .from(subscriptions)
+    .where(and(eq(subscriptions.partnerId, partnerId), eq(subscriptions.free, true), inArray(subscriptions.status, ["active", "suspended"])));
+  if (!sub) return false;
+  const status = (await freeLeadsUsed(tx, partnerId)) >= FREE_LEADS ? "suspended" : "active";
+  if (status === sub.status) return false;
+  await tx.update(subscriptions).set({ status }).where(eq(subscriptions.id, sub.id));
+  const [p] = await tx.select({ accountStatus: partners.accountStatus, verification: partners.verificationStatus }).from(partners).where(eq(partners.id, partnerId)).for("update");
+  // Partner sospeso col gratuito ancora attivo = sospensione a mano del team: resta com'è.
+  if (p && !(p.accountStatus === "suspended" && sub.status === "active"))
+    await tx.update(partners).set({ accountStatus: listingStatus(status, p.verification) }).where(eq(partners.id, partnerId));
+  return true;
 }
 
 /** Scelto un piano a pagamento, le richieste arrivate bloccate col piano gratuito mostrano i contatti. */
@@ -65,10 +87,10 @@ export async function unlockLeads(tx: Tx, partnerId: string, now = new Date()) {
 
 /**
  * Lead verificato con OTP: lo consegna al partner (gratis e senza quota, decisione del 4/11/2026),
- * salvo duplicati e partner non attivi. Col piano gratuito, oltre le 3 richieste del mese, lo consegna senza
- * contatti ("locked"). Tutto in una transazione.
+ * salvo duplicati e partner non attivi. Col piano gratuito, alla 3ª richiesta il piano finisce (syncFreePlan,
+ * `freeEnded`); "locked" (consegnata senza contatti) resta solo per richieste confermate insieme. Tutto in una transazione.
  */
-export async function confirmLead(leadId: string, now = new Date()): Promise<{ outcome: ConfirmOutcome; partnerId: string }> {
+export async function confirmLead(leadId: string, now = new Date()): Promise<{ outcome: ConfirmOutcome; partnerId: string; freeEnded?: boolean }> {
   return db.transaction(async (tx) => {
     const [lead] = await tx.select().from(leads).where(eq(leads.id, leadId)).for("update");
     if (!lead) throw new Error("Richiesta non trovata");
@@ -78,7 +100,7 @@ export async function confirmLead(leadId: string, now = new Date()): Promise<{ o
       return { outcome, partnerId: lead.partnerId };
     }
 
-    // Riga del partner bloccata: due richieste confermate insieme non superano le 3 gratuite del mese.
+    // Riga del partner bloccata: due richieste confermate insieme non superano le 3 gratuite.
     const [partner] = await tx.select({ accountStatus: partners.accountStatus }).from(partners).where(eq(partners.id, lead.partnerId)).for("update");
     const [sub] = await tx
       .select({ id: subscriptions.id, free: subscriptions.free })
@@ -99,23 +121,25 @@ export async function confirmLead(leadId: string, now = new Date()): Promise<{ o
     const decision = decideLeadCharge({
       accountActive: partner?.accountStatus === "active" && !!sub,
       isDuplicate: duplicate,
-      freeLeadsLeft: sub?.free ? freeLeadsLeft(await freeLeadsUsed(tx, lead.partnerId, now)) : null,
+      freeLeadsLeft: sub?.free ? freeLeadsLeft(await freeLeadsUsed(tx, lead.partnerId)) : null,
     });
 
     const events: { type: string; message: string; actor: string }[] = [
       { type: "verified", message: "Richiesta inviata e confermata con codice via email", actor: "Cliente" },
     ];
     let outcome: ConfirmOutcome;
+    let freeEnded = false;
 
     switch (decision.kind) {
       case "quota":
         await tx.update(leads).set({ verifiedAt: now, deliveredAt: now, charge: "quota" }).where(eq(leads.id, lead.id));
         events.push({ type: "delivered", message: "Richiesta consegnata", actor: "Sistema" });
         outcome = "delivered";
+        if (sub?.free) freeEnded = await syncFreePlan(tx, lead.partnerId);
         break;
       case "locked":
         await tx.update(leads).set({ verifiedAt: now, deliveredAt: now, charge: "locked" }).where(eq(leads.id, lead.id));
-        events.push({ type: "delivered", message: "Richiesta consegnata senza contatti: le 3 gratuite del mese sono già usate", actor: "Sistema" });
+        events.push({ type: "delivered", message: "Richiesta consegnata senza contatti: le 3 gratuite sono già usate", actor: "Sistema" });
         outcome = "delivered";
         break;
       case "duplicate":
@@ -131,7 +155,7 @@ export async function confirmLead(leadId: string, now = new Date()): Promise<{ o
     }
 
     await tx.insert(leadEvents).values(events.map((e) => ({ ...e, leadId: lead.id, createdAt: now })));
-    return { outcome, partnerId: lead.partnerId };
+    return { outcome, partnerId: lead.partnerId, freeEnded };
   });
 }
 

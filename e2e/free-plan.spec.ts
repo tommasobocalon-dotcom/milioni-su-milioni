@@ -4,8 +4,9 @@ import { E2E_DATABASE_URL } from "../playwright.config";
 import { verifyPartner } from "./verify-partner";
 
 /**
- * Piano gratuito di lancio (soci, 15/11/2026): l'azienda parte gratis con il Base finché non riceve 3 richieste nello
- * stesso mese. Dalla 4ª vede tipo di lavoro e comune ma non i contatti, che si sbloccano scegliendo un piano.
+ * Piano gratuito di lancio (soci, 15/11/2026; dal 21/11/2026 3 richieste in tutto): l'azienda parte gratis con il Base
+ * finché non riceve 3 richieste. Alla 3ª il gratuito finisce: la scheda esce dai risultati e l'Area Partner resta ferma
+ * sulla pagina Abbonamento finché l'azienda non sceglie un piano.
  */
 
 const sql = postgres(E2E_DATABASE_URL, { max: 1, onnotice: () => {} });
@@ -18,7 +19,7 @@ function newVatNumber() {
   return digits.join("") + ((10 - (sum % 10)) % 10);
 }
 
-test("un'azienda parte gratis e dalla 4ª richiesta del mese i contatti restano nascosti fino alla scelta del piano", async ({ page, browser }) => {
+test("un'azienda parte gratis e alla 3ª richiesta sparisce dai risultati con l'Area Partner bloccata fino alla scelta del piano", async ({ page, browser }) => {
   const stamp = Date.now();
   const name = `Idraulica Gratis ${stamp}`;
   const clientEmail = `cliente.gratis.${stamp}@example.com`;
@@ -51,11 +52,15 @@ test("un'azienda parte gratis e dalla 4ª richiesta del mese i contatti restano 
   expect(free).toBe(true);
   await expect(page.getByText("La tua scheda è in verifica.")).toBeVisible();
   await verifyPartner(browser, name);
+  const listed = await browser.newPage();
+  await listed.goto("/idraulico/treviso");
+  await expect(listed.getByText(name)).toBeVisible();
+  await listed.close();
 
-  // Le 3 richieste gratuite del mese, già consegnate.
+  // Le prime 2 richieste gratuite, già consegnate.
   const [category] = await sql<{ id: string }[]>`select category_id as id from partners where id = ${partnerId}`;
   const [place] = await sql<{ id: number }[]>`select id from municipalities where name = 'Treviso'`;
-  for (let i = 0; i < 3; i++) {
+  for (let i = 0; i < 2; i++) {
     await sql`
       insert into leads (partner_id, category_id, municipality_id, request_type, timing, callback_slot, client_name, client_email, client_phone,
                          privacy_consent, charge, verified_at, delivered_at)
@@ -63,7 +68,7 @@ test("un'azienda parte gratis e dalla 4ª richiesta del mese i contatti restano 
               ${`gia.${i}.${stamp}@example.com`}, ${`+39347000${String(stamp).slice(-4)}${i}`}, true, 'quota', now(), now())`;
   }
 
-  // La 4ª arriva dal sito, confermata con il codice.
+  // La 3ª arriva dal sito, confermata con il codice.
   const client = await browser.newPage();
   await client.goto(`/richiesta/${slug}`);
   await client.getByLabel("Altro lavoro").check();
@@ -75,7 +80,7 @@ test("un'azienda parte gratis e dalla 4ª richiesta del mese i contatti restano 
   await client.getByLabel("Entro 3 mesi").check();
   await client.getByLabel("Qualsiasi orario").check();
   await client.getByRole("button", { name: "Continua" }).click();
-  await client.getByLabel("Nome e cognome").fill("Cliente Quarto");
+  await client.getByLabel("Nome e cognome").fill("Cliente Terzo");
   await client.getByRole("textbox", { name: /^Email/ }).fill(clientEmail);
   await client.getByLabel("Telefono").fill(`347 ${Math.floor(1_000_000 + Math.random() * 8_999_999)}`);
   await client.getByRole("checkbox").first().check();
@@ -86,25 +91,26 @@ test("un'azienda parte gratis e dalla 4ª richiesta del mese i contatti restano 
   await expect(client.getByRole("heading", { name: "Richiesta inviata!" })).toBeVisible();
   await client.close();
 
-  // L'azienda vede che c'è, ma non chi è il cliente né cosa ha scritto.
+  // Il gratuito è finito: scheda fuori dai risultati, Area Partner ferma sull'abbonamento con l'avviso.
+  const [after] = await sql<{ account: string; sub: string }[]>`
+    select p.account_status as account, s.status as sub from partners p join subscriptions s on s.partner_id = p.id and s.free where p.id = ${partnerId}`;
+  expect(after).toEqual({ account: "suspended", sub: "suspended" });
+  const search = await browser.newPage();
+  await search.goto("/idraulico/treviso");
+  await expect(search.getByText(name)).toHaveCount(0);
+  await search.close();
   await page.goto("/area-partner/lead");
-  await expect(page.getByText("Contatti nascosti: scegli un piano")).toBeVisible();
-  await page.getByText("Contatti nascosti: scegli un piano").click();
-  await expect(page.getByRole("heading", { level: 1, name: "Altro lavoro" })).toBeVisible();
-  await expect(page.getByRole("link", { name: "Scegli un piano" })).toBeVisible();
-  await expect(page.getByText("Cliente Quarto")).toHaveCount(0);
-  await expect(page.getByText(clientEmail)).toHaveCount(0);
-  await expect(page.getByText(/347 123 4567/)).toHaveCount(0);
-
-  await page.goto("/area-partner/abbonamento");
+  await expect(page).toHaveURL(/\/area-partner\/abbonamento$/);
+  await expect(page.getByRole("heading", { level: 1, name: "Piano gratuito finito" })).toBeVisible();
+  await expect(page.getByRole("alert").getByText("Hai ricevuto le 3 richieste gratuite")).toBeVisible();
   await expect(page.getByText("3 di 3")).toBeVisible();
-  await expect(page.getByText("Hai 1 richiesta senza contatti.")).toBeVisible();
 
-  // Scelto un piano (attivazione di prova senza Stripe), i contatti compaiono.
+  // Scelto un piano (attivazione di prova senza Stripe), torna online e l'Area Partner si riapre.
   await page.getByRole("button", { name: "Scegli Normal (prova senza pagare)" }).click();
   await expect(page.getByRole("heading", { level: 1, name: "Il tuo abbonamento" })).toBeVisible();
+  const [{ account }] = await sql<{ account: string }[]>`select account_status as account from partners where id = ${partnerId}`;
+  expect(account).toBe("active");
   await page.goto("/area-partner/lead");
-  await expect(page.getByText("Contatti nascosti: scegli un piano")).toHaveCount(0);
-  await page.getByText("Cliente Quarto").click();
+  await page.getByText("Cliente Terzo").click();
   await expect(page.getByText(clientEmail)).toBeVisible();
 });

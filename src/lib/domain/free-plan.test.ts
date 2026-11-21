@@ -1,25 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { FREE_LEADS_PER_MONTH, freeLeadsLeft, freePlanOpen, romeMonthStart } from "./free-plan";
-
-describe("romeMonthStart", () => {
-  it("starts the month at midnight in Italy, not in UTC", () => {
-    // 15 novembre, ora solare (UTC+1): il mese parte il 1° novembre alle 00:00 italiane = 31 ottobre 23:00 UTC.
-    expect(romeMonthStart(new Date("2026-11-15T10:00:00Z")).toISOString()).toBe("2026-10-31T23:00:00.000Z");
-  });
-
-  it("uses summer time when the month starts in summer (UTC+2)", () => {
-    expect(romeMonthStart(new Date("2026-07-20T10:00:00Z")).toISOString()).toBe("2026-06-30T22:00:00.000Z");
-  });
-
-  it("counts the first hour of the month in Italy as the new month", () => {
-    // 1° dicembre 00:30 in Italia = 30 novembre 23:30 UTC: è già dicembre.
-    expect(romeMonthStart(new Date("2026-11-30T23:30:00Z")).toISOString()).toBe("2026-11-30T23:00:00.000Z");
-  });
-});
+import { FREE_LEADS, freeLeadsLeft, freePlanOpen } from "./free-plan";
 
 describe("freeLeadsLeft", () => {
-  it("allows 3 leads a month", () => {
-    expect(FREE_LEADS_PER_MONTH).toBe(3);
+  it("allows 3 leads in total", () => {
+    expect(FREE_LEADS).toBe(3);
     expect(freeLeadsLeft(0)).toBe(3);
     expect(freeLeadsLeft(2)).toBe(1);
   });
