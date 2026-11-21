@@ -42,7 +42,7 @@ export function SiteFooter() {
       <div className="container-page grid gap-12 pt-16 pb-12 md:grid-cols-2 md:pt-20 lg:grid-cols-[1.3fr_repeat(3,1fr)]">
         <div className="flex flex-col gap-4">
           <Wordmark className="text-3xl text-on-brand" />
-          <p className="max-w-xs text-body">Casa tua, in buone mani. Agenzie, tecnici e artigiani del Veneto.</p>
+          <p className="max-w-xs text-body">Casa tua, in buone mani. Agenzie immobiliari, tecnici e artigiani del Veneto.</p>
         </div>
         {COLUMNS.map((c) => (
           <nav key={c.title} aria-label={c.title} className="flex flex-col gap-3">
