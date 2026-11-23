@@ -19,7 +19,6 @@ const HOME_SHORTCUTS: Shortcut[] = [
   { label: "Locali commerciali", href: "/trova-casa?servizio=locazione-commerciale" },
   { label: "Nuove costruzioni", href: "/trova-casa?servizio=nuove-costruzioni" },
   { label: "Terreni e rustici", href: "/trova-casa?servizio=terreni" },
-  { label: "Tour virtuali", href: "/trova-casa?servizio=tour-virtuale" },
   { label: "Verifica documenti", href: "/trova-casa?servizio=verifica-documenti" },
   { label: "Foto e planimetria", href: "/trova-casa?servizio=foto-planimetria" },
 ];

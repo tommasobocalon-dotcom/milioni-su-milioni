@@ -24,9 +24,11 @@ export async function Hero({ next }: { next: string }) {
           <div className="flex max-w-[600px] flex-col min-[482px]:max-w-[588px]">
             <h1
               id="hero-titolo"
-              className="hero-rise font-display text-[2.25rem] [font-variation-settings:'wght'_500] leading-[1.05] tracking-[-0.02em] text-balance min-[482px]:text-[3rem]"
+              className="hero-rise font-display text-[min(3.5rem,calc((100vw-2rem)/11))] [font-variation-settings:'wght'_500] leading-[1.05] tracking-[-0.025em]"
             >
-              Casa tua, in buone mani.
+              {/* Sempre su due righe (cliente, 23/11/2026): sul telefono il titolo si stringe con lo schermo invece di andare a capo a caso. */}
+              <span className="block whitespace-nowrap">Per ogni immobile</span>
+              <span className="block whitespace-nowrap">il suo professionista.</span>
             </h1>
             {/* Sempre su due righe (cliente, 20/11/2026): sul telefono il testo si stringe con lo schermo, fino a 16 px. */}
             <p className="hero-rise mt-4 mb-6 text-[min(1rem,calc((100vw-2rem)/24))] leading-[1.3] font-normal [animation-delay:80ms]">

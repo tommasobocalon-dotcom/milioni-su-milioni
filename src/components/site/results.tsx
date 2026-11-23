@@ -8,7 +8,10 @@ import { Button } from "@/components/ui/button";
 import { ChipLink } from "@/components/ui/chip";
 import { Input, Select } from "@/components/ui/field";
 import { findZone, getCategories, getCategoryBySlug, getMunicipalities, getProvinceZones, getServicesForCategory } from "@/lib/data/catalog";
+import { AreaRequestForm } from "@/components/site/area-request-form";
 import { FeaturedPartner } from "@/components/site/featured-partner";
+import { PROVINCE_BLOCKS } from "@/lib/data/home-content";
+import { isProvinceOpen } from "@/lib/domain/open-areas";
 import { recordImpressions, searchPartners, type SortKey } from "@/lib/data/search";
 import { VISITOR_COOKIE, visitorRotation } from "@/lib/domain/ranking";
 import { pageNumbers, parsePage } from "@/lib/domain/pagination";
@@ -22,6 +25,8 @@ import { aLuogo } from "@/lib/domain/format";
  */
 const FIRST_PAGE_SIZE = 5;
 const PAGE_SIZE = 7;
+/** Servizi che restano nei listini ma non tra i filtri (cliente, 23/11/2026: "Tour virtuale e video" delle agenzie). */
+const HIDDEN_FILTER_SERVICES = ["tour-virtuale"];
 
 export type ResultsParams = {
   categoria?: string;
@@ -70,14 +75,22 @@ export async function Results({ mode, params }: { mode: "agency" | "pro"; params
 
 /** Filtri letti dall'indirizzo e ricerca. Le funzioni chiamate sono in cache: chiamarla due volte non rifà le query. */
 async function findResults(mode: "agency" | "pro", params: ResultsParams, seed: string) {
-  const [allCategories, { place, province }] = await Promise.all([getCategories(), findZone(params.dove)]);
+  const [allCategories, zone, provinceZones] = await Promise.all([getCategories(), findZone(params.dove), getProvinceZones()]);
+  const { place } = zone;
+  // Senza zona si cerca nella prima provincia attiva (Treviso, src/lib/domain/open-areas.ts), non in tutto il Veneto.
+  const defaultZone = !place && !zone.province;
+  const province = defaultZone ? provinceZones.find((p) => isProvinceOpen(p.code)) ?? null : zone.province;
+  // Comune o provincia non ancora attivi: niente risultati, al loro posto il modulo "Inoltra una richiesta".
+  const closedCode = place ? (isProvinceOpen(place.provinceCode) ? null : place.provinceCode) : province && !isProvinceOpen(province.code) ? province.code : null;
   const category =
     mode === "agency" ? allCategories.find((c) => c.partnerType === "agency") ?? null : params.categoria ? await getCategoryBySlug(params.categoria) : null;
   const categoryServices = category ? await getServicesForCategory(category.id) : [];
   const service = findService(categoryServices, params.servizio);
   const sort = (sortsFor(mode).find((s) => s.value === params.ordina)?.value ?? "rilevanza") as SortKey;
 
-  const found = await searchPartners({
+  const found = closedCode
+    ? { featured: null, results: [], total: 0, page: 1, pages: 1 }
+    : await searchPartners({
     partnerType: mode,
     categoryId: category?.id,
     serviceId: service?.id,
@@ -92,10 +105,10 @@ async function findResults(mode: "agency" | "pro", params: ResultsParams, seed: 
   });
   // Zero risultati in un comune: proponiamo la stessa ricerca in tutta la provincia, così la pagina non resta vuota.
   const nearby =
-    found.total === 0 && place
+    found.total === 0 && place && !closedCode
       ? await searchPartners({ partnerType: mode, categoryId: category?.id, provinceId: place.provinceId, page: 1, pageSize: 3, firstPageSize: 3, visitorSeed: seed })
       : null;
-  return { allCategories, place, province, category, categoryServices, service, sort, found, nearby };
+  return { allCategories, place, province, defaultZone, closedCode, category, categoryServices, service, sort, found, nearby };
 }
 
 async function ResultsBody({ mode, params, seed }: { mode: "agency" | "pro"; params: ResultsParams; seed: string }) {
@@ -103,9 +116,12 @@ async function ResultsBody({ mode, params, seed }: { mode: "agency" | "pro"; par
   cacheLife("minutes");
   cacheTag("catalog", "boosts");
   const basePath = mode === "agency" ? "/trova-casa" : "/trova-professionista";
-  const { allCategories, place, province, category, categoryServices, service, sort, found, nearby } = await findResults(mode, params, seed);
+  const { allCategories, place, province, defaultZone, closedCode, category, categoryServices, service, sort, found, nearby } = await findResults(mode, params, seed);
   const { featured, results, total, page, pages } = found;
-  const [places, provinceZones] = await Promise.all([getMunicipalities(), getProvinceZones()]);
+  const [places, allZones] = await Promise.all([getMunicipalities(), getProvinceZones()]);
+  // Nel filtro Zona prima le province attive.
+  const provinceZones = [...allZones].sort((a, b) => Number(isProvinceOpen(b.code)) - Number(isProvinceOpen(a.code)));
+  const closed = closedCode ? PROVINCE_BLOCKS.find((b) => b.code === closedCode) ?? null : null;
 
   const href = (patch: Partial<ResultsParams>) => {
     // Ogni cambio di filtro riparte dalla prima pagina; solo la paginazione passa `pagina`.
@@ -124,6 +140,7 @@ async function ResultsBody({ mode, params, seed }: { mode: "agency" | "pro"; par
   const unknownPlace = params.dove?.trim() && !place && !province ? params.dove.trim() : null;
   // Ricerca libera senza nessuna categoria né servizio riconosciuti.
   const notUnderstood = params.cerca && !service && !(mode === "pro" && category) ? params.cerca : null;
+  const filterServices = categoryServices.filter((s) => !HIDDEN_FILTER_SERVICES.includes(s.slug));
   const nearbyList = nearby ? [...(nearby.featured ? [nearby.featured] : []), ...nearby.results].slice(0, 3) : [];
 
   return (
@@ -155,7 +172,7 @@ async function ResultsBody({ mode, params, seed }: { mode: "agency" | "pro"; par
           {what} {where}
         </h1>
         <p className="text-body text-ink-2">
-          {total} {total === 1 ? "risultato" : "risultati"}
+          {closed ? "Zona non ancora attiva" : <>{total} {total === 1 ? "risultato" : "risultati"}</>}
           {total > 0 && mode === "pro" && " · prezzi indicativi nel profilo di ogni partner"}
           {total > 0 && mode === "agency" && " · specializzazioni e portfolio immobili"}
           {params.cerca && !notUnderstood && <> · hai cercato «{params.cerca}»</>}
@@ -170,7 +187,7 @@ async function ResultsBody({ mode, params, seed }: { mode: "agency" | "pro"; par
             )}
             {unknownPlace && (
               <p>
-                Non troviamo «{unknownPlace}» tra i comuni del Veneto: ti mostriamo {province || place ? "la zona scelta" : "tutta la regione"}. Controlla come è
+                Non troviamo «{unknownPlace}» tra i comuni del Veneto: ti mostriamo {defaultZone ? `la provincia di ${province?.name ?? "Treviso"}` : "la zona scelta"}. Controlla come è
                 scritto o scegli un comune dall&apos;elenco del campo Zona.
               </p>
             )}
@@ -245,11 +262,11 @@ async function ResultsBody({ mode, params, seed }: { mode: "agency" | "pro"; par
               </fieldset>
             )}
 
-            {categoryServices.length > 0 && (
+            {filterServices.length > 0 && (
               <fieldset className="flex flex-col gap-2">
                 <legend className="mb-2 text-body-s font-semibold">{mode === "agency" ? "Cosa ti serve" : "Lavoro specifico"}</legend>
                 <div className="flex flex-wrap gap-2">
-                  {categoryServices.map((s) => (
+                  {filterServices.map((s) => (
                     <ChipLink
                       key={s.id}
                       href={href({ servizio: service?.id === s.id ? undefined : s.slug })}
@@ -279,21 +296,33 @@ async function ResultsBody({ mode, params, seed }: { mode: "agency" | "pro"; par
 
         <section aria-label="Risultati" className="flex flex-col gap-4">
           <h2 className="sr-only">Risultati</h2>
+          {closed && (
+            <div className="rounded-lg border border-line bg-surface">
+              <AreaRequestForm
+                province={closed}
+                titleId="richiesta-zona-titolo"
+                categories={allCategories.map(({ id, name, partnerType }) => ({ id, name, partnerType }))}
+                places={places.filter((p) => p.provinceCode === closed.code).map(({ id, name, provinceCode }) => ({ id, name, provinceCode }))}
+                defaultCategory={category?.id}
+                defaultPlace={place?.name}
+              />
+            </div>
+          )}
           {featured && <FeaturedPartner p={featured} />}
           {results.map((p) => (
             <PartnerCard key={p.id} p={p} />
           ))}
           {pages > 1 && <Pagination page={page} pages={pages} href={(n) => href({ pagina: n > 1 ? String(n) : undefined })} />}
-          {total === 0 && (
+          {total === 0 && !closed && (
             <div className="flex flex-col items-center gap-4 rounded-lg border border-line bg-surface p-10 text-center">
               <h3 className="text-h3 font-semibold">Nessun risultato con questi filtri</h3>
               <p className="max-w-md text-body-s text-ink-2">
-                Prova ad allargare la zona o a togliere un filtro. Stiamo attivando nuovi partner in tutto il Veneto.
+                Prova ad allargare la zona o a togliere un filtro. Stiamo attivando nuovi partner in provincia di Treviso.
               </p>
               <div className="flex flex-wrap justify-center gap-4">
-                {(place || province) && (
+                {!defaultZone && (
                   <Link href={href({ dove: undefined })} className="font-semibold text-primary underline">
-                    Cerca in tutto il Veneto
+                    Cerca in tutta la provincia di Treviso
                   </Link>
                 )}
                 <Link href={basePath} className="font-semibold text-primary underline">

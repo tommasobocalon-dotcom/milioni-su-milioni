@@ -101,13 +101,13 @@ export async function findPlace(query: string | undefined | null): Promise<Place
   );
 }
 
-export type ProvinceZone = { id: number; name: string; slug: string; label: string };
+export type ProvinceZone = { id: number; code: string; name: string; slug: string; label: string };
 
 /** Le province del Veneto come voci del filtro Zona ("Provincia di Padova"), ricavate dai comuni. */
 export async function getProvinceZones(): Promise<ProvinceZone[]> {
   const byId = new Map<number, ProvinceZone>();
   for (const m of await getMunicipalities()) {
-    byId.set(m.provinceId, { id: m.provinceId, name: m.provinceName, slug: m.provinceSlug, label: `Provincia di ${m.provinceName}` });
+    byId.set(m.provinceId, { id: m.provinceId, code: m.provinceCode, name: m.provinceName, slug: m.provinceSlug, label: `Provincia di ${m.provinceName}` });
   }
   return [...byId.values()].sort((a, b) => a.name.localeCompare(b.name, "it"));
 }

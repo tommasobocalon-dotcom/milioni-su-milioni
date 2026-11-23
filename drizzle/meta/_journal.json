@@ -253,6 +253,13 @@
       "when": 1795206064468,
       "tag": "0035_lavori_in_ispirazione",
       "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "7",
+      "when": 1795466356914,
+      "tag": "0036_richieste_zona",
+      "breakpoints": true
     }
   ]
 }

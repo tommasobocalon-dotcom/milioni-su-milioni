@@ -2,6 +2,7 @@ import "server-only";
 import { and, count, desc, eq, ilike, inArray, isNotNull, isNull, ne, not, or, sql, type SQL } from "drizzle-orm";
 import { db } from "@/lib/db/client";
 import {
+  areaRequests,
   auditLogs,
   categories,
   leads,
@@ -583,4 +584,52 @@ export async function listSponsorshipsAdmin(
     startsAt: new Date(r.starts_at),
     endsAt: new Date(r.ends_at),
   }));
+}
+
+/**
+ * "Inoltra una richiesta" dalle province non ancora attive: quante per provincia (totale e ultimi 30 giorni),
+ * le categorie più chieste e le ultime arrivate. Serve a decidere dove aprire dopo Treviso.
+ */
+export async function getAreaRequestsAdmin(now: Date) {
+  const since = new Date(now.getTime() - 30 * DAY);
+  const [byProvince, byCategory, latest] = await Promise.all([
+    db
+      .select({
+        code: provinces.code,
+        name: provinces.name,
+        total: count(areaRequests.id),
+        recent: sql<number>`count(${areaRequests.id}) filter (where ${areaRequests.createdAt} > ${since})::int`,
+      })
+      .from(provinces)
+      .leftJoin(areaRequests, eq(areaRequests.provinceId, provinces.id))
+      .groupBy(provinces.id)
+      .orderBy(desc(count(areaRequests.id)), provinces.name),
+    db
+      .select({ code: provinces.code, category: categories.name, n: count() })
+      .from(areaRequests)
+      .innerJoin(provinces, eq(provinces.id, areaRequests.provinceId))
+      .innerJoin(categories, eq(categories.id, areaRequests.categoryId))
+      .groupBy(provinces.code, categories.name)
+      .orderBy(desc(count()), categories.name),
+    db
+      .select({
+        id: areaRequests.id,
+        province: provinces.name,
+        municipality: municipalities.name,
+        category: categories.name,
+        email: areaRequests.email,
+        createdAt: areaRequests.createdAt,
+      })
+      .from(areaRequests)
+      .innerJoin(provinces, eq(provinces.id, areaRequests.provinceId))
+      .innerJoin(categories, eq(categories.id, areaRequests.categoryId))
+      .leftJoin(municipalities, eq(municipalities.id, areaRequests.municipalityId))
+      .orderBy(desc(areaRequests.createdAt))
+      .limit(100),
+  ]);
+  const provincesWithTop = byProvince.map((p) => ({
+    ...p,
+    topCategories: byCategory.filter((c) => c.code === p.code).slice(0, 3),
+  }));
+  return { provinces: provincesWithTop, latest };
 }

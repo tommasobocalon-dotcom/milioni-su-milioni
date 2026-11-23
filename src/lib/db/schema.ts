@@ -678,6 +678,29 @@ export const supportMessages = pgTable(
 );
 
 // ---------------------------------------------------------------------------
+// Richieste da province non ancora attive (src/lib/domain/open-areas.ts)
+// ---------------------------------------------------------------------------
+
+export const areaRequests = pgTable(
+  "area_requests",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    provinceId: smallint("province_id")
+      .notNull()
+      .references(() => provinces.id),
+    /** Comune scritto dalla persona, se lo ha indicato. */
+    municipalityId: integer("municipality_id").references(() => municipalities.id),
+    categoryId: uuid("category_id")
+      .notNull()
+      .references(() => categories.id, { onDelete: "cascade" }),
+    /** Per avvisare la persona quando la provincia apre. */
+    email: text("email").notNull(),
+    createdAt: createdAt(),
+  },
+  (t) => [index("area_requests_province_idx").on(t.provinceId, t.createdAt)],
+);
+
+// ---------------------------------------------------------------------------
 // Audit
 // ---------------------------------------------------------------------------
 
