@@ -103,7 +103,7 @@ async function ClientArea() {
           <div className="flex flex-col gap-2 p-4">
             <h3 className="font-semibold">Scarica i tuoi dati</h3>
             <p className="text-body-s text-ink-2">
-              Un file con il tuo account, le richieste inviate e i messaggi all&apos;assistenza.
+              Un file con il tuo account, le richieste inviate, le province in cui ci hai chiesto di arrivare e i messaggi all&apos;assistenza.
               {!verified && " Le richieste compaiono dopo aver confermato l'email."}
             </p>
             {/* Link normale, non <Link>: la route risponde con un file da scaricare, non con una pagina. */}

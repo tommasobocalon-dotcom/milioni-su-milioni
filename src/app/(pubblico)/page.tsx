@@ -27,8 +27,10 @@ export default function HomePage() {
             <h2 id="province" className="font-display text-[2.25rem] leading-[1.08] tracking-[-0.02em] text-balance md:text-display-l">
               Professionisti fidati, vicino a te
             </h2>
+            {/* Province attive in ACTIVE_PROVINCES (src/lib/domain/coverage.ts): aggiornare il testo quando se ne apre un'altra. */}
             <p className="mt-4 max-w-xl text-body-l text-neutro-700">
-              Parti dalla tua provincia, o cerca il tuo comune.
+              Siamo partiti dalla provincia di Treviso. Abiti in un&apos;altra provincia? Inoltra una richiesta: arriviamo prima dove ce lo
+              chiedete di più.
             </p>
           </div>
           <ProvinceExplorer />

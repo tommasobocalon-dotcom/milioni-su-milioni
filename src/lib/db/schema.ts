@@ -678,6 +678,34 @@ export const supportMessages = pgTable(
 );
 
 // ---------------------------------------------------------------------------
+// Province non ancora attive: chi ci abita chiede di arrivare anche lì (mappa della Home, 23/11/2026)
+// ---------------------------------------------------------------------------
+
+export const provinceRequestNeed = pgEnum("province_request_need", ["professional", "agency"]);
+
+export const provinceRequests = pgTable(
+  "province_requests",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    provinceId: smallint("province_id")
+      .notNull()
+      .references(() => provinces.id),
+    municipalityId: integer("municipality_id").references(() => municipalities.id, { onDelete: "set null" }),
+    need: provinceRequestNeed("need").notNull(),
+    note: text("note"),
+    /** Per avvisare la persona quando la provincia apre. Una richiesta per email e provincia: chi la rimanda la aggiorna. */
+    email: text("email").notNull(),
+    createdAt: createdAt(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("province_requests_province_email_idx").on(t.provinceId, t.email),
+    index("province_requests_email_idx").on(t.email),
+    index("province_requests_created_idx").on(t.createdAt),
+  ],
+);
+
+// ---------------------------------------------------------------------------
 // Audit
 // ---------------------------------------------------------------------------
 

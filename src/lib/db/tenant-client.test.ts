@@ -55,6 +55,7 @@ describe.skipIf(!UP)("RLS dell'Area cliente e del profilo dell'azienda", () => {
   });
 
   afterAll(async () => {
+    await owner`delete from province_requests where email in (${mine}, ${other})`;
     if (myLead) await owner`delete from leads where id in (${myLead}, ${otherLead})`;
     if (ticket) await owner`delete from support_tickets where id = ${ticket}`;
     if (me) await owner`delete from users where id in (${me}, ${stranger})`;
@@ -106,6 +107,14 @@ describe.skipIf(!UP)("RLS dell'Area cliente e del profilo dell'azienda", () => {
     expect(messages.map((m) => m.kind)).toEqual(["inbound"]);
     const tickets = await tenant.asClient(stranger, (tx) => tx.select({ id: schema.supportTickets.id }).from(schema.supportTickets));
     expect(tickets).toEqual([]);
+  });
+
+  it("vede solo le proprie richieste di nuova provincia, senza poterle cambiare", async () => {
+    await owner`insert into province_requests (province_id, need, email) values (28, 'professional', ${mine}), (27, 'agency', ${other})`;
+    const rows = await tenant.asClient(me, (tx) => tx.select({ email: schema.provinceRequests.email }).from(schema.provinceRequests));
+    expect(rows.map((r) => r.email)).toEqual([mine]);
+    await expect(tenant.asClient(me, (tx) => tx.update(schema.provinceRequests).set({ note: "cambiata" }))).rejects.toThrow();
+    await expect(tenant.asClient(me, (tx) => tx.delete(schema.provinceRequests))).rejects.toThrow();
   });
 
   it("l'azienda modifica le colonne del profilo ma non stato dell'account né indirizzo della scheda", async () => {

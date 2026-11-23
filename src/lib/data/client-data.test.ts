@@ -46,7 +46,13 @@ describe.skipIf(!UP)("dati del cliente (GDPR)", () => {
     data = await import("./client-data");
   });
 
+  /** Una richiesta "Inoltra una richiesta" della mappa in Home, per la provincia di Padova. */
+  async function provinceRequest(email: string) {
+    await owner`insert into province_requests (province_id, need, note, email) values (28, 'agency', 'vendere casa', ${email})`;
+  }
+
   afterAll(async () => {
+    await owner`delete from province_requests where email like 'gdpr-%@example.com'`;
     if (leadsCreated.length) await owner`delete from leads where id in ${owner(leadsCreated)}`;
     if (usersCreated.length) await owner`delete from users where id in ${owner(usersCreated)}`;
     await owner.end();
@@ -64,6 +70,18 @@ describe.skipIf(!UP)("dati del cliente (GDPR)", () => {
     const verified = await data.exportClientData(unverified);
     expect(verified?.requests).toHaveLength(1);
     expect(verified?.requests[0].phone).toBe("+393331112233");
+  });
+
+  it("scarica le richieste di nuova provincia dell'email confermata", async () => {
+    const email = `gdpr-${crypto.randomUUID()}@example.com`;
+    await provinceRequest(email);
+    await provinceRequest(`gdpr-${crypto.randomUUID()}@example.com`);
+    const id = await user(email, false);
+    expect((await data.exportClientData(id))?.provinceRequests).toEqual([]);
+
+    await owner`update users set email_verified_at = now() where id = ${id}`;
+    const out = await data.exportClientData(id);
+    expect(out?.provinceRequests).toEqual([expect.objectContaining({ province: "Padova", need: "agency", note: "vendere casa", email })]);
   });
 
   it("toglie il consenso al marketing da tutte le richieste dell'email", async () => {
@@ -88,6 +106,14 @@ describe.skipIf(!UP)("dati del cliente (GDPR)", () => {
     expect(row.description).toBeNull();
     expect(row.client_name).toBe("Cliente cancellato");
     expect(row.follow_up_sent_at).not.toBeNull();
+  });
+
+  it("cancellando l'account toglie anche le richieste di nuova provincia dell'email", async () => {
+    const email = `gdpr-${crypto.randomUUID()}@example.com`;
+    const id = await user(email, true);
+    await provinceRequest(email);
+    expect(await data.deleteClientAccount(id)).toBe("deleted");
+    expect(await owner`select 1 from province_requests where email = ${email}`).toHaveLength(0);
   });
 
   it("con l'email non confermata non tocca le richieste di quell'indirizzo", async () => {

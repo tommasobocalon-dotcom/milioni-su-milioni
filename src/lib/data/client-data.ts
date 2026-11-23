@@ -11,6 +11,8 @@ import {
   otpCodes,
   partnerMembers,
   partners,
+  provinceRequests,
+  provinces,
   supportMessages,
   supportTickets,
   users,
@@ -71,6 +73,22 @@ export async function exportClientData(userId: string) {
       .innerJoin(municipalities, eq(municipalities.id, leads.municipalityId))
       .where(eq(leads.clientEmail, u.email))
       .orderBy(leads.createdAt);
+    // "Inoltra una richiesta" della mappa in Home: anche queste sono legate all'email confermata.
+    const provincesAsked = await tx
+      .select({
+        province: provinces.name,
+        municipality: municipalities.name,
+        need: provinceRequests.need,
+        note: provinceRequests.note,
+        email: provinceRequests.email,
+        createdAt: provinceRequests.createdAt,
+        updatedAt: provinceRequests.updatedAt,
+      })
+      .from(provinceRequests)
+      .innerJoin(provinces, eq(provinces.id, provinceRequests.provinceId))
+      .leftJoin(municipalities, eq(municipalities.id, provinceRequests.municipalityId))
+      .where(eq(provinceRequests.email, u.email))
+      .orderBy(provinceRequests.createdAt);
     const tickets = await tx
       .select({ id: supportTickets.id, number: supportTickets.number, subject: supportTickets.subject, status: supportTickets.status, createdAt: supportTickets.createdAt })
       .from(supportTickets)
@@ -88,7 +106,8 @@ export async function exportClientData(userId: string) {
       exportedAt: new Date().toISOString(),
       account: { email: u.email, name: u.name, phone: u.phone, emailVerifiedAt: u.emailVerifiedAt, createdAt: u.createdAt, logins },
       requests,
-      ...(u.emailVerifiedAt ? {} : { note: "Conferma la tua email per vedere anche le richieste di contatto inviate con questo indirizzo." }),
+      provinceRequests: provincesAsked,
+      ...(u.emailVerifiedAt ? {} : { note: "Conferma la tua email per vedere anche le richieste inviate con questo indirizzo." }),
       support: tickets.map(({ id, ...t }) => ({ ...t, messages: messages.filter((m) => m.ticketId === id).map((m) => ({ kind: m.kind, author: m.author, body: m.body, createdAt: m.createdAt })) })),
     };
   });
@@ -146,6 +165,7 @@ export async function deleteClientAccount(userId: string): Promise<DeleteOutcome
         })
         .where(eq(leads.clientEmail, u.email));
       await tx.delete(otpCodes).where(eq(otpCodes.target, u.email));
+      await tx.delete(provinceRequests).where(eq(provinceRequests.email, u.email));
     }
     const tickets = tx.select({ id: supportTickets.id }).from(supportTickets).where(eq(supportTickets.userId, userId));
     await tx
