@@ -57,7 +57,7 @@
     "concurrently": "^10.0.6",
     "drizzle-kit": "^0.31.11",
     "embedded-postgres": "^18.4.0-beta.17",
-    "eslint": "^9",
+    "eslint": "^10",
     "eslint-config-next": "16.4.6",
     "tailwindcss": "^4",
     "tsx": "^4.23.15",
