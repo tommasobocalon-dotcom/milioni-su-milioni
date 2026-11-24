@@ -10,6 +10,9 @@ import EmbeddedPostgres from "embedded-postgres";
 import { connect, ensureDatabase } from "./db-connection";
 import { seed } from "./seed";
 
+/** Riga che scripts/pentest-server.ts aspetta prima della build: migrazioni e dati di esempio sono finiti. */
+const DATABASE_READY = "[db] database pronto";
+
 const portInUse = (port: number) =>
   new Promise<boolean>((resolve) => {
     const socket = tcpConnect({ port, host: "127.0.0.1" }, () => {
@@ -43,6 +46,7 @@ async function main() {
     // Un database è già in ascolto (per esempio avviato da un'altra finestra): lo riusiamo.
     console.log(`[db] PostgreSQL già in esecuzione su 127.0.0.1:${port}`);
     await prepareDatabase();
+    console.log(DATABASE_READY);
     setInterval(() => {}, 1 << 30);
     return;
   }
@@ -63,6 +67,7 @@ async function main() {
   await pg.start();
   console.log(`[db] PostgreSQL pronto su 127.0.0.1:${port} — dati in ${databaseDir}`);
   await prepareDatabase();
+  console.log(DATABASE_READY);
 
   const shutdown = async () => {
     await pg.stop();

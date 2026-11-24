@@ -16,6 +16,7 @@
 # next.js
 /.next/
 /.next-e2e/
+/.next-pentest/
 /out/
 
 # production
@@ -48,6 +49,8 @@ next-env.d.ts
 /test-results/
 /playwright-report/
 /blob-report/
+# risultati delle scansioni di sicurezza (pentest/README.md)
+/pentest/risultati/
 
 # eccezione: l'esempio di configurazione va versionato
 !.env.example
