@@ -198,7 +198,7 @@ export default function AboutPage() {
                 contatto da clienti della tua zona.
               </p>
               <ButtonLink href="/per-i-professionisti" variant="secondary" className="mt-2">
-                Scopri come aderire
+                Scopri i piani per la tua impresa
               </ButtonLink>
             </div>
           </div>
