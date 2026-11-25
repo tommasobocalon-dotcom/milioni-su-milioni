@@ -41,19 +41,22 @@ export function homeSponsorPrice(pkg: HomeSponsorPackage, now: Date, launch: Dat
   return { cents: promo ? pkg.promoCents : pkg.priceCents, listCents: pkg.priceCents, promo };
 }
 
-/** Estensione territoriale: la scheda compare nelle ricerche di un altro comune del Veneto. Prezzo per comune, IVA esclusa. */
+/**
+ * Estensione territoriale: la scheda compare nelle ricerche di un'altra provincia (tutti i suoi comuni).
+ * Prezzo per provincia, IVA esclusa (cliente, 25/11/2026; prima per comune).
+ */
 export const AREA_EXTENSION_OFFER = { days: 30, priceCents: 4900 } as const;
 
-/** Comuni per pagamento: i codici viaggiano nei metadati di Stripe (massimo 500 caratteri). */
-export const MAX_EXTENSION_MUNICIPALITIES = 40;
+/** Province per pagamento: i codici viaggiano nei metadati di Stripe (massimo 500 caratteri). */
+export const MAX_EXTENSION_PROVINCES = 20;
 
 export const areaExtensionTotal = (count: number) => count * AREA_EXTENSION_OFFER.priceCents;
 
-/** Codici ISTAT scelti dall'azienda: interi positivi senza doppioni, da 1 a MAX_EXTENSION_MUNICIPALITIES; altrimenti null. */
-export function municipalityIdsFrom(values: unknown): number[] | null {
+/** Codici ISTAT delle province scelte dall'azienda: interi positivi senza doppioni, da 1 a MAX_EXTENSION_PROVINCES; altrimenti null. */
+export function provinceIdsFrom(values: unknown): number[] | null {
   if (!Array.isArray(values)) return null;
   const ids = [...new Set(values.map((v) => (typeof v === "number" || (typeof v === "string" && /^\d+$/.test(v)) ? Number(v) : NaN)))];
-  if (ids.length === 0 || ids.length > MAX_EXTENSION_MUNICIPALITIES) return null;
+  if (ids.length === 0 || ids.length > MAX_EXTENSION_PROVINCES) return null;
   return ids.every((id) => Number.isInteger(id) && id > 0) ? ids : null;
 }
 

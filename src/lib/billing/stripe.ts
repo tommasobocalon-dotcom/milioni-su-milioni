@@ -3,9 +3,9 @@ import { revalidateTag } from "next/cache";
 import { and, eq, inArray, isNotNull, isNull, or } from "drizzle-orm";
 import Stripe from "stripe";
 import { db } from "@/lib/db/client";
-import { municipalities, partners, plans, stripeProcessed, subscriptions } from "@/lib/db/schema";
+import { partners, plans, provinces, stripeProcessed, subscriptions } from "@/lib/db/schema";
 import { accountStatusFrom, areaExtensionFromCheckout, listingStatus, homeSponsorFromCheckout, searchBoostFromCheckout, periodFromItems, planFromLookupKey, planLookupKey, subscriptionStatusFromStripe, TRIAL_DAYS } from "@/lib/domain/billing";
-import { AREA_EXTENSION_OFFER, changePromo, HOME_SPONSOR_PACKAGES, homeSponsorPrice, launchDate, municipalityIdsFrom, planPromo, type PlanPromo, SEARCH_BOOST_PACKAGES } from "@/lib/domain/offers";
+import { AREA_EXTENSION_OFFER, changePromo, HOME_SPONSOR_PACKAGES, homeSponsorPrice, launchDate, planPromo, type PlanPromo, provinceIdsFrom, SEARCH_BOOST_PACKAGES } from "@/lib/domain/offers";
 import { hadFreePlan } from "@/lib/data/partner-area";
 import { grantAreaExtensions, grantHomeSponsor, grantSearchBoost, unlockLeads } from "@/lib/leads/service";
 import { alertTeam } from "@/lib/notify";
@@ -113,12 +113,12 @@ export async function createSearchBoostCheckout(payer: Payer, packageCode: strin
   return packageCheckout(payer, { kind: "search_boost", code: pkg.code, name: `Sponsorizzato nella ricerca · ${pkg.hours} ore`, cents: pkg.priceCents, back: "boost" });
 }
 
-/** Estensione territoriale: 49 € + IVA per ogni comune scelto, per 30 giorni. */
+/** Estensione territoriale: 49 € + IVA per ogni provincia scelta, per 30 giorni. */
 export async function createAreaExtensionCheckout(payer: Payer, ids: number[]): Promise<string> {
-  const valid = municipalityIdsFrom(ids);
-  const chosen = valid ? await db.select({ id: municipalities.id, name: municipalities.name }).from(municipalities).where(inArray(municipalities.id, valid)) : [];
-  if (chosen.length === 0) throw new BillingError("Scegli almeno un comune");
-  const metadata = { kind: "area_extension", partnerId: payer.partnerId, municipalityIds: chosen.map((m) => m.id).join(",") };
+  const valid = provinceIdsFrom(ids);
+  const chosen = valid ? await db.select({ id: provinces.id, name: provinces.name }).from(provinces).where(inArray(provinces.id, valid)) : [];
+  if (chosen.length === 0) throw new BillingError("Scegli almeno una provincia");
+  const metadata = { kind: "area_extension", partnerId: payer.partnerId, provinceIds: chosen.map((p) => p.id).join(",") };
   const session = await stripe().checkout.sessions.create({
     mode: "payment",
     customer: await customerFor(payer),
@@ -132,8 +132,8 @@ export async function createAreaExtensionCheckout(payer: Payer, ids: number[]): 
           currency: "eur",
           unit_amount: AREA_EXTENSION_OFFER.priceCents,
           product_data: {
-            name: `Estensione territoriale · ${AREA_EXTENSION_OFFER.days} giorni per comune`,
-            description: chosen.map((m) => m.name).join(", ").slice(0, 500),
+            name: `Estensione territoriale · ${AREA_EXTENSION_OFFER.days} giorni per provincia`,
+            description: chosen.map((p) => `Provincia di ${p.name}`).join(", ").slice(0, 500),
           },
         },
       },
@@ -439,9 +439,9 @@ async function applyCheckoutSession(session: Stripe.Checkout.Session): Promise<v
   if (extension) {
     await db.transaction(async (tx) => {
       if (!(await firstTime(tx, `checkout:${session.id}`))) return;
-      await grantAreaExtensions(tx, extension.partnerId, extension.municipalityIds, AREA_EXTENSION_OFFER.days);
+      await grantAreaExtensions(tx, extension.partnerId, extension.provinceIds, AREA_EXTENSION_OFFER.days);
     });
-    // I risultati della ricerca sono in cache: l'azienda compare subito nei nuovi comuni.
+    // I risultati della ricerca sono in cache: l'azienda compare subito nelle nuove province.
     revalidateTag("boosts", { expire: 0 });
     return;
   }

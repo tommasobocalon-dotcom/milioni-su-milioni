@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { SEARCH_BOOST_PACKAGES, AREA_EXTENSION_OFFER, areaExtensionTotal, changePromo, homeSponsorPrice, HOME_SPONSOR_PACKAGES, isBoostPlacement, MAX_EXTENSION_MUNICIPALITIES, municipalityIdsFrom, planPromo, promoActive } from "./offers";
+import { SEARCH_BOOST_PACKAGES, AREA_EXTENSION_OFFER, areaExtensionTotal, changePromo, homeSponsorPrice, HOME_SPONSOR_PACKAGES, isBoostPlacement, MAX_EXTENSION_PROVINCES, provinceIdsFrom, planPromo, promoActive } from "./offers";
 
 describe("isBoostPlacement", () => {
   it("accetta solo i due boost", () => {
@@ -37,23 +37,23 @@ describe("sponsorizzazione in Home a pacchetti in euro (decisione dei soci, 10/1
   });
 });
 
-describe("estensione territoriale a comuni (decisione dei soci, 10/11/2026)", () => {
-  it("49 € IVA esclusa per ogni comune, per 30 giorni", () => {
+describe("estensione territoriale a province (decisione del cliente, 25/11/2026)", () => {
+  it("49 € IVA esclusa per ogni provincia, per 30 giorni", () => {
     expect(AREA_EXTENSION_OFFER).toEqual({ days: 30, priceCents: 4900 });
     expect(areaExtensionTotal(3)).toBe(14700);
   });
 
-  it("tiene i codici ISTAT validi, senza doppioni", () => {
-    expect(municipalityIdsFrom([27042, "28060", 27042])).toEqual([27042, 28060]);
+  it("tiene i codici ISTAT delle province validi, senza doppioni", () => {
+    expect(provinceIdsFrom([28, "26", 28])).toEqual([28, 26]);
   });
 
-  it("rifiuta scelte vuote, codici non validi o troppi comuni insieme", () => {
-    expect(municipalityIdsFrom([])).toBeNull();
-    expect(municipalityIdsFrom(["Padova"])).toBeNull();
-    expect(municipalityIdsFrom([-1])).toBeNull();
-    expect(municipalityIdsFrom("27042")).toBeNull();
-    const many = Array.from({ length: MAX_EXTENSION_MUNICIPALITIES + 1 }, (_, i) => 27000 + i);
-    expect(municipalityIdsFrom(many)).toBeNull();
+  it("rifiuta scelte vuote, codici non validi o troppe province insieme", () => {
+    expect(provinceIdsFrom([])).toBeNull();
+    expect(provinceIdsFrom(["Padova"])).toBeNull();
+    expect(provinceIdsFrom([-1])).toBeNull();
+    expect(provinceIdsFrom("28")).toBeNull();
+    const many = Array.from({ length: MAX_EXTENSION_PROVINCES + 1 }, (_, i) => i + 1);
+    expect(provinceIdsFrom(many)).toBeNull();
   });
 });
 

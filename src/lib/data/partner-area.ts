@@ -294,22 +294,19 @@ export async function getBoostEnd(partnerId: string, placement: "home" | "search
   });
 }
 
-/** Comuni aggiunti con l'estensione territoriale ancora in corso (o in coda), con la data di fine. */
-export async function getMunicipalityExtensions(partnerId: string, now: Date) {
+/** Province (e, nello storico, comuni) aggiunte con l'estensione territoriale ancora in corso o in coda, con la data di fine. */
+export async function getAreaExtensions(partnerId: string, now: Date) {
+  const label = sql<string>`case when ${municipalities.id} is null then 'Provincia di ' || ${provinces.name}
+    else ${municipalities.name} || ' (' || ${provinces.code} || ')' end`;
   return asPartner(partnerId, async (tx) => {
     return tx
-      .select({
-        id: municipalities.id,
-        name: municipalities.name,
-        provinceCode: provinces.code,
-        endsAt: sql<Date>`max(${areaExtensions.endsAt})`.mapWith((v) => new Date(v)),
-      })
+      .select({ label, endsAt: sql<Date>`max(${areaExtensions.endsAt})`.mapWith((v) => new Date(v)) })
       .from(areaExtensions)
-      .innerJoin(municipalities, eq(municipalities.id, areaExtensions.municipalityId))
-      .innerJoin(provinces, eq(provinces.id, municipalities.provinceId))
+      .leftJoin(municipalities, eq(municipalities.id, areaExtensions.municipalityId))
+      .innerJoin(provinces, eq(provinces.id, sql`coalesce(${areaExtensions.provinceId}, ${municipalities.provinceId})`))
       .where(and(eq(areaExtensions.partnerId, partnerId), gt(areaExtensions.endsAt, now)))
-      .groupBy(municipalities.id, municipalities.name, provinces.code)
-      .orderBy(municipalities.name);
+      .groupBy(label)
+      .orderBy(label);
   });
 }
 

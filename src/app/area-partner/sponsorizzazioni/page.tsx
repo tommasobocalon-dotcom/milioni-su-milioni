@@ -12,8 +12,8 @@ import { LogoPartner } from "@/components/ui/logo-partner";
 import { Award, Check, Lock, MapPin, Star } from "lucide-react";
 import { requirePartner } from "@/lib/auth/session";
 import { stripeConfigured } from "@/lib/billing/stripe";
-import { getMunicipalities } from "@/lib/data/catalog";
-import { getBoostEnd, getHomeMunicipality, getMunicipalityExtensions, getSubscription } from "@/lib/data/partner-area";
+import { getProvinceZones } from "@/lib/data/catalog";
+import { getAreaExtensions, getBoostEnd, getHomeMunicipality, getSubscription } from "@/lib/data/partner-area";
 import { demoMode } from "@/lib/demo-mode";
 import { formatEuro } from "@/lib/domain/format";
 import { canBoost } from "@/lib/domain/ranking";
@@ -50,12 +50,12 @@ async function Sponsorships({ payment }: { payment: "received" | "started" | nul
   const { partner, memberRole } = await requirePartner();
   await connection();
   const now = new Date();
-  const [sub, homeEnd, searchEnd, extensions, places, homeTown] = await Promise.all([
+  const [sub, homeEnd, searchEnd, extensions, provinces, homeTown] = await Promise.all([
     getSubscription(partner.id),
     getBoostEnd(partner.id, "home", now),
     getBoostEnd(partner.id, "search", now),
-    getMunicipalityExtensions(partner.id, now),
-    getMunicipalities(),
+    getAreaExtensions(partner.id, now),
+    getProvinceZones(),
     getHomeMunicipality(partner.id),
   ]);
   const launch = launchDate();
@@ -131,9 +131,9 @@ async function Sponsorships({ payment }: { payment: "received" | "started" | nul
               />
               <Status
                 href="#estensione"
-                label="Comuni in più"
+                label="Zone in più"
                 active={extensions.length > 0}
-                detail={extensions.length > 0 ? `${extensions.length} ${extensions.length === 1 ? "comune attivo" : "comuni attivi"}` : "Solo il tuo comune"}
+                detail={extensions.length > 0 ? `${extensions.length} ${extensions.length === 1 ? "zona attiva" : "zone attive"}` : "Solo la tua zona"}
               />
             </ul>
           </section>
@@ -168,12 +168,12 @@ async function Sponsorships({ payment }: { payment: "received" | "started" | nul
           <Offer
             id="estensione"
             title="Estensione territoriale"
-            lead="Compari anche nelle ricerche di altri comuni del Veneto, oltre al tuo."
-            points={["Qualsiasi comune del Veneto, quanti ne vuoi", `Ogni comune resta attivo ${AREA_EXTENSION_OFFER.days} giorni`, "Vale per ricerca e boost"]}
-            preview={<AreaPreview home={homeTown ? `${homeTown.name} (${homeTown.provinceCode})` : null} extensions={extensions.map((e) => ({ id: e.id, label: `${e.name} (${e.provinceCode})`, until: dateFmt.format(e.endsAt) }))} />}
+            lead="Compari anche nelle ricerche di altre province del Veneto, in tutti i loro comuni, oltre alla tua zona."
+            points={["Qualsiasi provincia del Veneto, quante ne vuoi", `Ogni provincia resta attiva ${AREA_EXTENSION_OFFER.days} giorni`, "Vale per ricerca e boost"]}
+            preview={<AreaPreview home={homeTown ? `${homeTown.name} (${homeTown.provinceCode})` : null} extensions={extensions.map((e) => ({ label: e.label, until: dateFmt.format(e.endsAt) }))} />}
             active={null}
           >
-            <AreaExtensionPicker comuni={places.map((p) => ({ id: p.id, label: `${p.name} (${p.provinceCode})` }))} mode={mode} disabled={!owner} />
+            <AreaExtensionPicker province={provinces.map((p) => ({ id: p.id, label: p.label }))} mode={mode} disabled={!owner} />
           </Offer>
 
           {!owner && <p className="text-body-s text-ink-2">Solo il titolare dell’azienda può fare acquisti.</p>}
@@ -337,11 +337,11 @@ function PreviewTown({ town }: { town?: string }) {
 }
 
 /** Dove compare oggi l'azienda: il suo comune più quelli acquistati. */
-function AreaPreview({ home, extensions }: { home: string | null; extensions: { id: number; label: string; until: string }[] }) {
+function AreaPreview({ home, extensions }: { home: string | null; extensions: { label: string; until: string }[] }) {
   return (
     <div className="flex flex-col gap-3 rounded-md border border-line bg-page p-5">
       <span className="text-body-s font-semibold text-brand">Dove compari oggi</span>
-      <ul aria-label="Comuni attivi" className="flex flex-wrap gap-2">
+      <ul aria-label="Zone attive" className="flex flex-wrap gap-2">
         {home && (
           <li className="inline-flex items-center gap-1.5 rounded-full bg-primary px-3 py-1 text-body-s text-on-brand">
             <MapPin className="size-3.5" aria-hidden />
@@ -349,12 +349,12 @@ function AreaPreview({ home, extensions }: { home: string | null; extensions: { 
           </li>
         )}
         {extensions.map((e) => (
-          <li key={e.id} className="rounded-full border border-line bg-surface px-3 py-1 text-body-s">
+          <li key={e.label} className="rounded-full border border-line bg-surface px-3 py-1 text-body-s">
             {e.label} · fino al {e.until}
           </li>
         ))}
         <li aria-hidden className="rounded-full border border-dashed border-line-strong px-3 py-1 text-body-s text-ink-2">
-          + altri comuni
+          + altre province
         </li>
       </ul>
     </div>

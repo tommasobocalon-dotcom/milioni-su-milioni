@@ -21,7 +21,7 @@ import { demoMode } from "@/lib/demo-mode";
 import { parseAmount } from "@/lib/domain/format";
 import { parseOpeningHours, parseSpecialties } from "@/lib/domain/profile-fields";
 import { canReportLead, REPORT_REASONS } from "@/lib/domain/lead-rules";
-import { AREA_EXTENSION_OFFER, HOME_SPONSOR_PACKAGES, municipalityIdsFrom, SEARCH_BOOST_PACKAGES } from "@/lib/domain/offers";
+import { AREA_EXTENSION_OFFER, HOME_SPONSOR_PACKAGES, provinceIdsFrom, SEARCH_BOOST_PACKAGES } from "@/lib/domain/offers";
 import { listingStatus } from "@/lib/domain/billing";
 
 import { grantAreaExtensions, grantHomeSponsor, grantSearchBoost, unlockLeads } from "@/lib/leads/service";
@@ -490,12 +490,12 @@ export async function simulateSearchBoost(code: string) {
   revalidatePath("/area-partner", "layout");
 }
 
-/** Estensione territoriale ai comuni scelti, pagata in euro: solo Normal e Premium. */
+/** Estensione territoriale alle province scelte, pagata in euro: solo Normal e Premium. */
 export async function startAreaExtensionCheckout(ids: number[]): Promise<CheckoutState> {
   const { partner } = await requirePartner();
   if (!(await canBuyPackages(partner.id))) return { error: "L'estensione territoriale è per i piani Normal e Premium" };
-  const valid = municipalityIdsFrom(ids);
-  if (!valid) return { error: "Scegli da 1 a 40 comuni" };
+  const valid = provinceIdsFrom(ids);
+  if (!valid) return { error: "Scegli almeno una provincia" };
   return billingAction((payer) => createAreaExtensionCheckout(payer, valid), "billing.area_extension_checkout");
 }
 
@@ -503,8 +503,8 @@ export async function startAreaExtensionCheckout(ids: number[]): Promise<Checkou
 export async function simulateAreaExtension(ids: number[]): Promise<ActionState> {
   if (!demoMode() || stripeConfigured()) return { error: "Non disponibile" };
   const { user, partner } = await requirePartner();
-  const valid = municipalityIdsFrom(ids);
-  if (!valid || !(await canBuyPackages(partner.id))) return { error: "Scegli da 1 a 40 comuni" };
+  const valid = provinceIdsFrom(ids);
+  if (!valid || !(await canBuyPackages(partner.id))) return { error: "Scegli almeno una provincia" };
   const added = await db.transaction(async (tx) => {
     const n = await grantAreaExtensions(tx, partner.id, valid, AREA_EXTENSION_OFFER.days);
     await tx.insert(auditLogs).values({ actor: user.email, action: "billing.simulated_area_extension", entity: "partner", entityId: partner.id, data: { ids: valid } });
@@ -512,7 +512,7 @@ export async function simulateAreaExtension(ids: number[]): Promise<ActionState>
   });
   updateTag("boosts");
   revalidatePath("/area-partner", "layout");
-  return { ok: `Compari in ${added} ${added === 1 ? "comune" : "comuni"} in più per ${AREA_EXTENSION_OFFER.days} giorni` };
+  return { ok: `Compari in ${added} ${added === 1 ? "provincia" : "province"} in più per ${AREA_EXTENSION_OFFER.days} giorni` };
 }
 
 export async function startSubscriptionCheckout(planCode: string, period: "monthly" | "yearly"): Promise<CheckoutState> {

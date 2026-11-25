@@ -1,5 +1,7 @@
+import { sql } from "drizzle-orm";
 import {
   boolean,
+  check,
   doublePrecision,
   index,
   integer,
@@ -580,7 +582,7 @@ export const boosts = pgTable(
   (t) => [index("boosts_lookup_idx").on(t.categoryId, t.provinceId, t.endsAt)],
 );
 
-/** Espansione "spot" a una provincia vicina, pagata a token (30 giorni): la scheda compare anche lì. */
+/** Estensione territoriale pagata in euro (30 giorni): la scheda compare anche in un'altra provincia (o, nello storico, comune). */
 export const areaExtensions = pgTable(
   "area_extensions",
   {
@@ -588,16 +590,20 @@ export const areaExtensions = pgTable(
     partnerId: uuid("partner_id")
       .notNull()
       .references(() => partners.id, { onDelete: "cascade" }),
-    /** Comune in cui la scheda compare in più, pagato in euro (49 € per 30 giorni, decisione dei soci 10/11/2026). */
-    municipalityId: integer("municipality_id")
-      .notNull()
-      .references(() => municipalities.id),
+    /** Comune in cui la scheda compare in più (49 € per 30 giorni, soci 10/11/2026): solo storico, dal 25/11/2026 si vendono province. */
+    municipalityId: integer("municipality_id").references(() => municipalities.id),
+    /** Provincia intera in cui la scheda compare in più (49 € per 30 giorni, cliente 25/11/2026). */
+    provinceId: smallint("province_id").references(() => provinces.id),
     startsAt: timestamp("starts_at", { withTimezone: true }).notNull(),
     endsAt: timestamp("ends_at", { withTimezone: true }).notNull(),
     tokensSpent: integer("tokens_spent").notNull(),
     createdAt: createdAt(),
   },
-  (t) => [index("area_extensions_municipality_idx").on(t.municipalityId, t.endsAt)],
+  (t) => [
+    index("area_extensions_municipality_idx").on(t.municipalityId, t.endsAt),
+    index("area_extensions_province_idx").on(t.provinceId, t.endsAt),
+    check("area_extensions_one_zone", sql`(${t.municipalityId} is null) <> (${t.provinceId} is null)`),
+  ],
 );
 
 /** Lavoro del portfolio messo in evidenza nella pagina "Ispirazione", pagato a token (7 o 30 giorni). */

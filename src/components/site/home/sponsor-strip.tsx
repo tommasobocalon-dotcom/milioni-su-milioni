@@ -1,15 +1,14 @@
-import Link from "next/link";
-import { ArrowRight } from "lucide-react";
 import { getHomeSponsors } from "@/lib/data/home";
-import { BOOST_HREF, SponsorMarquee } from "./sponsor-marquee";
+import { SponsorMarquee } from "./sponsor-marquee";
 
 /** Loghi minimi per metà nastro: con poche aziende la fila si ripete, così il nastro riempie lo schermo e scorre sempre. */
 const MIN_PER_HALF = 8;
 
 /**
  * Fascia divisoria con i loghi delle aziende in evidenza: partner con un pacchetto "Logo in evidenza in Home" in corso.
- * Niente etichetta "Sponsorizzato" (tolta dal cliente il 10/11/2026): il pagamento è dichiarato nel testo sotto il titolo,
- * nel link "Come funzionano i contenuti sponsorizzati" e nell'aria-label di ogni logo. Dati in cache per qualche minuto (getHomeSponsors), ordine mescolato nel browser (SponsorMarquee).
+ * Niente etichetta "Sponsorizzato" (tolta dal cliente il 10/11/2026), né acquisto nel testo sotto il titolo né riga di link
+ * sotto i loghi (tolti dal cliente il 25/11/2026): il pagamento resta nell'aria-label di ogni logo e nel footer
+ * ("Contenuti sponsorizzati"). Dati in cache per qualche minuto (getHomeSponsors), ordine mescolato nel browser (SponsorMarquee).
  */
 export async function SponsorStrip() {
   const sponsors = await getHomeSponsors();
@@ -33,8 +32,8 @@ export async function SponsorStrip() {
         </h2>
         <p className="max-w-xl text-body text-neutro-700">
           {sponsors.length > 0
-            ? "Aziende che pagano un pacchetto per comparire in questa fascia."
-            : "Qui compaiono le aziende che acquistano un pacchetto di visibilità. Il posto è libero: può essere il tuo."}
+            ? "Alcune delle imprese del territorio che trovi su GecoItalia."
+            : "Qui compaiono le aziende in evidenza. Il posto è libero: può essere il tuo."}
         </p>
       </div>
 
@@ -45,28 +44,6 @@ export async function SponsorStrip() {
           <SponsorMarquee sponsors={sponsors} repeat={repeat} />
         </div>
       )}
-
-      <div
-        data-reveal
-        className="container-page mt-10 flex flex-wrap items-center justify-center gap-x-6 gap-y-3 text-body-s"
-      >
-        <Link
-          href="/come-ordiniamo-i-risultati#sponsorizzati"
-          className="font-semibold text-ink-2 underline underline-offset-4 hover:text-ink"
-        >
-          Come funzionano i contenuti sponsorizzati
-        </Link>
-        <Link
-          href={BOOST_HREF}
-          className="group/link inline-flex items-center gap-1.5 font-semibold text-primary hover:text-primary-hover"
-        >
-          Metti in evidenza la tua azienda
-          <ArrowRight
-            className="size-4 transition-transform duration-200 group-hover/link:translate-x-1"
-            aria-hidden
-          />
-        </Link>
-      </div>
     </section>
   );
 }

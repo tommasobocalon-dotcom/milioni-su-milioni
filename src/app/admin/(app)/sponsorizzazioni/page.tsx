@@ -26,7 +26,7 @@ async function Sponsorships({ ended }: { ended: boolean }) {
 
   return (
     <div className="flex flex-col gap-6">
-      <AdminPageHeader title="Sponsorizzazioni" subtitle="Logo in Home, boost nella ricerca e comuni in più comprati dalle aziende" />
+      <AdminPageHeader title="Sponsorizzazioni" subtitle="Logo in Home, boost nella ricerca e province in più comprati dalle aziende" />
       <Panel>
         <div className="flex flex-wrap gap-2 p-5">
           <ChipLink href="/admin/sponsorizzazioni" selected={!ended}>

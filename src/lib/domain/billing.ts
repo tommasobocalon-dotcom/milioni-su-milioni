@@ -2,7 +2,7 @@
  * Regole di fatturazione (PRD §7.2, §7.3) indipendenti da Stripe e dal database: il webhook le usa
  * per tradurre lo stato di Stripe nello stato di abbonamento e scheda del partner.
  */
-import { HOME_SPONSOR_PACKAGES, municipalityIdsFrom, SEARCH_BOOST_PACKAGES } from "./offers";
+import { HOME_SPONSOR_PACKAGES, provinceIdsFrom, SEARCH_BOOST_PACKAGES } from "./offers";
 
 /** Giorni di prova gratuita al primo abbonamento (documento del 4/11/2026). */
 export const TRIAL_DAYS = 7;
@@ -63,12 +63,12 @@ export function homeSponsorFromCheckout(session: CheckoutLike): { partnerId: str
   return pkg ? { partnerId: m.partnerId, days: pkg.days } : null;
 }
 
-/** Estensione territoriale pagata (Checkout "area_extension"): partner e codici ISTAT dei comuni. */
-export function areaExtensionFromCheckout(session: CheckoutLike): { partnerId: string; municipalityIds: number[] } | null {
+/** Estensione territoriale pagata (Checkout "area_extension"): partner e codici ISTAT delle province. */
+export function areaExtensionFromCheckout(session: CheckoutLike): { partnerId: string; provinceIds: number[] } | null {
   const m = session.metadata;
   if (session.mode !== "payment" || session.payment_status !== "paid" || m?.kind !== "area_extension" || !m.partnerId) return null;
-  const municipalityIds = municipalityIdsFrom(m.municipalityIds ? m.municipalityIds.split(",") : []);
-  return municipalityIds ? { partnerId: m.partnerId, municipalityIds } : null;
+  const provinceIds = provinceIdsFrom(m.provinceIds ? m.provinceIds.split(",") : []);
+  return provinceIds ? { partnerId: m.partnerId, provinceIds } : null;
 }
 
 /** Boost nella ricerca pagato (Checkout "search_boost"): partner e ore di sponsorizzazione. */

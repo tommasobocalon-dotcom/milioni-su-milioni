@@ -83,12 +83,13 @@ export async function searchPartners(input: {
   if (input.partnerType === "agency") conditions.push(eq(partners.type, "agency"));
   if (input.partnerType === "pro") conditions.push(sql`${partners.type} <> 'agency'`);
   if (input.place) {
-    // Il partner serve il comune cercato o tutta la sua provincia, oppure ha comprato l'estensione territoriale a quel comune.
+    // Il partner serve il comune cercato o tutta la sua provincia, oppure ha comprato l'estensione territoriale a quella
+    // provincia (o, nello storico, a quel comune).
     conditions.push(
       sql`(exists (select 1 from ${serviceAreas} sa where sa.partner_id = ${partners.id}
         and (sa.municipality_id = ${input.place.id} or sa.province_id = ${input.place.provinceId}))
         or exists (select 1 from ${areaExtensions} ae where ae.partner_id = ${partners.id}
-        and ae.municipality_id = ${input.place.id}
+        and (ae.municipality_id = ${input.place.id} or ae.province_id = ${input.place.provinceId})
         and ae.starts_at <= ${now.toISOString()}::timestamptz and ae.ends_at > ${now.toISOString()}::timestamptz))`,
     );
   } else if (input.provinceId) {
@@ -98,7 +99,7 @@ export async function searchPartners(input: {
       sql`(exists (select 1 from ${serviceAreas} sa where sa.partner_id = ${partners.id}
         and (sa.province_id = ${input.provinceId} or sa.municipality_id in ${inProvince}))
         or exists (select 1 from ${areaExtensions} ae where ae.partner_id = ${partners.id}
-        and ae.municipality_id in ${inProvince}
+        and (ae.province_id = ${input.provinceId} or ae.municipality_id in ${inProvince})
         and ae.starts_at <= ${now.toISOString()}::timestamptz and ae.ends_at > ${now.toISOString()}::timestamptz))`,
     );
   }

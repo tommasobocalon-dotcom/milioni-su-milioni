@@ -73,11 +73,6 @@ export const ABOUT_PHOTOS = {
     alt: "Donna al telefono nella cucina di casa, davanti al computer",
     credit: { title: "Donna che lavora da remoto nella cucina di casa", author: "Vitaly Gariev", license: "Licenza Pexels", licenseUrl: "https://www.pexels.com/it-it/license/", page: "https://www.pexels.com/it-it/foto/donna-che-lavora-da-remoto-nella-cucina-di-casa-36697452/" },
   },
-  forBusinesses: {
-    src: "/foto/chi-siamo/per-le-imprese.jpg",
-    alt: "Artigiano al banco di lavoro mentre rifinisce un pezzo di legno",
-    credit: { title: "Artigiano che incide il legno in laboratorio", author: "Pam Crane", license: "Licenza Pexels", licenseUrl: "https://www.pexels.com/it-it/license/", page: "https://www.pexels.com/it-it/foto/anziano-artigiano-che-incide-il-legno-in-laboratorio-30249657/" },
-  },
 } satisfies Record<string, CategoryPhoto>;
 
 const PEXELS = { license: "Licenza Pexels", licenseUrl: "https://www.pexels.com/it-it/license/" };

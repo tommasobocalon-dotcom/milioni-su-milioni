@@ -90,15 +90,15 @@ describe("homeSponsorFromCheckout", () => {
 });
 
 describe("areaExtensionFromCheckout", () => {
-  const paid = { mode: "payment", payment_status: "paid", metadata: { kind: "area_extension", partnerId: "p1", municipalityIds: "27042,28060" } };
+  const paid = { mode: "payment", payment_status: "paid", metadata: { kind: "area_extension", partnerId: "p1", provinceIds: "28,26" } };
 
-  it("estensione pagata: partner e comuni da aggiungere", () => {
-    expect(areaExtensionFromCheckout(paid)).toEqual({ partnerId: "p1", municipalityIds: [27042, 28060] });
+  it("estensione pagata: partner e province da aggiungere", () => {
+    expect(areaExtensionFromCheckout(paid)).toEqual({ partnerId: "p1", provinceIds: [28, 26] });
   });
 
-  it("non pagata, senza comuni o di un altro tipo: niente", () => {
+  it("non pagata, senza province o di un altro tipo: niente", () => {
     expect(areaExtensionFromCheckout({ ...paid, payment_status: "unpaid" })).toBeNull();
-    expect(areaExtensionFromCheckout({ ...paid, metadata: { ...paid.metadata, municipalityIds: "" } })).toBeNull();
+    expect(areaExtensionFromCheckout({ ...paid, metadata: { ...paid.metadata, provinceIds: "" } })).toBeNull();
     expect(areaExtensionFromCheckout({ ...paid, metadata: { kind: "home_sponsor", partnerId: "p1", packageCode: "home-7" } })).toBeNull();
   });
 });

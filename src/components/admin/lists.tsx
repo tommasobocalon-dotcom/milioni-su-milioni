@@ -78,7 +78,7 @@ export function LeadList({ leads, now, showPartner = true }: { leads: LeadRow[];
   );
 }
 
-export const SPONSORSHIP_KIND = { home: "Logo in Home", search: "Boost nella ricerca", area: "Comune in più" } as const;
+export const SPONSORSHIP_KIND = { home: "Logo in Home", search: "Boost nella ricerca", area: "Zona in più" } as const;
 
 const STATE = {
   scheduled: { label: "Programmata", style: TONE.muted },

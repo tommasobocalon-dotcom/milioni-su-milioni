@@ -1,7 +1,7 @@
 import "server-only";
 import { and, count, desc, eq, gt, inArray, isNotNull, ne, or, isNull } from "drizzle-orm";
 import { db } from "@/lib/db/client";
-import { areaExtensions, boosts, leadEvents, leads, municipalities, partners, subscriptions, type LeadAnswer } from "@/lib/db/schema";
+import { areaExtensions, boosts, leadEvents, leads, municipalities, partners, provinces, subscriptions, type LeadAnswer } from "@/lib/db/schema";
 import { type BoostPlacement } from "@/lib/domain/offers";
 import { FREE_LEADS, freeLeadsLeft } from "@/lib/domain/free-plan";
 import { listingStatus } from "@/lib/domain/billing";
@@ -211,23 +211,23 @@ async function insertBoost(
 }
 
 /**
- * Estensione territoriale già pagata con Stripe: per ogni comune la scheda compare nelle sue ricerche per `days` giorni;
- * se in quel comune c'è già un'estensione in corso, il nuovo periodo parte alla sua scadenza. Va chiamata dentro la
- * transazione che segna il pagamento come elaborato. I codici che non sono comuni del database vengono ignorati.
+ * Estensione territoriale già pagata con Stripe: per ogni provincia la scheda compare nelle ricerche dei suoi comuni per
+ * `days` giorni; se in quella provincia c'è già un'estensione in corso, il nuovo periodo parte alla sua scadenza. Va chiamata
+ * dentro la transazione che segna il pagamento come elaborato. I codici che non sono province del database vengono ignorati.
  */
-export async function grantAreaExtensions(tx: Tx, partnerId: string, municipalityIds: number[], days: number, now = new Date()) {
+export async function grantAreaExtensions(tx: Tx, partnerId: string, provinceIds: number[], days: number, now = new Date()) {
   await lockPartner(tx, partnerId);
-  const known = await tx.select({ id: municipalities.id }).from(municipalities).where(inArray(municipalities.id, municipalityIds));
+  const known = await tx.select({ id: provinces.id }).from(provinces).where(inArray(provinces.id, provinceIds));
   for (const { id } of known) {
     const [last] = await tx
       .select({ endsAt: areaExtensions.endsAt })
       .from(areaExtensions)
-      .where(and(eq(areaExtensions.partnerId, partnerId), eq(areaExtensions.municipalityId, id), gt(areaExtensions.endsAt, now)))
+      .where(and(eq(areaExtensions.partnerId, partnerId), eq(areaExtensions.provinceId, id), gt(areaExtensions.endsAt, now)))
       .orderBy(desc(areaExtensions.endsAt))
       .limit(1);
     const startsAt = last?.endsAt ?? now;
     const endsAt = new Date(startsAt.getTime() + days * 86_400_000);
-    await tx.insert(areaExtensions).values({ partnerId, municipalityId: id, startsAt, endsAt, tokensSpent: 0, createdAt: now });
+    await tx.insert(areaExtensions).values({ partnerId, provinceId: id, startsAt, endsAt, tokensSpent: 0, createdAt: now });
   }
   return known.length;
 }

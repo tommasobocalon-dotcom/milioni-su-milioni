@@ -193,7 +193,7 @@ test("campanella, profilo, boost, statistiche, assistenza e lavori svolti", asyn
   await expect(portfolio.getByText("Bagno rifatto a Mestre")).toHaveCount(0);
 });
 
-test("pacchetti in euro: logo in Home ed estensione territoriale a un comune", async ({ page }) => {
+test("pacchetti in euro: logo in Home ed estensione territoriale a una provincia", async ({ page }) => {
   await login(page);
 
   // Logo in Home per 7 giorni: il nome compare nella fascia "Aziende in evidenza".
@@ -204,19 +204,18 @@ test("pacchetti in euro: logo in Home ed estensione territoriale a un comune", a
   await page.goto("/");
   await expect(page.getByRole("link", { name: /Rossi Impianti, idraulico a Padova \(sponsorizzato\)/ }).first()).toBeAttached();
 
-  // Rossi Impianti è a Padova: a Verona compare solo dopo aver comprato l'estensione a quel comune.
-  const verona = "/trova-professionista?categoria=idraulico&dove=Verona";
-  await page.goto(verona);
+  // Rossi Impianti è a Padova: a Treviso (unica provincia attiva) compare solo dopo aver comprato l'estensione alla sua provincia.
+  const treviso = "/trova-professionista?categoria=idraulico&dove=Treviso";
+  await page.goto(treviso);
   await expect(page.getByRole("link", { name: "Rossi Impianti" })).toHaveCount(0);
   await page.goto("/area-partner/sponsorizzazioni");
   const extension = page.locator("#estensione");
-  await extension.getByLabel("Comune").fill("Verona (VR)");
-  await extension.getByRole("button", { name: "Aggiungi" }).click();
-  await expect(extension.getByText("1 comune ·")).toBeVisible();
+  await extension.getByLabel("Provincia di Treviso").check();
+  await expect(extension.getByText("1 provincia ·")).toBeVisible();
   await extension.getByRole("button", { name: "Simula" }).click();
-  await expect(extension.getByText("Compari in 1 comune in più per 30 giorni")).toBeVisible();
-  await expect(extension.getByRole("list", { name: "Comuni attivi" }).getByText(/Verona \(VR\)/)).toBeVisible();
-  await page.goto(verona);
+  await expect(extension.getByText("Compari in 1 provincia in più per 30 giorni")).toBeVisible();
+  await expect(extension.getByRole("list", { name: "Zone attive" }).getByText(/Provincia di Treviso/)).toBeVisible();
+  await page.goto(treviso);
   await expect(page.getByRole("link", { name: "Rossi Impianti" }).first()).toBeVisible();
 });
 

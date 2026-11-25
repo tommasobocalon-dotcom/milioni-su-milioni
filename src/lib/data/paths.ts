@@ -38,6 +38,10 @@ export async function listCategoryPlacePaths(): Promise<{ categorySlug: string; 
       union
       select p.category_id, ae.municipality_id
         from ${partners} p join ${areaExtensions} ae on ae.partner_id = p.id
+        where p.account_status = 'active' and ae.starts_at <= now() and ae.ends_at > now() and ae.municipality_id is not null
+      union
+      select p.category_id, m.id
+        from ${partners} p join ${areaExtensions} ae on ae.partner_id = p.id join ${municipalities} m on m.province_id = ae.province_id
         where p.account_status = 'active' and ae.starts_at <= now() and ae.ends_at > now()
     )
     select c.slug as "categorySlug", m.slug as "municipalitySlug"

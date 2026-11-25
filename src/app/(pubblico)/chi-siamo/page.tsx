@@ -174,31 +174,34 @@ export default function AboutPage() {
         </div>
       </section>
 
-      <section aria-labelledby="imprese" className="container-page grid items-center gap-10 py-16 md:py-20 lg:grid-cols-[7fr_5fr]">
-        <div className="flex flex-col gap-5">
-          <h2 id="imprese" className="font-display text-h2 md:text-h1">
-            Per le imprese
+      {/* Chiusura: due strade affiancate, per chi cerca e per chi lavora (sul telefono una sotto l'altra). */}
+      <section aria-labelledby="inizia" className="bg-brand-soft">
+        <div className="container-page flex flex-col gap-10 py-16 md:py-20">
+          <h2 id="inizia" className="font-display text-h2 md:text-h1">
+            Da dove vuoi iniziare?
           </h2>
-          <p className="text-body-l text-ink-2">
-            Agenzie immobiliari, studi tecnici e imprese artigiane del Veneto possono presentare la propria attività su
-            GecoItalia con una scheda dedicata, mostrare i lavori realizzati e ricevere richieste di contatto da clienti della
-            propria zona.
-          </p>
-          <div className="flex flex-wrap gap-3">
-            <ButtonLink href="/trova-professionista">Avvia una ricerca</ButtonLink>
-            <ButtonLink href="/per-i-professionisti" variant="secondary">
-              Sei un&apos;impresa?
-            </ButtonLink>
+          <div className="grid gap-10 md:grid-cols-2 md:gap-0 md:divide-x md:divide-brand/20">
+            <div className="flex flex-col items-start gap-4 md:pr-12">
+              <h3 className="text-h3 font-semibold">Cerchi qualcuno per la casa</h3>
+              <p className="text-body-l text-ink">
+                Trova l&apos;agenzia, il tecnico o l&apos;impresa artigiana che lavora nel tuo comune e scrivile in pochi passaggi.
+                Per te il servizio è gratuito.
+              </p>
+              <ButtonLink href="/trova-professionista" className="mt-2">
+                Avvia una ricerca
+              </ButtonLink>
+            </div>
+            <div className="flex flex-col items-start gap-4 border-t border-brand/20 pt-10 md:border-t-0 md:pt-0 md:pl-12">
+              <h3 className="text-h3 font-semibold">Hai un&apos;impresa in Veneto</h3>
+              <p className="text-body-l text-ink">
+                Presenta la tua attività con una scheda dedicata, mostra i lavori che hai realizzato e ricevi richieste di
+                contatto da clienti della tua zona.
+              </p>
+              <ButtonLink href="/per-i-professionisti" variant="secondary" className="mt-2">
+                Scopri come aderire
+              </ButtonLink>
+            </div>
           </div>
-        </div>
-        <div className="relative mx-auto aspect-square w-full max-w-sm overflow-hidden rounded-lg lg:max-w-none">
-          <Image
-            src={ABOUT_PHOTOS.forBusinesses.src}
-            alt={ABOUT_PHOTOS.forBusinesses.alt}
-            fill
-            sizes="(min-width: 1024px) 35vw, 100vw"
-            className="object-cover"
-          />
         </div>
       </section>
     </>

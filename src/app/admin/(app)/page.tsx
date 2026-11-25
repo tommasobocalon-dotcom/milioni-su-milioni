@@ -107,7 +107,7 @@ async function Overview() {
             rows={[
               ["Abbonamenti a pagamento", o.activeSubscriptions],
               ["Piani gratuiti di lancio", o.freeSubscriptions],
-              ["Sponsorizzazioni attive", sponsorships, `${o.homeSponsors} logo in Home · ${o.searchBoosts} boost · ${o.areaExtensions} comuni in più`],
+              ["Sponsorizzazioni attive", sponsorships, `${o.homeSponsors} logo in Home · ${o.searchBoosts} boost · ${o.areaExtensions} zone in più`],
             ]}
           />
         </Area>

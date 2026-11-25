@@ -539,7 +539,7 @@ export async function countSubscriptionsByFilter(): Promise<Record<SubscriptionF
 }
 
 // ---------------------------------------------------------------------------
-// Sponsorizzazioni: logo in Home, boost nella ricerca, estensioni per comune
+// Sponsorizzazioni: logo in Home, boost nella ricerca, estensioni per provincia (prima per comune)
 // ---------------------------------------------------------------------------
 
 export type SponsorshipKind = "home" | "search" | "area";
@@ -569,8 +569,9 @@ export async function listSponsorshipsAdmin(
     from boosts b join partners p on p.id = b.partner_id join categories c on c.id = b.category_id join provinces pr on pr.id = b.province_id
     where ${window}
     union all
-    select e.id, 'area', p.id, p.display_name, m.name, e.starts_at, e.ends_at
-    from area_extensions e join partners p on p.id = e.partner_id join municipalities m on m.id = e.municipality_id
+    select e.id, 'area', p.id, p.display_name, coalesce(m.name, 'Provincia di ' || pr.name), e.starts_at, e.ends_at
+    from area_extensions e join partners p on p.id = e.partner_id
+      left join municipalities m on m.id = e.municipality_id left join provinces pr on pr.id = e.province_id
     where ${window}
     order by ends_at ${ended || partnerId ? sql`desc` : sql`asc`}
     limit ${limit}
