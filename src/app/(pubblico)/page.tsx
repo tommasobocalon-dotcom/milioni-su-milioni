@@ -5,7 +5,7 @@ import { Hero } from "@/components/site/home/hero";
 import { HowItWorks } from "@/components/site/home/how-it-works";
 import { ProvinceExplorer } from "@/components/site/home/province-explorer";
 import { SponsorStrip } from "@/components/site/home/sponsor-strip";
-import { getCategories, getMunicipalities } from "@/lib/data/catalog";
+import { getCategories, getMunicipalities, getOpenProvinceCodes } from "@/lib/data/catalog";
 
 export const metadata: Metadata = { alternates: { canonical: "/" } };
 
@@ -41,11 +41,12 @@ export default function HomePage() {
 
 /** Categorie e comuni (in cache) per il modulo "Inoltra una richiesta" delle province non ancora attive. */
 async function Provinces() {
-  const [categories, places] = await Promise.all([getCategories(), getMunicipalities()]);
+  const [categories, places, openCodes] = await Promise.all([getCategories(), getMunicipalities(), getOpenProvinceCodes()]);
   return (
     <ProvinceExplorer
       categories={categories.map(({ id, name, partnerType }) => ({ id, name, partnerType }))}
       places={places.map(({ id, name, provinceCode }) => ({ id, name, provinceCode }))}
+      openCodes={openCodes}
     />
   );
 }

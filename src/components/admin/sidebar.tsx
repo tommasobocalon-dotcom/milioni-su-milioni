@@ -13,7 +13,7 @@ const NAV = [
   { href: "/admin/assistenza", label: "Assistenza", icon: LifeBuoy, badge: true },
   { href: "/admin/partner", label: "Partner", icon: Store },
   { href: "/admin/richieste", label: "Richieste clienti", icon: Inbox },
-  { href: "/admin/zone", label: "Richieste per zona", icon: MapPinned },
+  { href: "/admin/zone", label: "Zone", icon: MapPinned },
   { href: "/admin/abbonamenti", label: "Abbonamenti", icon: CreditCard },
   { href: "/admin/sponsorizzazioni", label: "Sponsorizzazioni", icon: Rocket },
   { href: "/admin/segnalazioni", label: "Segnalazioni lead", icon: Flag },

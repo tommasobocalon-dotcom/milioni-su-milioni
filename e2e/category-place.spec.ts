@@ -1,9 +1,15 @@
 import { expect, test } from "@playwright/test";
+import { setProvinceOpen } from "./province";
 
 /**
  * Pagine "categoria × comune" per i motori di ricerca (PRD §15): /idraulico/padova mostra gli idraulici che lavorano
- * a Padova, con titolo e indirizzo canonico propri. Esistono solo dove c'è almeno un'azienda e sono nella sitemap.
+ * a Padova, con titolo e indirizzo canonico propri. Esistono solo dove c'è almeno un'azienda, nelle province attive
+ * (gestionale → Zone; al lancio solo Treviso, qui si apre Padova dove stanno le aziende di esempio) e sono nella sitemap.
  */
+
+test.describe.configure({ mode: "serial" });
+test.beforeAll(async ({ browser }) => setProvinceOpen(browser, "Padova", true));
+test.afterAll(async ({ browser }) => setProvinceOpen(browser, "Padova", false));
 
 test("/idraulico/padova elenca gli idraulici di Padova con titolo e indirizzo canonico", async ({ page }) => {
   await page.goto("/idraulico/padova");
@@ -43,4 +49,12 @@ test("le pagine si collegano tra loro e dalle schede delle aziende", async ({ pa
   await page.goto("/professionisti/padova/idraulico/rossi-impianti");
   await page.getByRole("link", { name: "Cerca idraulici a Padova" }).click();
   await expect(page.getByRole("heading", { level: 1, name: "Idraulici a Padova" })).toBeVisible();
+});
+
+test("in una provincia chiusa le pagine danno 404 ed escono dalla sitemap", async ({ page, request, browser }) => {
+  await setProvinceOpen(browser, "Padova", false);
+  await page.goto("/idraulico/padova");
+  await expect(page.getByRole("heading", { level: 1 })).not.toContainText(/ a /);
+  await expect(page.locator('head meta[name="robots"]')).toHaveAttribute("content", /noindex/);
+  expect(await (await request.get("/sitemap.xml")).text()).not.toMatch(/\/idraulico\/padova<\/loc>/);
 });

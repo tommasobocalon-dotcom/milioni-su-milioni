@@ -129,6 +129,8 @@ export const provinces = pgTable("provinces", {
   code: text("code").notNull().unique(), // sigla, es. PD
   name: text("name").notNull(),
   slug: text("slug").notNull().unique(),
+  /** Servizio attivo in provincia (risultati, mappa della Home); si apre e chiude dal gestionale → Zone. */
+  isOpen: boolean("is_open").notNull().default(false),
 });
 
 export const municipalities = pgTable(

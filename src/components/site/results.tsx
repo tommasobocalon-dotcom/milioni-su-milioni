@@ -7,7 +7,7 @@ import { PartnerCard } from "@/components/site/partner-card";
 import { Button } from "@/components/ui/button";
 import { ChipLink } from "@/components/ui/chip";
 import { Input, Select } from "@/components/ui/field";
-import { findZone, getCategories, getCategoryBySlug, getMunicipalities, getProvinceZones, getServicesForCategory } from "@/lib/data/catalog";
+import { findZone, getCategories, getCategoryBySlug, getMunicipalities, getOpenProvinceCodes, getProvinceZones, getServicesForCategory } from "@/lib/data/catalog";
 import { AreaRequestForm } from "@/components/site/area-request-form";
 import { FeaturedPartner } from "@/components/site/featured-partner";
 import { PROVINCE_BLOCKS } from "@/lib/data/home-content";
@@ -75,13 +75,13 @@ export async function Results({ mode, params }: { mode: "agency" | "pro"; params
 
 /** Filtri letti dall'indirizzo e ricerca. Le funzioni chiamate sono in cache: chiamarla due volte non rifà le query. */
 async function findResults(mode: "agency" | "pro", params: ResultsParams, seed: string) {
-  const [allCategories, zone, provinceZones] = await Promise.all([getCategories(), findZone(params.dove), getProvinceZones()]);
+  const [allCategories, zone, provinceZones, open] = await Promise.all([getCategories(), findZone(params.dove), getProvinceZones(), getOpenProvinceCodes()]);
   const { place } = zone;
-  // Senza zona si cerca nella prima provincia attiva (Treviso, src/lib/domain/open-areas.ts), non in tutto il Veneto.
+  // Senza zona si cerca nella prima provincia attiva (gestionale → Zone), non in tutto il Veneto.
   const defaultZone = !place && !zone.province;
-  const province = defaultZone ? provinceZones.find((p) => isProvinceOpen(p.code)) ?? null : zone.province;
+  const province = defaultZone ? provinceZones.find((p) => isProvinceOpen(p.code, open)) ?? null : zone.province;
   // Comune o provincia non ancora attivi: niente risultati, al loro posto il modulo "Inoltra una richiesta".
-  const closedCode = place ? (isProvinceOpen(place.provinceCode) ? null : place.provinceCode) : province && !isProvinceOpen(province.code) ? province.code : null;
+  const closedCode = place ? (isProvinceOpen(place.provinceCode, open) ? null : place.provinceCode) : province && !isProvinceOpen(province.code, open) ? province.code : null;
   const category =
     mode === "agency" ? allCategories.find((c) => c.partnerType === "agency") ?? null : params.categoria ? await getCategoryBySlug(params.categoria) : null;
   const categoryServices = category ? await getServicesForCategory(category.id) : [];
@@ -118,9 +118,11 @@ async function ResultsBody({ mode, params, seed }: { mode: "agency" | "pro"; par
   const basePath = mode === "agency" ? "/trova-casa" : "/trova-professionista";
   const { allCategories, place, province, defaultZone, closedCode, category, categoryServices, service, sort, found, nearby } = await findResults(mode, params, seed);
   const { featured, results, total, page, pages } = found;
-  const [places, allZones] = await Promise.all([getMunicipalities(), getProvinceZones()]);
+  const [places, allZones, open] = await Promise.all([getMunicipalities(), getProvinceZones(), getOpenProvinceCodes()]);
   // Nel filtro Zona prima le province attive.
-  const provinceZones = [...allZones].sort((a, b) => Number(isProvinceOpen(b.code)) - Number(isProvinceOpen(a.code)));
+  const provinceZones = [...allZones].sort((a, b) => Number(isProvinceOpen(b.code, open)) - Number(isProvinceOpen(a.code, open)));
+  // Dove porta la ricerca senza zona: la prima provincia attiva.
+  const firstOpen = provinceZones.find((p) => isProvinceOpen(p.code, open))?.name ?? "Treviso";
   const closed = closedCode ? PROVINCE_BLOCKS.find((b) => b.code === closedCode) ?? null : null;
 
   const href = (patch: Partial<ResultsParams>) => {
@@ -317,12 +319,12 @@ async function ResultsBody({ mode, params, seed }: { mode: "agency" | "pro"; par
             <div className="flex flex-col items-center gap-4 rounded-lg border border-line bg-surface p-10 text-center">
               <h3 className="text-h3 font-semibold">Nessun risultato con questi filtri</h3>
               <p className="max-w-md text-body-s text-ink-2">
-                Prova ad allargare la zona o a togliere un filtro. Stiamo attivando nuovi partner in provincia di Treviso.
+                Prova ad allargare la zona o a togliere un filtro. Stiamo attivando nuovi partner in provincia di {firstOpen}.
               </p>
               <div className="flex flex-wrap justify-center gap-4">
                 {!defaultZone && (
                   <Link href={href({ dove: undefined })} className="font-semibold text-primary underline">
-                    Cerca in tutta la provincia di Treviso
+                    Cerca in tutta la provincia di {firstOpen}
                   </Link>
                 )}
                 <Link href={basePath} className="font-semibold text-primary underline">

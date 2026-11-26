@@ -3,20 +3,23 @@ import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { Results, ResultsSkeleton } from "@/components/site/results";
 import { ChipLink } from "@/components/ui/chip";
-import { getCategories, getCategoryBySlug, getMunicipalities, type Place } from "@/lib/data/catalog";
+import { getCategories, getCategoryBySlug, getMunicipalities, getOpenProvinceCodes, type Place } from "@/lib/data/catalog";
 import { listCategoryPlacePaths } from "@/lib/data/paths";
 import { searchPartners } from "@/lib/data/search";
 import { distanceKm, aLuogo } from "@/lib/domain/format";
+import { isProvinceOpen } from "@/lib/domain/open-areas";
 
 /**
  * Pagine "categoria × comune" per i motori di ricerca (PRD §15), es. /idraulico/padova: lo stesso elenco di Trova
  * Professionista o Trova Casa filtrato su categoria e comune, con titolo, descrizione e indirizzo canonico propri.
- * Solo slug esatti e solo dove lavora almeno un'azienda attiva (le stesse coppie della sitemap); il resto è 404.
+ * Solo slug esatti, solo nelle province attive e dove lavora almeno un'azienda attiva (le stesse coppie della sitemap);
+ * il resto è 404.
  */
 async function findLanding(categoria: string, comune: string) {
-  const [category, places] = await Promise.all([getCategoryBySlug(categoria), getMunicipalities()]);
+  const [category, places, open] = await Promise.all([getCategoryBySlug(categoria), getMunicipalities(), getOpenProvinceCodes()]);
   const place = places.find((m) => m.slug === comune);
-  if (!category || !place) return null;
+  // Provincia non ancora attiva (gestionale → Zone): niente pagina, come nella sitemap.
+  if (!category || !place || !isProvinceOpen(place.provinceCode, open)) return null;
   const { total } = await searchPartners({ categoryId: category.id, place });
   return total > 0 ? { category, place } : null;
 }

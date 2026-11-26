@@ -14,22 +14,22 @@ const hrefFor = (city: string) => `/trova-professionista?dove=${encodeURICompone
 
 type Block = (typeof PROVINCE_BLOCKS)[number];
 
-// Prima le province attive, poi le altre nell'ordine di sempre.
-const BLOCKS = [...PROVINCE_BLOCKS].sort((a, b) => Number(isProvinceOpen(b.code)) - Number(isProvinceOpen(a.code)));
-
 /**
  * "Professionisti di fiducia" sul modello del "coast to coast" di Thumbtack: una scheda per provincia con lo
  * slogan, la mappa del Veneto (confini ISTAT) che si accende insieme alla scheda, e "Cerca la tua città".
- * Si parte dalla provincia di Treviso (src/lib/domain/open-areas.ts): le altre aprono il modulo "Inoltra una richiesta".
+ * Le province attive (gestionale → Zone) portano ai risultati, le altre aprono il modulo "Inoltra una richiesta".
  */
-export function ProvinceExplorer({ categories, places }: { categories: AreaCategory[]; places: AreaPlace[] }) {
+export function ProvinceExplorer({ categories, places, openCodes }: { categories: AreaCategory[]; places: AreaPlace[]; openCodes: string[] }) {
+  const isOpen = (code: string) => isProvinceOpen(code, openCodes);
+  // Prima le province attive, poi le altre nell'ordine di sempre.
+  const blocks = [...PROVINCE_BLOCKS].sort((a, b) => Number(isOpen(b.code)) - Number(isOpen(a.code)));
   const router = useRouter();
   const [active, setActive] = useState<string | null>(null);
   const [asking, setAsking] = useState<Block | null>(null);
   const dialog = useRef<HTMLDialogElement>(null);
 
   function open(b: Block) {
-    if (isProvinceOpen(b.code)) return router.push(hrefFor(b.city));
+    if (isOpen(b.code)) return router.push(hrefFor(b.city));
     setAsking(b);
     dialog.current?.showModal();
   }
@@ -41,7 +41,7 @@ export function ProvinceExplorer({ categories, places }: { categories: AreaCateg
         <svg viewBox={VENETO_VIEWBOX} className="h-auto w-full" aria-hidden>
           {VENETO_PROVINCES.map((p) => {
             const block = PROVINCE_BLOCKS.find((b) => b.code === p.code);
-            const live = isProvinceOpen(p.code);
+            const live = isOpen(p.code);
             const on = active === p.code;
             return (
               <g
@@ -75,9 +75,9 @@ export function ProvinceExplorer({ categories, places }: { categories: AreaCateg
       </div>
 
       <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        {BLOCKS.map((b, i) => {
+        {blocks.map((b, i) => {
           const on = active === b.code;
-          const live = isProvinceOpen(b.code);
+          const live = isOpen(b.code);
           const hover = {
             onMouseEnter: () => setActive(b.code),
             onMouseLeave: () => setActive(null),

@@ -599,8 +599,12 @@ export async function getAreaRequestsAdmin(now: Date) {
       .select({
         code: provinces.code,
         name: provinces.name,
+        isOpen: provinces.isOpen,
+        // Aziende già online con sede in provincia: aiuta a decidere quando aprirla.
+        partners: sql<number>`(select count(*)::int from ${partners} p join ${municipalities} m on m.id = p.municipality_id where m.province_id = "provinces"."id" and p.account_status = 'active')`,
         total: count(areaRequests.id),
-        recent: sql<number>`count(${areaRequests.id}) filter (where ${areaRequests.createdAt} > ${since})::int`,
+        // Data come testo: in un sql grezzo Drizzle passa il Date così com'è e il driver lo rifiuta.
+        recent: sql<number>`count(${areaRequests.id}) filter (where ${areaRequests.createdAt} > ${since.toISOString()})::int`,
       })
       .from(provinces)
       .leftJoin(areaRequests, eq(areaRequests.provinceId, provinces.id))

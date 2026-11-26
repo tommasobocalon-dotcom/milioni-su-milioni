@@ -119,6 +119,15 @@ export async function findZone(query: string | undefined | null): Promise<{ plac
   return { place: province ? null : await findPlace(query), province };
 }
 
+/** Sigle delle province dove il servizio è attivo, aperte e chiuse dal gestionale → Zone. */
+export async function getOpenProvinceCodes(): Promise<string[]> {
+  "use cache";
+  cacheLife("hours");
+  cacheTag("catalog");
+  const rows = await db.select({ code: provinces.code }).from(provinces).where(eq(provinces.isOpen, true)).orderBy(asc(provinces.name));
+  return rows.map((r) => r.code);
+}
+
 export async function getProvinceBySlug(slug: string) {
   const [row] = await db.select().from(provinces).where(and(eq(provinces.slug, slug))).limit(1);
   return row ?? null;

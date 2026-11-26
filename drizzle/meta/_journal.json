@@ -267,6 +267,13 @@
       "when": 1795605646754,
       "tag": "0037_estensione_province",
       "breakpoints": true
+    },
+    {
+      "idx": 38,
+      "version": "7",
+      "when": 1795728486690,
+      "tag": "0038_province_aperte",
+      "breakpoints": true
     }
   ]
 }

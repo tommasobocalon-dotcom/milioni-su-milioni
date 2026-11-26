@@ -7,7 +7,7 @@ import { z } from "zod";
 import { signIn } from "@/app/accedi/actions";
 import { destroySession, requireAdmin } from "@/lib/auth/session";
 import { db } from "@/lib/db/client";
-import { auditLogs, leadEvents, leads, partners, subscriptions, supportMessages, supportTickets } from "@/lib/db/schema";
+import { auditLogs, leadEvents, leads, partners, provinces, subscriptions, supportMessages, supportTickets } from "@/lib/db/schema";
 
 import { accountStatusFrom, listingStatus } from "@/lib/domain/billing";
 import { REPORT_REASONS } from "@/lib/domain/lead-rules";
@@ -131,6 +131,28 @@ async function statusFromPlans(tx: Pick<typeof db, "select">, partnerId: string)
  * Verifica del team (partita IVA, sede, documenti): dà il badge "Verificato" e, dal 20/11/2026, manda online la scheda
  * se il piano è attivo. Togliere la verifica la nasconde di nuovo. Una sospensione a mano resta com'è.
  */
+/**
+ * Apre o chiude una provincia (gestionale → Zone): da aperta compare nei risultati e nella mappa della Home, da chiusa
+ * mostra "Inoltra una richiesta". Almeno una resta aperta, altrimenti la ricerca senza zona non saprebbe dove cercare.
+ */
+export async function setProvinceOpenAction(code: string, formData: FormData) {
+  const admin = await requireAdmin();
+  const open = formData.get("open") === "1";
+  if (!/^[A-Z]{2}$/.test(code)) return;
+  const done = await db.transaction(async (tx) => {
+    const rows = await tx.select({ code: provinces.code, isOpen: provinces.isOpen }).from(provinces).for("update");
+    const target = rows.find((r) => r.code === code);
+    if (!target || target.isOpen === open) return false;
+    if (!open && rows.filter((r) => r.isOpen).length === 1) return false;
+    await tx.update(provinces).set({ isOpen: open }).where(eq(provinces.code, code));
+    await tx.insert(auditLogs).values({ actor: admin.email, action: open ? "province.open" : "province.close", entity: "province", entityId: code, data: { open } });
+    return true;
+  });
+  if (!done) return;
+  updateTag("catalog");
+  revalidatePath("/admin", "layout");
+}
+
 export async function setVerificationAction(partnerId: string, formData: FormData) {
   const admin = await requireAdmin();
   const status = Verification.safeParse(formData.get("status"));

@@ -46,6 +46,9 @@ export async function listCategoryPlacePaths(): Promise<{ categorySlug: string; 
     )
     select c.slug as "categorySlug", m.slug as "municipalitySlug"
       from covered join ${categories} c on c.id = covered.category_id join ${municipalities} m on m.id = covered.municipality_id
+        join ${provinces} pr on pr.id = m.province_id
+      -- Solo nelle province attive (gestionale → Zone): nelle altre la pagina mostrerebbe "Zona non ancora attiva".
+      where pr.is_open
       order by 1, 2`);
 }
 

@@ -2,7 +2,7 @@
 
 import { and, eq } from "drizzle-orm";
 import { z } from "zod";
-import { findPlace } from "@/lib/data/catalog";
+import { findPlace, getOpenProvinceCodes } from "@/lib/data/catalog";
 import { db } from "@/lib/db/client";
 import { areaRequests, categories, provinces } from "@/lib/db/schema";
 import { isProvinceOpen } from "@/lib/domain/open-areas";
@@ -33,7 +33,7 @@ export async function sendAreaRequest(input: AreaRequestInput, turnstileToken?: 
     return { ok: false, error: issue.message, field: field === "province" ? undefined : (field as AreaRequestField) };
   }
   const d = parsed.data;
-  if (isProvinceOpen(d.province)) return { ok: false, error: "In questa provincia geco è già attivo: cerca direttamente." };
+  if (isProvinceOpen(d.province, await getOpenProvinceCodes())) return { ok: false, error: "In questa provincia geco è già attivo: cerca direttamente." };
 
   const [province] = await db.select({ id: provinces.id, name: provinces.name }).from(provinces).where(eq(provinces.code, d.province.toUpperCase()));
   if (!province) return { ok: false, error: "Provincia non trovata." };
