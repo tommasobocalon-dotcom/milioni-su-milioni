@@ -58,6 +58,9 @@ export default defineConfig({
       NEXT_PUBLIC_GOOGLE_ADS_ID: E2E_GOOGLE_ADS_ID,
       NEXT_PUBLIC_GOOGLE_ADS_LEAD_LABEL: "e2eLead",
       NEXT_PUBLIC_META_PIXEL_ID: E2E_META_PIXEL_ID,
+      // Il banner provato da e2e/consent.spec.ts è il nostro: niente iubenda anche se è in .env.local.
+      NEXT_PUBLIC_IUBENDA_SITE_ID: "",
+      NEXT_PUBLIC_IUBENDA_COOKIE_POLICY_ID: "",
     },
     timeout: 180_000,
   },

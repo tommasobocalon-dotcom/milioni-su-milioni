@@ -219,6 +219,19 @@ Il sito misura quali pubblicità portano **richieste dei clienti**, **iscrizioni
 
 Prima del lancio pubblico l'informativa (`/privacy`, sezione Cookie) va fatta rivedere dal consulente insieme al resto.
 
+### Banner di iubenda
+
+Con le due variabili qui sotto il banner dei cookie diventa quello di [iubenda](https://www.iubenda.com) (account info@gecoitalia.it, progetto `gecoitalia.it`): "Accetta", "Rifiuta" e "Scopri di più e personalizza", cookie policy di iubenda nel pannello, scelte registrate da iubenda. Google e Meta partono solo con il consenso alla finalità **marketing** (5); "Preferenze cookie" nel footer apre il pannello di iubenda. Senza variabili resta il banner nostro (lo usano anche i test).
+
+| Nome | Valore |
+|---|---|
+| `NEXT_PUBLIC_IUBENDA_SITE_ID` | `4779617` |
+| `NEXT_PUBLIC_IUBENDA_COOKIE_POLICY_ID` | `14991085` |
+
+Integrazione "classica" (`iubenda_cs.js` con la configurazione in `consent.tsx`), **non** il codice unico che iubenda propone in "Embed": quello attiva il blocco automatico, che blocca gli script inline di Next e Turnstile (`challenges.cloudflare.com`) finché non si accetta. Le impostazioni del banner (posizione, pulsanti) stanno quindi nel codice, non nel pannello di iubenda; il pannello decide testi, finalità e servizi.
+
+Il banner compare solo se nella privacy policy di iubenda c'è almeno un servizio che chiede il consenso (Google Ads, pixel di Meta): con i soli cookie tecnici iubenda non chiede niente. Il piano **Free** non ha Google Ads né Meta e ammette 4 servizi; prima del lancio serve il piano **Advanced** (servizi da aggiungere: Google Ads conversion tracking e Remarketing, Meta Pixel, Stripe, Sentry, Vercel, Supabase, Brevo, Resend, accesso con Google e Apple, YouTube, Vimeo, OpenStreetMap) e il titolare vero al posto del segnaposto.
+
 ## Errori con Sentry
 
 Gli errori del sito (server e browser) arrivano su [Sentry](https://sentry.io) con pagina, browser e punto del codice, e Sentry manda un'email quando ne compare uno nuovo. Senza la variabile qui sotto non parte niente. Codice in `src/instrumentation.ts`, `src/instrumentation-client.ts` e `src/lib/domain/sentry.ts`.

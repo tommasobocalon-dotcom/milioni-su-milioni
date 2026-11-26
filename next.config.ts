@@ -14,6 +14,15 @@ const ADS_HOSTS = {
   img: "https://www.googletagmanager.com https://www.googleadservices.com https://googleads.g.doubleclick.net https://pagead2.googlesyndication.com https://www.google.com https://www.google.it https://www.facebook.com",
   frame: "https://td.doubleclick.net https://www.googletagmanager.com https://www.facebook.com",
 };
+// Banner dei cookie di iubenda (components/site/consent.tsx): script e stili dal CDN, scelte salvate sui loro server,
+// cookie policy aperta in una finestra sopra la pagina.
+const IUBENDA_HOSTS = {
+  script: "https://cdn.iubenda.com https://cs.iubenda.com",
+  style: "https://cdn.iubenda.com",
+  connect: "https://*.iubenda.com",
+  img: "https://cdn.iubenda.com",
+  frame: "https://www.iubenda.com",
+};
 // Foto caricate dalle aziende: Supabase Storage in produzione (SUPABASE_URL), su disco in sviluppo (/uploads).
 const SUPABASE_HOST = process.env.SUPABASE_URL ? new URL(process.env.SUPABASE_URL).hostname : "*.supabase.co";
 const csp = [
@@ -24,21 +33,21 @@ const csp = [
   "form-action 'self'",
   // Tutte le foto passano da next/image (/_next/image, quindi 'self'), anche quelle su Supabase; blob: per l'anteprima
   // delle foto scelte nei moduli. Fuori da qui solo i pixel delle pubblicità, caricati dopo "Accetta" nel banner.
-  `img-src 'self' data: blob: ${ADS_HOSTS.img}`,
+  `img-src 'self' data: blob: ${ADS_HOSTS.img} ${IUBENDA_HOSTS.img}`,
   // Video della Home in public/hero.
   "media-src 'self'",
   "font-src 'self' data:",
   // Tailwind e Next iniettano stili inline: senza nonce 'unsafe-inline' evita di rompere la UI.
-  "style-src 'self' 'unsafe-inline'",
+  `style-src 'self' 'unsafe-inline' ${IUBENDA_HOSTS.style}`,
   // Cloudflare Turnstile (antispam): script e iframe del widget, verifica dal browser.
   // Google Ads e pixel di Meta: caricati solo dopo "Accetta" nel banner dei cookie (components/site/consent.tsx).
-  `script-src 'self' 'unsafe-inline' https://challenges.cloudflare.com ${ADS_HOSTS.script}${isDev ? " 'unsafe-eval'" : ""}`,
-  `frame-src https://challenges.cloudflare.com https://www.youtube-nocookie.com https://player.vimeo.com ${ADS_HOSTS.frame}`,
+  `script-src 'self' 'unsafe-inline' https://challenges.cloudflare.com ${ADS_HOSTS.script} ${IUBENDA_HOSTS.script}${isDev ? " 'unsafe-eval'" : ""}`,
+  `frame-src https://challenges.cloudflare.com https://www.youtube-nocookie.com https://player.vimeo.com ${ADS_HOSTS.frame} ${IUBENDA_HOSTS.frame}`,
   // MapLibre gira in un web worker creato da un blob.
   "worker-src 'self' blob:",
   // Turnstile + tile di OpenStreetMap (mappa dei risultati).
   // Sentry (regione UE): errori del browser.
-  `connect-src 'self' https://challenges.cloudflare.com https://tile.openstreetmap.org https://*.ingest.de.sentry.io ${ADS_HOSTS.connect}${isDev ? " ws:" : ""}`,
+  `connect-src 'self' https://challenges.cloudflare.com https://tile.openstreetmap.org https://*.ingest.de.sentry.io ${ADS_HOSTS.connect} ${IUBENDA_HOSTS.connect}${isDev ? " ws:" : ""}`,
   ...(isDev ? [] : ["upgrade-insecure-requests"]),
 ].join("; ");
 

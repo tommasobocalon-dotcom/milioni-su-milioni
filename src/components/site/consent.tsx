@@ -29,11 +29,27 @@ const config: TrackingConfig = {
   metaPixelId: process.env.NEXT_PUBLIC_META_PIXEL_ID ?? "",
 };
 
+/**
+ * Banner di iubenda (Privacy Controls and Cookie Solution) al posto del nostro, se configurato (DEPLOY.md). Integrazione
+ * classica senza blocco automatico: quello di iubenda blocca gli script inline di Next e Turnstile. Google e Meta li
+ * carichiamo noi, solo con il consenso alla finalità 5 (marketing) di iubenda.
+ */
+const IUBENDA = {
+  siteId: Number(process.env.NEXT_PUBLIC_IUBENDA_SITE_ID ?? ""),
+  cookiePolicyId: Number(process.env.NEXT_PUBLIC_IUBENDA_COOKIE_POLICY_ID ?? ""),
+};
+const useIubenda = Boolean(IUBENDA.siteId && IUBENDA.cookiePolicyId);
+const IUBENDA_MARKETING = "5";
+
 type Fn = (...args: unknown[]) => void;
 type Fbq = Fn & { callMethod?: Fn; queue: unknown[][]; push: Fbq; loaded: boolean; version: string };
-type TrackingWindow = Window & { dataLayer?: unknown[]; gtag?: Fn; fbq?: Fbq; _fbq?: Fbq };
+type IubendaPreference = { consent?: boolean; purposes?: Record<string, boolean> };
+type Iubenda = { csConfiguration?: Record<string, unknown>; cs?: { api?: { openPreferences?: () => void } } };
+type TrackingWindow = Window & { dataLayer?: unknown[]; gtag?: Fn; fbq?: Fbq; _fbq?: Fbq; _iub?: Iubenda };
 
 let loaded = false;
+/** Scelta fatta nel banner di iubenda: null finché iubenda non l'ha letta o chiesta. */
+let iubendaMarketing: boolean | null = null;
 /** Conversioni arrivate prima della scelta o prima del caricamento degli script: partono appena si può. */
 const pending: Conversion[] = [];
 let lastPath: string | null = null;
@@ -47,6 +63,7 @@ function readConsentRaw(): string {
 }
 
 function readConsent() {
+  if (useIubenda) return iubendaMarketing === null ? null : { marketing: iubendaMarketing };
   return parseConsent(readConsentRaw());
 }
 
@@ -138,15 +155,74 @@ export function TrackConversion({ event }: { event: Conversion }) {
 
 /** Link "Preferenze cookie" del footer: riapre il banner per cambiare scelta. */
 export function CookiePreferencesButton({ className }: { className?: string }) {
-  if (!trackingEnabled(config)) return null;
+  if (!useIubenda && !trackingEnabled(config)) return null;
+  const open = () =>
+    useIubenda
+      ? (window as TrackingWindow)._iub?.cs?.api?.openPreferences?.()
+      : window.dispatchEvent(new Event("geco:cookie"));
   return (
-    <button type="button" className={className} onClick={() => window.dispatchEvent(new Event("geco:cookie"))}>
+    <button type="button" className={className} onClick={open}>
       Preferenze cookie
     </button>
   );
 }
 
+/** Applica la scelta: con il consenso carica Google e Meta, senza toglie i loro cookie (e ricarica se erano già partiti). */
+function applyMarketing(marketing: boolean) {
+  if (marketing) return loadTrackers();
+  pending.length = 0;
+  clearTrackingCookies();
+  // Gli script già caricati non si possono togliere: si ricarica la pagina, che riparte senza.
+  if (loaded) location.reload();
+}
+
+function loadIubenda() {
+  const w = window as TrackingWindow;
+  if (w._iub) return;
+  const onPreference = (preference?: IubendaPreference) => {
+    // Conta solo il marketing: con le sole finalità necessarie iubenda segna "consenso dato" senza chiedere niente.
+    const marketing = preference?.purposes?.[IUBENDA_MARKETING] === true;
+    if (marketing === iubendaMarketing) return;
+    iubendaMarketing = marketing;
+    applyMarketing(marketing);
+  };
+  w._iub = Object.assign([], {
+    csConfiguration: {
+      siteId: IUBENDA.siteId,
+      cookiePolicyId: IUBENDA.cookiePolicyId,
+      lang: "it",
+      storage: { useSiteId: true },
+      perPurposeConsent: true,
+      askConsentAtCookiePolicyUpdate: true,
+      // "Preferenze cookie" sta già nel footer: niente pulsante fluttuante sopra la pagina.
+      floatingPreferencesButtonDisplay: false,
+      banner: {
+        position: "float-bottom-center",
+        acceptButtonDisplay: true,
+        rejectButtonDisplay: true,
+        customizeButtonDisplay: true,
+        closeButtonDisplay: false,
+        explicitWithdrawal: true,
+        listPurposes: true,
+        showTitle: false,
+      },
+      callback: { onPreferenceExpressedOrNotNeeded: onPreference },
+    },
+  });
+  loadScript("https://cdn.iubenda.com/cs/iubenda_cs.js");
+}
+
 export function ConsentBanner() {
+  if (useIubenda) return <IubendaBanner />;
+  return <OwnConsentBanner />;
+}
+
+function IubendaBanner() {
+  useEffect(loadIubenda, []);
+  return null;
+}
+
+function OwnConsentBanner() {
   const enabled = trackingEnabled(config);
   const saved = useSyncExternalStore(subscribeConsent, readConsentRaw, () => null);
   const [reopened, setReopened] = useState(false);
@@ -180,11 +256,7 @@ export function ConsentBanner() {
     writeConsent(marketing);
     setReopened(false);
     window.dispatchEvent(new Event(CONSENT_CHANGED));
-    if (marketing) return loadTrackers();
-    pending.length = 0;
-    clearTrackingCookies();
-    // Gli script già caricati non si possono togliere: si ricarica la pagina, che riparte senza.
-    if (loaded) location.reload();
+    applyMarketing(marketing);
   };
 
   return (
