@@ -1,6 +1,7 @@
 "use client";
 
 import { startTransition, useActionState, useEffect, useRef, useState } from "react";
+import Image from "next/image";
 import { Plus } from "lucide-react";
 import { addPortfolioItem, type ActionState } from "@/app/area-partner/actions";
 import { Button } from "@/components/ui/button";
@@ -28,11 +29,14 @@ async function shrink(file: File): Promise<File> {
 export function PortfolioForm({
   isAgency,
   places,
+  defaultPlaceId,
   canVideo,
   limitNote,
 }: {
   isAgency: boolean;
   places: { id: number; label: string }[];
+  /** Comune della sede, già scelto: quasi sempre è lì. */
+  defaultPlaceId: number | null;
   /** Video YouTube o Vimeo: solo piano Premium. */
   canVideo: boolean;
   /** Es. "3 di 5 progetti del piano Base". */
@@ -41,6 +45,17 @@ export function PortfolioForm({
   const [state, action, pending] = useActionState<ActionState, FormData>(addPortfolioItem, {});
   const [photoError, setPhotoError] = useState<string | null>(null);
   const [preparing, setPreparing] = useState(false);
+  /**
+   * Anteprime delle foto scelte, nell'ordine in cui verranno pubblicate (la prima è la principale). Dopo una
+   * pubblicazione riuscita spariscono con il modulo svuotato.
+   */
+  const [picked, setPicked] = useState<{ for: ActionState; urls: string[] }>({ for: state, urls: [] });
+  // Con un errore del server le foto restano scelte nel campo: anche le anteprime restano.
+  const previews = picked.for === state || !state.ok ? picked.urls : [];
+  const showPreviews = (files: File[]) => {
+    for (const url of picked.urls) URL.revokeObjectURL(url);
+    setPicked({ for: state, urls: files.map((f) => URL.createObjectURL(f)) });
+  };
   const form = useRef<HTMLFormElement>(null);
   useEffect(() => {
     if (state.ok) form.current?.reset();
@@ -73,7 +88,7 @@ export function PortfolioForm({
       </Field>
       <div className="grid gap-4 sm:grid-cols-2">
         <Field label="Comune" htmlFor="pf-place">
-          <Select id="pf-place" name="municipalityId" defaultValue="">
+          <Select id="pf-place" name="municipalityId" defaultValue={defaultPlaceId ?? ""}>
             <option value="">—</option>
             {places.map((p) => (
               <option key={p.id} value={p.id}>
@@ -83,9 +98,28 @@ export function PortfolioForm({
           </Select>
         </Field>
         <Field label="Foto" htmlFor="pf-photos" required help={`Da ${PROJECT_PHOTOS.min} a ${PROJECT_PHOTOS.max} foto, JPG, PNG o WebP`}>
-          <Input id="pf-photos" name="photos" type="file" multiple required accept="image/jpeg,image/png,image/webp" className="py-2" />
+          <Input
+            id="pf-photos"
+            name="photos"
+            type="file"
+            multiple
+            required
+            accept="image/jpeg,image/png,image/webp"
+            className="py-2"
+            onChange={(e) => showPreviews(Array.from(e.target.files ?? []))}
+          />
         </Field>
       </div>
+      {previews.length > 0 && (
+        <ul aria-label="Anteprima delle foto scelte" className="flex flex-wrap gap-2">
+          {previews.map((src, i) => (
+            <li key={src} className="relative">
+              <Image src={src} alt={`Foto ${i + 1}`} unoptimized width={96} height={72} className="h-18 w-24 rounded-md object-cover" />
+              {i === 0 && <span className="absolute bottom-1 left-1 rounded-sm bg-brand px-1.5 py-0.5 text-caption text-on-brand">Principale</span>}
+            </li>
+          ))}
+        </ul>
+      )}
       {isAgency ? (
         <div className="grid gap-4 sm:grid-cols-4">
           <Field label="Contratto" htmlFor="pf-contract" required>

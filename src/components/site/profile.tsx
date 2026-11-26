@@ -23,6 +23,18 @@ import { cn } from "@/lib/utils";
 import { videoEmbedUrl } from "@/lib/domain/extras";
 import { contractBadge, isMonthlyContract } from "@/lib/domain/property-contract";
 
+/** Sopra la scheda non ancora online, vista da chi gestisce l'azienda. */
+export function ProfilePreviewNotice() {
+  return (
+    <p role="status" className="bg-info-soft px-4 py-3 text-center text-body-s">
+      <strong>Anteprima:</strong> la tua scheda non è ancora visibile ai clienti. Va online dopo la verifica del team e con il piano attivo.{" "}
+      <Link href="/area-partner" className="font-semibold text-primary underline">
+        Torna all&apos;Area Partner
+      </Link>
+    </p>
+  );
+}
+
 /** Profilo pubblico del partner (PRD §5.4), stesso impianto per agenzie e professionisti. */
 export function ProfileView({ p }: { p: PartnerProfile }) {
   const isAgency = p.type === "agency";

@@ -15,6 +15,7 @@ import {
   supportTickets,
   users,
 } from "@/lib/db/schema";
+import { profileCompleteness } from "@/lib/data/completeness";
 import { profileHref } from "@/lib/data/search";
 import { listTickets } from "@/lib/data/support";
 import { monthlyRecurringCents } from "@/lib/domain/admin";
@@ -268,7 +269,7 @@ export async function getPartnerAdmin(id: string, now: Date) {
         tagline: partners.tagline,
         accountStatus: partners.accountStatus,
         verificationStatus: partners.verificationStatus,
-        completeness: partners.completeness,
+        completeness: profileCompleteness,
         stripeCustomerId: partners.stripeCustomerId,
         createdAt: partners.createdAt,
         category: categories.name,

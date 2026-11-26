@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
 import { notFound, permanentRedirect } from "next/navigation";
 import { Suspense } from "react";
-import { ProfileView } from "@/components/site/profile";
+import { ProfilePreviewNotice, ProfileView } from "@/components/site/profile";
 import { TrackEvent } from "@/components/site/track-event";
+import { managesPartner } from "@/lib/auth/session";
 import { getPartnerProfile } from "@/lib/data/partners";
 import { listPublicPartnerPaths } from "@/lib/data/paths";
 import { aLuogo } from "@/lib/domain/format";
@@ -16,7 +17,7 @@ export async function generateMetadata({ params }: PageProps<"/professionisti/[p
   const { slug } = await params;
   const p = await getPartnerProfile(slug);
   // Schede non attive (in attivazione, sospese): nessun dato nel titolo, come per la pagina 404.
-  if (!p || p.accountStatus !== "active") return { title: "Pagina non trovata" };
+  if (!p || p.accountStatus !== "active") return { title: "Pagina non trovata", robots: { index: false } };
   return {
     title: `${p.displayName} — ${p.categoryName} ${aLuogo(p.municipalityName)}`,
     description: `${p.tagline}. Prezzi indicativi, lavori svolti e richiesta di contatto gratuita.`,
@@ -30,12 +31,16 @@ export default function ProfessionalPage({ params }: PageProps<"/professionisti/
 
 async function Profile({ provincia, categoria, slug }: { provincia: string; categoria: string; slug: string }) {
   const p = await getPartnerProfile(slug);
-  if (!p || p.type === "agency" || p.accountStatus !== "active") notFound();
+  if (!p || p.type === "agency") notFound();
+  // Scheda non ancora online (in verifica, sospesa): la vede solo chi gestisce l'azienda, come anteprima.
+  const preview = p.accountStatus !== "active";
+  if (preview && !(await managesPartner(p.id))) notFound();
   if (p.provinceSlug !== provincia || p.categorySlug !== categoria) permanentRedirect(p.href);
   return (
     <>
+      {preview && <ProfilePreviewNotice />}
       <ProfileView p={p} />
-      <TrackEvent partnerId={p.id} type="view" />
+      {!preview && <TrackEvent partnerId={p.id} type="view" />}
     </>
   );
 }

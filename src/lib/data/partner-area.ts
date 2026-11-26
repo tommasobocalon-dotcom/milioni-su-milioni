@@ -1,5 +1,6 @@
 import "server-only";
 import { and, asc, count, desc, eq, gt, isNotNull, ne, sql, type AnyColumn, type SQL } from "drizzle-orm";
+import { profileCompleteness } from "@/lib/data/completeness";
 import { asPartner } from "@/lib/db/tenant";
 import { freeLeadsLeft } from "@/lib/domain/free-plan";
 import { freeLeadsUsed } from "@/lib/leads/service";
@@ -153,7 +154,7 @@ export async function getOverview(partnerId: string) {
     listLeads(partnerId, undefined, 5),
     asPartner(partnerId, (tx) =>
       tx
-        .select({ completeness: partners.completeness, responseMinutes: partners.responseMinutes, slug: partners.slug })
+        .select({ completeness: profileCompleteness, responseMinutes: partners.responseMinutes, slug: partners.slug })
         .from(partners)
         .where(eq(partners.id, partnerId)),
     ),

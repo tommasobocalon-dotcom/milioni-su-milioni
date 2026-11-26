@@ -52,7 +52,7 @@ async function Works() {
           </ButtonLink>
         </div>
       </section>
-      <PortfolioManager partnerId={partner.id} isAgency={isAgency} />
+      <PortfolioManager partnerId={partner.id} isAgency={isAgency} defaultPlaceId={p.municipalityId} />
     </div>
   );
 }

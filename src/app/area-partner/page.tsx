@@ -40,8 +40,8 @@ function nextStep(newLeads: number, completeness: number, lockedLeads: number) {
     };
   if (completeness < 80)
     return {
-      title: `La tua scheda è completa al ${completeness}%`,
-      text: "Aggiungi prezzi e foto dei tuoi lavori: le schede complete compaiono più in alto.",
+      title: `Scheda completa: ${completeness}%`,
+      text: "Aggiungi prezzi e foto dei tuoi lavori: i clienti scrivono più volentieri a chi li mostra.",
       href: "/area-partner/lavori",
       cta: "Completa la scheda",
     };

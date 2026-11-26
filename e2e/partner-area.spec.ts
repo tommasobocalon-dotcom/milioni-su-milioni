@@ -179,6 +179,8 @@ test("campanella, profilo, boost, statistiche, assistenza e lavori svolti", asyn
     { name: "lavoro-2.png", mimeType: "image/png", buffer: png },
   ]);
   await page.getByLabel(/^Descrizione/).fill("Demolizione, impianti nuovi e piatto doccia filo pavimento.");
+  // In Ispirazione solo se l'azienda lo sceglie (20/11/2026).
+  await page.getByLabel(/Mostra anche nella pagina Ispirazione/).check();
   await page.getByRole("button", { name: "Pubblica il lavoro" }).click();
   await expect(page.getByText("Lavoro pubblicato nella tua scheda e in Ispirazione")).toBeVisible();
   const portfolio = page.getByRole("region", { name: "Elementi del portfolio" });

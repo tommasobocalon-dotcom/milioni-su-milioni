@@ -71,7 +71,11 @@ async function PriceList() {
             <span className="text-h4 text-ink-2"> / {rows.length}</span>
           </p>
           <p className="text-caption text-ink-2">
-            {rows.length - priced > 0 ? `${rows.length - priced} su preventivo: aggiungi una fascia per ricevere più richieste` : "Tutti i servizi mostrano un prezzo"}
+            {rows.length === 0
+              ? "Nessun servizio ancora"
+              : rows.length - priced > 0
+                ? `${rows.length - priced} su preventivo: aggiungi una fascia per ricevere più richieste`
+                : "Tutti i servizi mostrano un prezzo"}
           </p>
         </div>
         <div className="flex flex-col gap-3 rounded-lg bg-brand p-5 text-on-brand">

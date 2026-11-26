@@ -16,7 +16,7 @@ const STATUS = [
 ] as const;
 
 /** Lavori svolti (o immobili per le agenzie) mostrati nella scheda pubblica. */
-export async function PortfolioManager({ partnerId, isAgency }: { partnerId: string; isAgency: boolean }) {
+export async function PortfolioManager({ partnerId, isAgency, defaultPlaceId }: { partnerId: string; isAgency: boolean; defaultPlaceId: number | null }) {
   const [items, places, sub] = await Promise.all([getPortfolio(partnerId), getMunicipalities(), getSubscription(partnerId)]);
   const limitNote = sub
     ? sub.maxPortfolioItems === null
@@ -28,6 +28,7 @@ export async function PortfolioManager({ partnerId, isAgency }: { partnerId: str
       <PortfolioForm
         isAgency={isAgency}
         places={places.map((p) => ({ id: p.id, label: `${p.name} (${p.provinceCode})` }))}
+        defaultPlaceId={defaultPlaceId}
         canVideo={!!sub && sub.planWeight >= PREMIUM_WEIGHT}
         limitNote={limitNote}
       />

@@ -49,6 +49,7 @@ export async function getPartnerProfile(slug: string) {
       categoryName: categories.name,
       categoryPlural: categories.pluralName,
       categorySlug: categories.slug,
+      municipalityId: partners.municipalityId,
       municipalityName: municipalities.name,
       municipalitySlug: municipalities.slug,
       provinceName: provinces.name,

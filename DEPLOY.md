@@ -196,7 +196,7 @@ Il comando stampa un `whsec_...` da mettere in `STRIPE_WEBHOOK_SECRET` in `.env.
 - *Pagamento fallito*: scheda nascosta dai risultati e richieste disattivate finché il pagamento non riesce.
 - *Disdetta dal portale*: il piano resta attivo fino a fine periodo pagato, poi la scheda esce dai risultati.
 
-**Fatture elettroniche**: Stripe emette ricevute e fatture "di cortesia". La fattura elettronica verso lo SdI non è ancora collegata: serve un provider italiano via API prima di incassare davvero.
+**Fatture elettroniche**: Stripe emette ricevute e fatture "di cortesia". La fattura elettronica verso lo SdI la emette il commercialista partendo dai pagamenti di Stripe (Stripe → Pagamenti / Fatture, esportazione CSV): il sito non la manda.
 
 ## Google Ads, pixel di Meta e banner dei cookie
 
@@ -294,7 +294,7 @@ tornano a funzionare. Se il progetto Supabase è nuovo, cambia l'indirizzo nelle
 
 1. Togli `SITE_ACCESS` e `DEMO_MODE` da Vercel. Senza `SITE_ACCESS` le scorciatoie demo si spengono comunque da sole.
 2. Svuota i dati di esempio dal database. Dal 16/11/2026 il deploy non lancia più `npm run db:seed` (`vercel.json`), così le aziende di esempio non tornano dopo la pulizia. Su un database nuovo e vuoto il seed va lanciato una volta a mano, con `DATABASE_URL` di quel database: categorie, servizi e piani di partenza arrivano da lì.
-3. Prima del lancio servono anche RLS, rate limit e Turnstile, email con Brevo, fatturazione elettronica SdI (vedi CLAUDE.md, "Da fare"). Per Stripe passa alle chiavi **live** e crea il webhook anche in modalità live.
+3. Prima del lancio servono anche RLS, rate limit e Turnstile, email con Brevo (vedi CLAUDE.md, "Da fare"). Per Stripe passa alle chiavi **live** e crea il webhook anche in modalità live.
 
 ## Sicurezza: protezione da flood e DDoS
 

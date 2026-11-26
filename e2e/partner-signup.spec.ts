@@ -77,7 +77,8 @@ function newVatNumber() {
 }
 
 test("un'agenzia appena registrata compare in Trova casa solo dopo l'attivazione del piano e la verifica del team", async ({ page, request, browser }) => {
-  const results = "/trova-casa?dove=Vicenza";
+  // Dal 23/11/2026 i risultati ci sono solo in provincia di Treviso (src/lib/domain/open-areas.ts).
+  const results = "/trova-casa?dove=Treviso";
   await page.goto("/accedi/azienda?next=/registrazione-partner");
   await page.getByLabel(/^Nome e cognome/).fill("Paolo Neri");
   await page.getByRole("textbox", { name: /^Email/ }).fill(`nuova.agenzia.${Date.now()}@example.com`);
@@ -86,8 +87,8 @@ test("un'agenzia appena registrata compare in Trova casa solo dopo l'attivazione
   await expect(page).toHaveURL(/\/registrazione-partner$/);
   await page.getByLabel(/^Cosa fai/).selectOption({ label: "Agenzia immobiliare" });
   await page.getByLabel(/^Nome sulla scheda/).fill("Immobiliare Berica Prova");
-  await page.getByLabel(/^Presentazione in una frase/).fill("Compravendite e affitti a Vicenza e provincia");
-  await page.getByLabel(/^Comune della sede/).selectOption({ label: "Vicenza" });
+  await page.getByLabel(/^Presentazione in una frase/).fill("Compravendite e affitti a Treviso e provincia");
+  await page.getByLabel(/^Comune della sede/).selectOption({ label: "Treviso" });
   await page.getByLabel(/^Telefono/).fill("0444 555 123");
   await page.getByLabel(/^Indirizzo della sede/).fill("Corso Palladio 1");
   await page.getByLabel(/^Ragione sociale/).fill("Immobiliare Berica Prova S.r.l.");

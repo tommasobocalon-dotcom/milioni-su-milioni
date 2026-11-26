@@ -142,6 +142,12 @@ export async function partnersOfUser(userId: string) {
     .orderBy(partners.createdAt, partners.id);
 }
 
+/** Chi gestisce l'azienda (accesso aziende): vede l'anteprima della sua scheda anche prima che vada online. */
+export async function managesPartner(partnerId: string): Promise<boolean> {
+  const user = await getSessionUser("business");
+  return !!user && (await partnersOfUser(user.id)).some((p) => p.id === partnerId);
+}
+
 export type PartnerSession = {
   user: SessionUser;
   partner: { id: string; slug: string; displayName: string; logoUrl: string | null; type: "agency" | "technician" | "artisan" | "b2b"; accountStatus: string };
