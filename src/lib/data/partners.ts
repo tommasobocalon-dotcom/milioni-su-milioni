@@ -22,7 +22,8 @@ import { profileHref } from "./search";
 export async function getPartnerProfile(slug: string) {
   "use cache";
   cacheLife("minutes");
-  cacheTag(`partner:${slug}`);
+  // "catalog": nome della categoria e domande del modulo cambiano dal gestionale → Categorie.
+  cacheTag(`partner:${slug}`, "catalog");
 
   const [p] = await db
     .select({
@@ -136,7 +137,8 @@ export type PartnerProfile = NonNullable<Awaited<ReturnType<typeof getPartnerPro
 export async function getRequestContext(slug: string) {
   "use cache";
   cacheLife("minutes");
-  cacheTag(`partner:${slug}`);
+  // "catalog": nome della categoria e domande del modulo cambiano dal gestionale → Categorie.
+  cacheTag(`partner:${slug}`, "catalog");
   const [p] = await db
     .select({
       id: partners.id,

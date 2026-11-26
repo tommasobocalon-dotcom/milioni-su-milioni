@@ -118,6 +118,17 @@ const ACTION_LABEL: Record<string, string> = {
   "support.ticket_opened": "Richiesta di assistenza aperta",
   "support.reply": "Risposta dell'assistenza",
   "support.status": "Stato della richiesta cambiato",
+  "province.open": "Provincia aperta",
+  "province.close": "Provincia chiusa",
+  "category.create": "Categoria creata",
+  "category.update": "Categoria modificata",
+  "category.delete": "Categoria eliminata",
+  "service.create": "Servizio aggiunto",
+  "service.update": "Servizio modificato",
+  "service.delete": "Servizio eliminato",
+  "question.create": "Domanda aggiunta",
+  "question.update": "Domanda modificata",
+  "question.delete": "Domanda eliminata",
 };
 
 export const actionLabel = (action: string) => ACTION_LABEL[action] ?? action;
