@@ -106,7 +106,7 @@ for (const [device, viewport] of Object.entries(VIEWPORTS)) {
     test("accessibile: gestionale", async ({ page }) => {
       await expectAccessible(page, "/admin/accedi");
       await login(page, "admin", "admin@gecoitalia.it");
-      for (const path of ["/admin", "/admin/assistenza", "/admin/partner", "/admin/richieste", "/admin/abbonamenti", "/admin/sponsorizzazioni", "/admin/segnalazioni", "/admin/registro", "/admin/zone"]) {
+      for (const path of ["/admin", "/admin/assistenza", "/admin/partner", "/admin/richieste", "/admin/abbonamenti", "/admin/sponsorizzazioni", "/admin/segnalazioni", "/admin/registro", "/admin/zone", "/admin/categorie"]) {
         await expectAccessible(page, path);
       }
     });

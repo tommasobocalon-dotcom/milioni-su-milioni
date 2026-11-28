@@ -411,9 +411,13 @@ async function syncSubscription(subscriptionId: string): Promise<{ id: string; p
     }
     const all = await tx.select({ status: subscriptions.status }).from(subscriptions).where(eq(subscriptions.partnerId, partner.id));
     // Riga bloccata: la verifica del team (setVerificationAction) e il webhook non si sovrascrivono a vicenda.
-    const [{ verification }] = await tx.select({ verification: partners.verificationStatus }).from(partners).where(eq(partners.id, partner.id)).for("update");
-    // Online solo con il piano attivo e i dati verificati dal team (listingStatus).
-    await tx.update(partners).set({ accountStatus: listingStatus(accountStatusFrom(all.map((s) => s.status)), verification) }).where(eq(partners.id, partner.id));
+    const [{ verification, suspendedByTeam }] = await tx
+      .select({ verification: partners.verificationStatus, suspendedByTeam: partners.suspendedByTeam })
+      .from(partners)
+      .where(eq(partners.id, partner.id))
+      .for("update");
+    // Online solo con il piano attivo e i dati verificati dal team, mai se il team l'ha sospesa (listingStatus).
+    await tx.update(partners).set({ accountStatus: listingStatus(accountStatusFrom(all.map((s) => s.status)), verification, suspendedByTeam) }).where(eq(partners.id, partner.id));
     return row.id;
   });
   refreshPublicPages(partner.slug);

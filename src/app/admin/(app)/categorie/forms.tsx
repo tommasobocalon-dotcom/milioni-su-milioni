@@ -43,11 +43,16 @@ export function ActionForm({
   );
 }
 
-/** Eliminazione: il server la rifiuta (con il motivo) se l'elemento è usato da aziende o richieste. */
-export function DeleteForm({ action, label }: { action: () => Promise<FormState>; label: string }) {
+export function DeleteForm({ action, label, confirmMessage }: { action: () => Promise<FormState>; label: string; confirmMessage: string }) {
   const [state, formAction, pending] = useActionState(action, {});
   return (
-    <form action={formAction} className="flex flex-col gap-1">
+    <form
+      className="flex flex-col gap-1"
+      onSubmit={(e) => {
+        e.preventDefault();
+        if (window.confirm(confirmMessage)) startTransition(() => formAction());
+      }}
+    >
       <Button type="submit" size="s" variant="secondary" disabled={pending} className="self-start">
         {label}
       </Button>

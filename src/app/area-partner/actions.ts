@@ -532,8 +532,12 @@ export async function startPlanChange(planCode: string, period: "monthly" | "yea
 
 /** Stato della scheda appena attivato un piano: online solo se il team ha già verificato i dati dell'azienda. */
 async function listingWithPlan(tx: Pick<typeof db, "select">, partnerId: string) {
-  const [{ verification }] = await tx.select({ verification: partners.verificationStatus }).from(partners).where(eq(partners.id, partnerId)).for("update");
-  return listingStatus("active", verification);
+  const [{ verification, suspendedByTeam }] = await tx
+    .select({ verification: partners.verificationStatus, suspendedByTeam: partners.suspendedByTeam })
+    .from(partners)
+    .where(eq(partners.id, partnerId))
+    .for("update");
+  return listingStatus("active", verification, suspendedByTeam);
 }
 
 /**

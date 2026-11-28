@@ -7,11 +7,11 @@ import { Button } from "@/components/ui/button";
 import { ChipLink } from "@/components/ui/chip";
 import { Input } from "@/components/ui/field";
 import { requireAdmin } from "@/lib/auth/session";
-import { ACCOUNT_STATUSES, countPartnersByFilter, listPartnersAdmin, type PartnerFilter } from "@/lib/data/admin";
+import { ACCOUNT_STATUSES, countPartnersByFilter, listPartnersAdmin, PARTNER_EXTRA_FILTERS, type PartnerFilter } from "@/lib/data/admin";
 
 export const metadata = { title: "Partner" };
 
-const FILTERS: { value: PartnerFilter; label: string }[] = [...ACCOUNT_STATUSES, { value: "da-verificare", label: "Da verificare" }];
+const FILTERS: { value: PartnerFilter; label: string }[] = [...ACCOUNT_STATUSES, ...PARTNER_EXTRA_FILTERS];
 const isFilter = (v: unknown): v is PartnerFilter => FILTERS.some((f) => f.value === v);
 
 export default function PartnersPage({ searchParams }: PageProps<"/admin/partner">) {

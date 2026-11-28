@@ -19,16 +19,17 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { connection } from "next/server";
-import { AccountStatusPill, AdminPageHeader, AdminSkeleton, ago, Panel, TicketStatusPill } from "@/components/admin/ui";
+import { AccountStatusPill, AdminPageHeader, AdminSkeleton, Panel } from "@/components/admin/ui";
 import { requireAdmin } from "@/lib/auth/session";
 import { getAdminOverview } from "@/lib/data/admin";
 import { formatEuro } from "@/lib/domain/format";
 
-export const metadata = { title: "Panoramica" };
+export const metadata = { title: "Da fare" };
 
 /**
- * Panoramica del gestionale per aree (cliente, 20/11/2026): in cima le cose da fare, poi Soldi, Aziende,
- * Clienti e Assistenza con un numero principale, il confronto con i 30 giorni prima e il link alla sezione.
+ * Panoramica del gestionale per aree (cliente, 20/11/2026): in cima le cose da fare, poi Soldi, Aziende e Clienti con
+ * un numero principale, il confronto con i 30 giorni prima e il link alla sezione. Dal 27/11/2026 ogni numero compare
+ * una volta sola: l'assistenza sta in "Da fare" e nel contatore del menu, non più in un riquadro a sé.
  */
 export default function AdminHomePage() {
   return (
@@ -48,12 +49,12 @@ async function Overview() {
   const sponsorships = o.homeSponsors + o.searchBoosts + o.areaExtensions;
   const todo: { n: number; label: string; href: string; icon: LucideIcon; urgent?: boolean }[] = [
     { n: o.ticketsToAnswer, label: "Assistenza da rispondere", href: "/admin/assistenza?stato=open", icon: LifeBuoy, urgent: true },
-    { n: o.openReports, label: "Lead segnalati da decidere", href: "/admin/segnalazioni", icon: Flag, urgent: true },
+    { n: o.openReports, label: "Richieste segnalate dalle aziende, da decidere", href: "/admin/richieste?filtro=segnalate", icon: Flag, urgent: true },
     { n: o.toVerify, label: "Aziende da verificare (scheda nascosta)", href: "/admin/partner?filtro=da-verificare", icon: BadgeCheck, urgent: true },
     { n: o.partnersBy.suspended, label: "Aziende sospese", href: "/admin/partner?filtro=suspended", icon: CircleAlert, urgent: true },
     { n: o.leadsNotDelivered, label: "Richieste non consegnate (7 giorni)", href: "/admin/richieste?filtro=non-consegnate", icon: Inbox, urgent: true },
-    { n: o.stuckActivating, label: "Iscritte da 3 giorni senza piano: da richiamare", href: "/admin/partner?filtro=activating", icon: Phone },
-    { n: o.freeAtLimit, label: "Gratuite finite dopo 3 richieste: proponi un piano", href: "/admin/abbonamenti?filtro=gratuiti", icon: Euro },
+    { n: o.stuckActivating, label: "Iscritte da 3 giorni senza piano: da richiamare", href: "/admin/partner?filtro=senza-piano", icon: Phone },
+    { n: o.freeAtLimit, label: "Gratuite finite dopo 3 richieste: proponi un piano", href: "/admin/abbonamenti?filtro=gratuiti-finiti", icon: Euro },
     { n: o.sponsorshipsEnding, label: "Sponsorizzazioni che finiscono entro 3 giorni", href: "/admin/sponsorizzazioni", icon: Rocket },
     { n: o.leadsUnconfirmed, label: "Codici mai confermati (7 giorni): controlla le email", href: "/admin/richieste?filtro=da-confermare", icon: MailWarning },
   ].filter((t) => t.n > 0);
@@ -70,9 +71,6 @@ async function Overview() {
           <h2 id="da-fare" className="text-h4 font-semibold">
             Da fare
           </h2>
-          {todo.length > 0 && (
-            <span className="rounded-full bg-primary px-2.5 py-0.5 text-caption font-semibold text-on-brand tabular-nums">{todo.reduce((s, t) => s + t.n, 0)}</span>
-          )}
         </div>
         {todo.length === 0 ? (
           <p className="flex items-center gap-2 px-5 py-4 text-body-s text-ink-2">
@@ -98,7 +96,8 @@ async function Overview() {
 
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
         <Area icon={Euro} title="Soldi" href="/admin/abbonamenti" linkLabel="Abbonamenti">
-          <Hero value={formatEuro(o.mrrCents)} label="al mese dagli abbonamenti (IVA esclusa)" />
+          <Hero value={formatEuro(o.mrrCents)} label="al mese dagli abbonamenti, a prezzi di listino (IVA esclusa)" />
+          <p className="-mt-2 text-caption text-ink-2">Stima senza sconti e prove gratuite: gli incassi veri sono su Stripe.</p>
           <div className="flex flex-col gap-2">
             <h3 className="text-caption font-semibold text-ink-2">Al mese per piano</h3>
             <Bars rows={o.mrrByPlan.map((r) => ({ name: r.plan, n: r.cents }))} format={formatEuro} />
@@ -116,13 +115,6 @@ async function Overview() {
           <Hero value={String(o.partnersBy.active)} label="online" />
           <Delta now={o.newPartners} before={o.newPartnersPrev} what="iscritte negli ultimi 30 giorni" />
           <PlanBars rows={o.byPlan} />
-          <Rows
-            rows={[
-              ["Da verificare", o.toVerify],
-              ["In attivazione", o.partnersBy.activating],
-              ["Sospese", o.partnersBy.suspended],
-            ]}
-          />
           {o.recentPartners.length > 0 && (
             <div className="flex flex-col gap-1">
               <h3 className="text-caption font-semibold text-ink-2">Ultime iscritte</h3>
@@ -142,7 +134,7 @@ async function Overview() {
           )}
         </Area>
 
-        <Area icon={Inbox} title="Clienti" href="/admin/richieste" linkLabel="Richieste">
+        <Area icon={Inbox} title="Clienti" href="/admin/richieste" linkLabel="Richieste" className="xl:col-span-2">
           <Hero value={String(o.leadsVerified)} label="richieste confermate negli ultimi 30 giorni" />
           <Delta now={o.leadsVerified} before={o.leadsVerifiedPrev} what="rispetto ai 30 giorni prima" plain />
           <DailyBars days={o.leadsDaily} />
@@ -155,29 +147,6 @@ async function Overview() {
           />
         </Area>
 
-        <Area icon={LifeBuoy} title="Assistenza" href="/admin/assistenza" linkLabel="Assistenza">
-          <Hero value={String(o.ticketsToAnswer)} label={o.ticketsToAnswer === 1 ? "richiesta da rispondere" : "richieste da rispondere"} />
-          {o.openTickets.length > 0 && (
-            <ul className="flex flex-col">
-              {o.openTickets.slice(0, 4).map((t) => (
-                <li key={t.id}>
-                  <Link href={`/admin/assistenza/${t.number}`} className="-mx-2 flex items-center justify-between gap-3 rounded-md px-2 py-1.5 hover:bg-subtle">
-                    <span className="flex min-w-0 flex-col">
-                      <span className="truncate text-body-s font-semibold">
-                        #{t.number} · {t.subject}
-                      </span>
-                      <span className="text-caption text-ink-2">
-                        {t.partnerName ?? t.requesterName} · {ago(t.lastMessageAt, now)}
-                      </span>
-                    </span>
-                    <TicketStatusPill status={t.status} />
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          )}
-          <Rows rows={[["Lead segnalati da decidere", o.openReports]]} />
-        </Area>
       </div>
 
       <Panel title="Dove sono le aziende online">
@@ -197,10 +166,10 @@ async function Overview() {
   );
 }
 
-function Area({ icon: Icon, title, href, linkLabel, children }: { icon: LucideIcon; title: string; href: string; linkLabel: string; children: React.ReactNode }) {
+function Area({ icon: Icon, title, href, linkLabel, className = "", children }: { icon: LucideIcon; title: string; href: string; linkLabel: string; className?: string; children: React.ReactNode }) {
   const id = `area-${title.toLowerCase()}`;
   return (
-    <section aria-labelledby={id} className="flex min-w-0 flex-col gap-4 rounded-lg border border-line bg-surface p-5">
+    <section aria-labelledby={id} className={`flex min-w-0 flex-col gap-4 rounded-lg border border-line bg-surface p-5 ${className}`}>
       <div className="flex items-center justify-between gap-3">
         <h2 id={id} className="inline-flex items-center gap-2 text-h4 font-semibold">
           <span className="flex size-8 items-center justify-center rounded-md bg-subtle text-primary">

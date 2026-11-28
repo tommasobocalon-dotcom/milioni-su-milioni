@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 import { notFound } from "next/navigation";
+import { z } from "zod";
 import { AdminPageHeader, AdminSkeleton, Empty, Panel } from "@/components/admin/ui";
 import { Field, Input, Select, Textarea } from "@/components/ui/field";
 import { requireAdmin } from "@/lib/auth/session";
@@ -27,9 +28,10 @@ export default function CategoryPage({ params }: PageProps<"/admin/categorie/[id
 
 async function Category({ id }: { id: string }) {
   await requireAdmin();
-  const c = /^[0-9a-f-]{36}$/.test(id) ? await getCategoryAdmin(id) : null;
+  if (!z.uuid().safeParse(id).success) notFound();
+  const c = await getCategoryAdmin(id);
   if (!c) notFound();
-  const used = c.partners + c.leads + c.boosts;
+  const used = c.partners + c.leads + c.areaRequests + c.boosts;
   return (
     <div className="flex flex-col gap-6">
       <AdminPageHeader
@@ -63,9 +65,13 @@ async function Category({ id }: { id: string }) {
             </div>
           </ActionForm>
           {used === 0 ? (
-            <DeleteForm action={deleteCategoryAction.bind(null, c.id)} label="Elimina la categoria" />
+            <DeleteForm
+              action={deleteCategoryAction.bind(null, c.id)}
+              label="Elimina la categoria"
+              confirmMessage={`Eliminare la categoria «${c.name}»? Verranno eliminati anche i suoi servizi e le sue domande.`}
+            />
           ) : (
-            <p className="text-caption text-ink-2">Non si può eliminare: la usano aziende, richieste o boost.</p>
+            <p className="text-caption text-ink-2">La categoria è usata da aziende, richieste di contatto, richieste di zona o boost. Non si può eliminare.</p>
           )}
         </div>
       </Panel>
@@ -76,15 +82,22 @@ async function Category({ id }: { id: string }) {
   );
 }
 
-function UnitSelect({ id, value }: { id: string; value?: string }) {
+function ServiceFields({ service, prefix }: { service?: CategoryAdmin["services"][number]; prefix: string }) {
   return (
-    <Select id={id} name="defaultUnit" defaultValue={value ?? "flat"}>
-      {PRICE_UNITS.map((u) => (
-        <option key={u} value={u}>
-          {PRICE_UNIT_LABEL[u]}
-        </option>
-      ))}
-    </Select>
+    <div className="grid gap-4 md:grid-cols-2">
+      <Field label={service ? "Nome" : "Nuovo servizio"} htmlFor={`${prefix}-name`} required help={service ? undefined : "Es. «Installazione climatizzatore»"}>
+        <Input id={`${prefix}-name`} name="name" defaultValue={service?.name} required minLength={2} maxLength={80} />
+      </Field>
+      <Field label="Unità di prezzo proposta" htmlFor={`${prefix}-unit`} required>
+        <Select id={`${prefix}-unit`} name="defaultUnit" defaultValue={service?.defaultUnit ?? "flat"}>
+          {PRICE_UNITS.map((u) => (
+            <option key={u} value={u}>
+              {PRICE_UNIT_LABEL[u]}
+            </option>
+          ))}
+        </Select>
+      </Field>
+    </div>
   );
 }
 
@@ -106,16 +119,15 @@ function Services({ c }: { c: CategoryAdmin }) {
                 </summary>
                 <div className="flex flex-col gap-3 pt-3">
                   <ActionForm action={updateServiceAction.bind(null, s.id)} submit="Salva il servizio">
-                    <div className="grid gap-4 md:grid-cols-2">
-                      <Field label="Nome" htmlFor={`s-name-${s.id}`} required>
-                        <Input id={`s-name-${s.id}`} name="name" defaultValue={s.name} required minLength={2} maxLength={80} />
-                      </Field>
-                      <Field label="Unità di prezzo proposta" htmlFor={`s-unit-${s.id}`} required>
-                        <UnitSelect id={`s-unit-${s.id}`} value={s.defaultUnit} />
-                      </Field>
-                    </div>
+                    <ServiceFields service={s} prefix={`s-${s.id}`} />
                   </ActionForm>
-                  {s.priceLists + s.leads === 0 && <DeleteForm action={deleteServiceAction.bind(null, s.id)} label="Elimina il servizio" />}
+                  {s.priceLists + s.leads === 0 && (
+                    <DeleteForm
+                      action={deleteServiceAction.bind(null, s.id)}
+                      label="Elimina il servizio"
+                      confirmMessage={`Eliminare il servizio «${s.name}»? Verranno eliminate anche le sue domande.`}
+                    />
+                  )}
                 </div>
               </details>
             </li>
@@ -124,14 +136,7 @@ function Services({ c }: { c: CategoryAdmin }) {
       )}
       <div className="border-t border-line p-5">
         <ActionForm action={createServiceAction.bind(null, c.id)} submit="Aggiungi il servizio" reset>
-          <div className="grid gap-4 md:grid-cols-2">
-            <Field label="Nuovo servizio" htmlFor="s-new-name" required help="Es. «Installazione climatizzatore»">
-              <Input id="s-new-name" name="name" required minLength={2} maxLength={80} />
-            </Field>
-            <Field label="Unità di prezzo proposta" htmlFor="s-new-unit" required>
-              <UnitSelect id="s-new-unit" />
-            </Field>
-          </div>
+          <ServiceFields prefix="s-new" />
         </ActionForm>
       </div>
     </Panel>
@@ -210,7 +215,11 @@ function Questions({ c }: { c: CategoryAdmin }) {
                   <ActionForm action={updateQuestionAction.bind(null, q.id)} submit="Salva la domanda">
                     <QuestionFields c={c} q={q} prefix={`q-${q.id}`} />
                   </ActionForm>
-                  <DeleteForm action={deleteQuestionAction.bind(null, q.id)} label="Elimina la domanda" />
+                  <DeleteForm
+                    action={deleteQuestionAction.bind(null, q.id)}
+                    label="Elimina la domanda"
+                    confirmMessage={`Eliminare la domanda «${q.label}»? Verrà rimossa dal modulo per le nuove richieste.`}
+                  />
                 </div>
               </details>
             </li>

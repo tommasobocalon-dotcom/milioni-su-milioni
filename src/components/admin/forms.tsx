@@ -24,3 +24,18 @@ export function AccountStatusForm({ action, suspended }: { action: FormAction; s
     </form>
   );
 }
+
+/** Pulsante d'invio che chiede conferma prima di un'azione che si nota subito sul sito o non si annulla. */
+export function ConfirmButton({ confirm, children, ...props }: React.ComponentProps<typeof Button> & { confirm: string }) {
+  return (
+    <Button
+      type="submit"
+      {...props}
+      onClick={(e) => {
+        if (!window.confirm(confirm)) e.preventDefault();
+      }}
+    >
+      {children}
+    </Button>
+  );
+}

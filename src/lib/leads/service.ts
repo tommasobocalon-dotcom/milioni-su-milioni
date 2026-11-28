@@ -67,10 +67,8 @@ export async function syncFreePlan(tx: Tx, partnerId: string): Promise<boolean> 
   const status = (await freeLeadsUsed(tx, partnerId)) >= FREE_LEADS ? "suspended" : "active";
   if (status === sub.status) return false;
   await tx.update(subscriptions).set({ status }).where(eq(subscriptions.id, sub.id));
-  const [p] = await tx.select({ accountStatus: partners.accountStatus, verification: partners.verificationStatus }).from(partners).where(eq(partners.id, partnerId)).for("update");
-  // Partner sospeso col gratuito ancora attivo = sospensione a mano del team: resta com'è.
-  if (p && !(p.accountStatus === "suspended" && sub.status === "active"))
-    await tx.update(partners).set({ accountStatus: listingStatus(status, p.verification) }).where(eq(partners.id, partnerId));
+  const [p] = await tx.select({ verification: partners.verificationStatus, suspendedByTeam: partners.suspendedByTeam }).from(partners).where(eq(partners.id, partnerId)).for("update");
+  if (p) await tx.update(partners).set({ accountStatus: listingStatus(status, p.verification, p.suspendedByTeam) }).where(eq(partners.id, partnerId));
   return true;
 }
 

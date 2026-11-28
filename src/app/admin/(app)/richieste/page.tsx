@@ -32,8 +32,12 @@ async function Leads({ filter, q, partnerId }: { filter?: LeadFilter; q?: string
   await requireAdmin();
   await connection();
   const now = new Date();
-  const [counts, rows] = await Promise.all([countLeadsByFilter(), listLeadsAdmin({ q, filter, partnerId })]);
-  const href = (f?: string) => `/admin/richieste${f ? `?filtro=${f}` : ""}`;
+  const [counts, rows] = await Promise.all([countLeadsByFilter(partnerId), listLeadsAdmin({ q, filter, partnerId })]);
+  // Filtri e ricerca restano sull'azienda scelta dalla sua scheda.
+  const href = (f?: string) => {
+    const params = new URLSearchParams({ ...(f && { filtro: f }), ...(partnerId && { partner: partnerId }), ...(q && { q }) }).toString();
+    return `/admin/richieste${params ? `?${params}` : ""}`;
+  };
 
   return (
     <div className="flex flex-col gap-6">
@@ -57,6 +61,7 @@ async function Leads({ filter, q, partnerId }: { filter?: LeadFilter; q?: string
           </div>
           <form role="search" className="flex gap-2" action="/admin/richieste">
             {filter && <input type="hidden" name="filtro" value={filter} />}
+            {partnerId && <input type="hidden" name="partner" value={partnerId} />}
             <label htmlFor="cerca-richiesta" className="sr-only">
               Cerca per cliente, email, telefono o azienda
             </label>
@@ -68,7 +73,8 @@ async function Leads({ filter, q, partnerId }: { filter?: LeadFilter; q?: string
         </div>
         <p className="border-t border-line px-5 py-3 text-caption text-ink-2">
           <strong className="text-ink">Codice non confermato</strong>: il cliente non ha inserito il codice arrivato per email; se sono tante, controlla l&apos;invio
-          delle email. <strong className="text-ink">Non consegnata</strong>: l&apos;azienda non era attiva e al cliente abbiamo proposto alternative.
+          delle email. <strong className="text-ink">Non consegnata</strong>: l&apos;azienda non era attiva e al cliente abbiamo proposto alternative.{" "}
+          <strong className="text-ink">Segnalata</strong>: l&apos;azienda dice che la richiesta non è valida; se la accogli non conta più tra quelle ricevute.
         </p>
         {rows.length === 0 ? (
           <Empty>Nessuna richiesta trovata.</Empty>

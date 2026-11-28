@@ -1,5 +1,5 @@
 import { Suspense } from "react";
-import { AdminSidebar } from "@/components/admin/sidebar";
+import { AdminSidebar, SectionTabs } from "@/components/admin/sidebar";
 import { AdminSkeleton } from "@/components/admin/ui";
 import { requireAdmin } from "@/lib/auth/session";
 import { countTicketsByStatus } from "@/lib/data/support";
@@ -29,6 +29,9 @@ async function AdminShell({ children }: { children: React.ReactNode }) {
         }
       />
       <main id="contenuto" className="min-w-0 flex-1 px-4 py-6 sm:px-8 lg:py-8">
+        <Suspense fallback={null}>
+          <SectionTabs />
+        </Suspense>
         {children}
       </main>
     </div>

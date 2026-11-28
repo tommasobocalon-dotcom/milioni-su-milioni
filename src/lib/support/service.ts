@@ -204,8 +204,9 @@ export async function replyFromPartner(partnerId: string, number: number, user: 
 }
 
 /**
- * Risposta del team: si salva sul ticket, che passa "in attesa del cliente", e parte per email a chi
- * ha scritto. Se l'email non parte la risposta resta salvata e il Backoffice mostra l'errore.
+ * Risposta del team: parte per email a chi ha scritto e poi si salva sul ticket, che passa "in attesa del cliente".
+ * Prima l'email (27/11/2026): se non parte non si salva niente, il ticket resta in coda e si può riprovare senza
+ * doppioni; prima la risposta restava salvata, il ticket usciva dalla coda e il nuovo invio la duplicava.
  */
 export async function replyToTicket(ticketId: string, admin: { id: string; name: string; email: string }, body: string): Promise<{ emailError?: string } | null> {
   const [t] = await db
@@ -214,12 +215,6 @@ export async function replyToTicket(ticketId: string, admin: { id: string; name:
     .where(eq(supportTickets.id, ticketId))
     .limit(1);
   if (!t) return null;
-  const now = new Date();
-  await db.transaction(async (tx) => {
-    await tx.insert(supportMessages).values({ ticketId: t.id, kind: "reply", authorName: admin.name, authorUserId: admin.id, body, createdAt: now });
-    await tx.update(supportTickets).set({ status: statusAfter(t.status, "reply"), lastMessageAt: now }).where(eq(supportTickets.id, t.id));
-    await tx.insert(auditLogs).values({ actor: admin.email, action: "support.reply", entity: "support_ticket", entityId: t.id, data: { number: t.number } });
-  });
 
   // Il link solo se il ticket compare davvero in Area Partner (aperto da dentro l'account).
   const areaLink = t.partnerId && t.openedFromAccount ? `\n\nTrovi tutta la conversazione anche nell'Area Partner: ${appUrl()}/area-partner/assistenza/${t.number}` : "";
@@ -234,5 +229,12 @@ export async function replyToTicket(ticketId: string, admin: { id: string; name:
     logError("[assistenza] risposta non inviata per email:", e);
     return { emailError: e instanceof Error ? e.message : String(e) };
   }
+
+  const now = new Date();
+  await db.transaction(async (tx) => {
+    await tx.insert(supportMessages).values({ ticketId: t.id, kind: "reply", authorName: admin.name, authorUserId: admin.id, body, createdAt: now });
+    await tx.update(supportTickets).set({ status: statusAfter(t.status, "reply"), lastMessageAt: now }).where(eq(supportTickets.id, t.id));
+    await tx.insert(auditLogs).values({ actor: admin.email, action: "support.reply", entity: "support_ticket", entityId: t.id, data: { number: t.number } });
+  });
   return {};
 }

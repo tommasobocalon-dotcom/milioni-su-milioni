@@ -132,4 +132,10 @@ describe("listingStatus", () => {
     expect(listingStatus("cancelled", "pending")).toBe("cancelled");
     expect(listingStatus("activating", "verified")).toBe("activating");
   });
+
+  it("una sospensione del team resta anche con il piano attivo e i dati verificati (un rinnovo non la toglie)", () => {
+    expect(listingStatus("active", "verified", true)).toBe("suspended");
+    expect(listingStatus("activating", "pending", true)).toBe("suspended");
+  });
 });
+

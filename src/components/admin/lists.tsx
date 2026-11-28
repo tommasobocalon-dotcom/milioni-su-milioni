@@ -1,5 +1,8 @@
 import Link from "next/link";
+import { resolveLeadReportAction } from "@/app/admin/actions";
+import { ConfirmButton } from "@/components/admin/forms";
 import { ago, dateOnly } from "@/components/admin/ui";
+import { REPORT_REASONS } from "@/lib/domain/lead-rules";
 import { statusInfo } from "@/lib/leads/status";
 import { leadOutcome, sponsorshipState } from "@/lib/domain/admin";
 import { cn } from "@/lib/utils";
@@ -9,6 +12,12 @@ import { aLuogo } from "@/lib/domain/format";
 
 const PILL = "inline-flex h-6 shrink-0 items-center rounded-full px-2.5 text-caption font-semibold whitespace-nowrap";
 const TONE = { ok: "bg-subtle text-primary", warn: "bg-sponsor text-ink", bad: "bg-error-soft text-error", muted: "bg-muted text-ink-2" } as const;
+
+const REPORT = {
+  open: { label: "Segnalata: da decidere", style: TONE.warn },
+  accepted: { label: "Segnalazione accolta", style: TONE.muted },
+  rejected: { label: "Segnalazione respinta", style: TONE.muted },
+} as const;
 
 /** Link alla dashboard Stripe: in sandbox con /test, così si apre il cliente giusto. */
 export function stripeDashboardUrl(kind: "customers" | "subscriptions", id: string) {
@@ -32,6 +41,7 @@ type LeadRow = {
   verifiedAt: Date | null;
   deliveredAt: Date | null;
   reportStatus: string | null;
+  reportReason: string | null;
   /** Risposta all'email "Com'è andata?": null finché il cliente non risponde. */
   clientContacted: boolean | null;
 };
@@ -70,11 +80,41 @@ export function LeadList({ leads, now, showPartner = true }: { leads: LeadRow[];
               {l.clientContacted !== null && (
                 <span className={cn(PILL, l.clientContacted ? TONE.ok : TONE.bad)}>{l.clientContacted ? "Cliente richiamato" : "Cliente non richiamato"}</span>
               )}
+              {l.reportStatus && <span className={cn(PILL, REPORT[l.reportStatus as keyof typeof REPORT].style)}>{REPORT[l.reportStatus as keyof typeof REPORT].label}</span>}
             </span>
+            {l.reportStatus && <ReportDecision lead={l} />}
           </li>
         );
       })}
     </ul>
+  );
+}
+
+/** Segnalazione dell'azienda (PRD §7.4): motivo e, se è ancora aperta, la decisione del team. */
+function ReportDecision({ lead }: { lead: LeadRow }) {
+  const reason = REPORT_REASONS.find((r) => r.value === lead.reportReason)?.label ?? lead.reportReason;
+  return (
+    <div className="flex flex-col gap-2 md:col-span-2 md:flex-row md:items-center md:justify-between">
+      <p className="text-caption text-ink-2">
+        Motivo della segnalazione: <strong className="text-ink">{reason}</strong>
+      </p>
+      {lead.reportStatus === "open" && (
+        <div className="flex shrink-0 gap-2">
+          <form action={resolveLeadReportAction.bind(null, lead.id)}>
+            <input type="hidden" name="decision" value="accept" />
+            <ConfirmButton size="s" confirm={`Accogliere la segnalazione di ${lead.partnerName}? La richiesta non conterà più tra quelle ricevute.`}>
+              Accogli e restituisci
+            </ConfirmButton>
+          </form>
+          <form action={resolveLeadReportAction.bind(null, lead.id)}>
+            <input type="hidden" name="decision" value="reject" />
+            <ConfirmButton size="s" variant="secondary" confirm={`Respingere la segnalazione di ${lead.partnerName}? La richiesta resta conteggiata.`}>
+              Respingi
+            </ConfirmButton>
+          </form>
+        </div>
+      )}
+    </div>
   );
 }
 

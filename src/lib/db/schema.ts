@@ -249,6 +249,8 @@ export const partners = pgTable(
     responseMinutes: integer("response_minutes"),
     verificationStatus: verificationStatus("verification_status").notNull().default("pending"),
     accountStatus: accountStatus("account_status").notNull().default("activating"),
+    /** Sospesa a mano dal gestionale: resta sospesa anche se Stripe rinnova il piano, finché il team non la riattiva. */
+    suspendedByTeam: boolean("suspended_by_team").notNull().default(false),
     completeness: smallint("completeness").notNull().default(0),
     /** Cliente Stripe del partner, creato al primo pagamento. */
     stripeCustomerId: text("stripe_customer_id").unique(),

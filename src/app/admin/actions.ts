@@ -1,6 +1,6 @@
 "use server";
 
-import { and, eq, inArray } from "drizzle-orm";
+import { and, eq, inArray, sql } from "drizzle-orm";
 import { revalidatePath, updateTag } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
@@ -69,9 +69,9 @@ export async function replyTicketAction(ticketId: string, _prev: FormState, form
   if (!body.success) return { error: body.error.issues[0].message };
   const result = await replyToTicket(ticketId, admin, body.data);
   if (!result) return { error: "Ticket non trovato" };
+  if (result.emailError) return { error: `L'email non è partita (${result.emailError}): la risposta non è stata salvata, riprova tra poco.` };
   const number = await ticketNumber(ticketId);
   if (number) refreshTicket(number);
-  if (result.emailError) return { error: `Risposta salvata, ma l'email non è partita: ${result.emailError}` };
   return { ok: "Risposta inviata" };
 }
 
@@ -99,17 +99,16 @@ export async function setTicketStatusAction(ticketId: string, formData: FormData
   refreshTicket(t.number);
 }
 
-/** Prende in carico il ticket (o lo rilascia se era già suo). */
+/** Prende in carico il ticket (o lo rilascia se era già suo), in un solo aggiornamento: due clic insieme non si pestano. */
 export async function toggleTicketAssigneeAction(ticketId: string) {
   const admin = await requireAdmin();
   if (!Id.safeParse(ticketId).success) return;
-  const [t] = await db.select({ number: supportTickets.number, assigneeId: supportTickets.assigneeId }).from(supportTickets).where(eq(supportTickets.id, ticketId));
-  if (!t) return;
-  await db
+  const [t] = await db
     .update(supportTickets)
-    .set({ assigneeId: t.assigneeId === admin.id ? null : admin.id })
-    .where(eq(supportTickets.id, ticketId));
-  refreshTicket(t.number);
+    .set({ assigneeId: sql`case when ${supportTickets.assigneeId} = ${admin.id} then null else ${admin.id}::uuid end` })
+    .where(eq(supportTickets.id, ticketId))
+    .returning({ number: supportTickets.number });
+  if (t) refreshTicket(t.number);
 }
 
 // ---------------------------------------------------------------------------
@@ -169,31 +168,35 @@ export async function setVerificationAction(partnerId: string, formData: FormDat
 }
 
 /**
- * Sospensione manuale: la scheda sparisce dalle ricerche e i nuovi lead non vengono consegnati.
- * La riattivazione rimette lo stato che deriva dall'abbonamento: senza abbonamento attivo resta fuori.
+ * Sospensione manuale: la scheda sparisce dalle ricerche e i nuovi lead non vengono consegnati. Resta anche se Stripe
+ * rinnova il piano (`suspendedByTeam`, 27/11/2026: prima il primo rinnovo la toglieva). La riattivazione toglie il
+ * blocco e rimette lo stato che deriva da piano e verifica.
  */
 export async function setAccountStatusAction(partnerId: string, _prev: FormState, formData: FormData): Promise<FormState> {
   const admin = await requireAdmin();
   if (!Id.safeParse(partnerId).success) return { error: "Partner non valido" };
   const action = formData.get("action");
-  let next: "suspended" | "activating" | "active" | "cancelled";
-  if (action === "suspend") {
-    next = "suspended";
-  } else if (action === "reactivate") {
-    const fromPlans = await statusFromPlans(db, partnerId);
-    if (fromPlans !== "active") return { error: "Nessun abbonamento pagato: il partner torna attivo da solo quando paga il piano." };
-    const [v] = await db.select({ verification: partners.verificationStatus }).from(partners).where(eq(partners.id, partnerId));
-    if (!v) return { error: "Partner non trovato" };
-    // Senza verifica la scheda resta nascosta, in attivazione: va online quando il team la verifica.
-    next = listingStatus(fromPlans, v.verification);
-  } else {
-    return { error: "Azione non valida" };
-  }
-  const [p] = await db.update(partners).set({ accountStatus: next }).where(eq(partners.id, partnerId)).returning({ id: partners.id });
-  if (!p) return { error: "Partner non trovato" };
-  await db.insert(auditLogs).values({ actor: admin.email, action: `partner.${action}`, entity: "partner", entityId: partnerId, data: { status: next } });
+  if (action !== "suspend" && action !== "reactivate") return { error: "Azione non valida" };
+  const next = await db.transaction(async (tx) => {
+    const [p] = await tx.select({ verification: partners.verificationStatus }).from(partners).where(eq(partners.id, partnerId)).for("update");
+    if (!p) return null;
+    const status = action === "suspend" ? "suspended" : listingStatus(await statusFromPlans(tx, partnerId), p.verification);
+    await tx.update(partners).set({ accountStatus: status, suspendedByTeam: action === "suspend" }).where(eq(partners.id, partnerId));
+    await tx.insert(auditLogs).values({ actor: admin.email, action: `partner.${action}`, entity: "partner", entityId: partnerId, data: { status } });
+    return status;
+  });
+  if (!next) return { error: "Partner non trovato" };
   await refreshPartnerPages(partnerId);
-  return { ok: next === "suspended" ? "Partner sospeso" : next === "active" ? "Partner riattivato" : "Partner riattivato: la scheda va online quando lo verifichi" };
+  return {
+    ok:
+      next === "suspended" && action === "suspend"
+        ? "Partner sospeso"
+        : next === "active"
+          ? "Partner riattivato"
+          : next === "activating"
+            ? "Blocco tolto: la scheda va online quando il piano è pagato e i dati sono verificati"
+            : "Blocco tolto, ma il pagamento del piano non è riuscito: torna online quando paga",
+  };
 }
 
 // ---------------------------------------------------------------------------

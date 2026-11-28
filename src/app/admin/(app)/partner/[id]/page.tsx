@@ -5,7 +5,7 @@ import { ExternalLink } from "lucide-react";
 import { connection } from "next/server";
 import { z } from "zod";
 import { setAccountStatusAction, setVerificationAction } from "@/app/admin/actions";
-import { AccountStatusForm } from "@/components/admin/forms";
+import { AccountStatusForm, ConfirmButton } from "@/components/admin/forms";
 import { AccountStatusPill, actionLabel, AdminPageHeader, AdminSkeleton, dateOnly, dateTime, Empty, Panel, TicketStatusPill, VerificationPill } from "@/components/admin/ui";
 import { Button } from "@/components/ui/button";
 import { requireAdmin } from "@/lib/auth/session";
@@ -178,9 +178,9 @@ async function PartnerDetail({ id }: { id: string }) {
                 {p.verificationStatus !== "rejected" && (
                   <form action={setVerificationAction.bind(null, p.id)}>
                     <input type="hidden" name="status" value="rejected" />
-                    <Button type="submit" size="s" variant="danger">
+                    <ConfirmButton size="s" variant="danger" confirm={`Respingere la verifica di ${p.displayName}? La scheda resta nascosta finché non la verifichi.`}>
                       Respingi
-                    </Button>
+                    </ConfirmButton>
                   </form>
                 )}
                 {p.verificationStatus !== "pending" && (
@@ -198,11 +198,11 @@ async function PartnerDetail({ id }: { id: string }) {
           <Panel title="Account">
             <div className="flex flex-col gap-3 p-5">
               <p className="text-body-s text-ink-2">
-                {p.accountStatus === "suspended"
-                  ? "Sospeso: la scheda non compare nelle ricerche e i nuovi lead non vengono consegnati."
-                  : "La sospensione nasconde la scheda e ferma i nuovi lead. Un pagamento andato a buon fine la toglie in automatico."}
+                {p.suspendedByTeam
+                  ? "Sospeso dal team: la scheda non compare nelle ricerche e i nuovi lead non vengono consegnati, anche se il piano si rinnova."
+                  : "La sospensione nasconde la scheda e ferma i nuovi lead finché non la togli tu: i pagamenti non la tolgono."}
               </p>
-              <AccountStatusForm action={setAccountStatusAction.bind(null, p.id)} suspended={p.accountStatus === "suspended"} />
+              <AccountStatusForm action={setAccountStatusAction.bind(null, p.id)} suspended={p.suspendedByTeam} />
             </div>
           </Panel>
 

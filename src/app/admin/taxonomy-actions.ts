@@ -6,7 +6,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { requireAdmin } from "@/lib/auth/session";
 import { db } from "@/lib/db/client";
-import { auditLogs, boosts, categories, leads, partners, partnerServices, serviceQuestions, services } from "@/lib/db/schema";
+import { areaRequests, auditLogs, boosts, categories, leads, partners, partnerServices, serviceQuestions, services } from "@/lib/db/schema";
 import { CategoryInput, QuestionInput, ServiceInput, uniqueQuestionKey, uniqueSlug } from "@/lib/domain/taxonomy";
 import type { FormState } from "@/components/ui/message-form";
 
@@ -17,7 +17,8 @@ import type { FormState } from "@/components/ui/message-form";
  */
 
 const Id = z.uuid();
-const Order = z.coerce.number().int().min(0).max(999);
+const Order = z.string().trim().min(1).pipe(z.coerce.number<string>().int().min(0).max(999)).optional();
+const ORDER_ERROR = "L’ordine deve essere un numero intero tra 0 e 999";
 const firstError = (e: z.ZodError) => e.issues[0]?.message ?? "Controlla i campi";
 const fields = (fd: FormData, names: string[]) => Object.fromEntries(names.map((n) => [n, fd.get(n) ?? undefined]));
 
@@ -53,10 +54,11 @@ export async function updateCategoryAction(id: string, _prev: FormState, fd: For
   // Il tipo di azienda non cambia: deciderebbe di nuovo indirizzi e modulo delle aziende già iscritte.
   const parsed = CategoryInput.omit({ partnerType: true }).safeParse(fields(fd, ["name", "pluralName", "icon"]));
   if (!parsed.success) return { error: firstError(parsed.error) };
-  const order = Order.safeParse(fd.get("sortOrder"));
+  const order = Order.safeParse(fd.get("sortOrder") ?? undefined);
+  if (!order.success) return { error: ORDER_ERROR };
   const done = await db
     .update(categories)
-    .set({ ...parsed.data, ...(order.success ? { sortOrder: order.data } : {}) })
+    .set({ ...parsed.data, sortOrder: order.data })
     .where(eq(categories.id, id))
     .returning({ id: categories.id });
   if (!done.length) return { error: "Categoria non trovata" };
@@ -72,9 +74,12 @@ export async function deleteCategoryAction(id: string): Promise<FormState> {
     const [row] = await tx.select({ name: categories.name }).from(categories).where(eq(categories.id, id)).for("update");
     if (!row) return "Categoria non trovata";
     const [{ n }] = await tx.execute<{ n: number }>(
-      sql`select (select count(*) from ${partners} where category_id = ${id}) + (select count(*) from ${leads} where category_id = ${id}) + (select count(*) from ${boosts} where category_id = ${id}) as n`,
+      sql`select (select count(*) from ${partners} where category_id = ${id})
+        + (select count(*) from ${leads} where category_id = ${id})
+        + (select count(*) from ${areaRequests} where category_id = ${id})
+        + (select count(*) from ${boosts} where category_id = ${id}) as n`,
     );
-    if (Number(n) > 0) return "Ci sono aziende, richieste o boost in questa categoria: non si può eliminare";
+    if (Number(n) > 0) return "La categoria è usata da aziende, richieste di contatto, richieste di zona o boost. Non si può eliminare.";
     await tx.delete(categories).where(eq(categories.id, id));
     await tx.insert(auditLogs).values({ actor: admin.email, action: "category.delete", entity: "taxonomy", entityId: id, data: { name: row.name } });
     return null;
@@ -169,14 +174,15 @@ export async function updateQuestionAction(questionId: string, _prev: FormState,
   if (!Id.safeParse(questionId).success) return { error: "Domanda non valida" };
   const parsed = QuestionInput.safeParse(fields(fd, QUESTION_FIELDS));
   if (!parsed.success) return { error: firstError(parsed.error) };
+  const order = Order.safeParse(fd.get("sortOrder") ?? undefined);
+  if (!order.success) return { error: ORDER_ERROR };
   const [current] = await db.select({ categoryId: serviceQuestions.categoryId }).from(serviceQuestions).where(eq(serviceQuestions.id, questionId));
   if (!current) return { error: "Domanda non trovata" };
   const serviceId = await serviceOf(current.categoryId, fd.get("serviceId"));
   if (serviceId === undefined) return { error: "Servizio non valido" };
-  const order = Order.safeParse(fd.get("sortOrder"));
   await db
     .update(serviceQuestions)
-    .set({ ...parsed.data, serviceId, ...(order.success ? { sortOrder: order.data } : {}) })
+    .set({ ...parsed.data, serviceId, sortOrder: order.data })
     .where(eq(serviceQuestions.id, questionId));
   await audit(admin.email, "question.update", questionId, { label: parsed.data.label });
   refresh(current.categoryId);

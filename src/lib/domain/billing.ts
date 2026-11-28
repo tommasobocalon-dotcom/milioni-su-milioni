@@ -40,8 +40,10 @@ export type VerificationStatus = "pending" | "verified" | "rejected";
  * Stato della scheda pubblica: online ("active") solo con un piano attivo **e** i dati dell'azienda controllati dal team
  * (partita IVA e sede, decisione del 20/11/2026). Prima chiunque poteva registrare la partita IVA di un'altra azienda e,
  * col piano gratuito, andare online a suo nome. Con il piano attivo ma senza verifica resta "activating", nascosta.
+ * Una sospensione del team (`partners.suspended_by_team`, 27/11/2026) vince su tutto: la toglie solo "Riattiva".
  */
-export function listingStatus(fromPlans: SubscriptionStatus, verification: VerificationStatus): SubscriptionStatus {
+export function listingStatus(fromPlans: SubscriptionStatus, verification: VerificationStatus, suspendedByTeam = false): SubscriptionStatus {
+  if (suspendedByTeam) return "suspended";
   return fromPlans === "active" && verification !== "verified" ? "activating" : fromPlans;
 }
 

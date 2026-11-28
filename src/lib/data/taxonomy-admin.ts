@@ -1,7 +1,7 @@
 import "server-only";
 import { asc, eq, sql } from "drizzle-orm";
 import { db } from "@/lib/db/client";
-import { boosts, categories, leads, partners, partnerServices, serviceQuestions, services } from "@/lib/db/schema";
+import { areaRequests, boosts, categories, leads, partners, partnerServices, serviceQuestions, services } from "@/lib/db/schema";
 
 /**
  * Categorie, servizi e domande del modulo di richiesta per il gestionale → Categorie (PRD §10, "Tassonomia").
@@ -15,11 +15,9 @@ export async function listCategoriesAdmin() {
     .select({
       id: categories.id,
       name: categories.name,
-      pluralName: categories.pluralName,
       slug: categories.slug,
       icon: categories.icon,
       partnerType: categories.partnerType,
-      sortOrder: categories.sortOrder,
       services: count(sql`select count(*) from ${services} s where s.category_id = "categories"."id"`),
       questions: count(sql`select count(*) from ${serviceQuestions} q where q.category_id = "categories"."id"`),
       partners: count(sql`select count(*) from ${partners} p where p.category_id = "categories"."id"`),
@@ -41,6 +39,7 @@ export async function getCategoryAdmin(id: string) {
       sortOrder: categories.sortOrder,
       partners: count(sql`select count(*) from ${partners} p where p.category_id = "categories"."id"`),
       leads: count(sql`select count(*) from ${leads} l where l.category_id = "categories"."id"`),
+      areaRequests: count(sql`select count(*) from ${areaRequests} ar where ar.category_id = "categories"."id"`),
       boosts: count(sql`select count(*) from ${boosts} b where b.category_id = "categories"."id"`),
     })
     .from(categories)
@@ -51,7 +50,6 @@ export async function getCategoryAdmin(id: string) {
       .select({
         id: services.id,
         name: services.name,
-        slug: services.slug,
         defaultUnit: services.defaultUnit,
         priceLists: count(sql`select count(*) from ${partnerServices} ps where ps.service_id = "services"."id"`),
         leads: count(sql`select count(*) from ${leads} l where l.service_id = "services"."id"`),
@@ -63,7 +61,6 @@ export async function getCategoryAdmin(id: string) {
       .select({
         id: serviceQuestions.id,
         serviceId: serviceQuestions.serviceId,
-        key: serviceQuestions.key,
         label: serviceQuestions.label,
         help: serviceQuestions.help,
         type: serviceQuestions.type,

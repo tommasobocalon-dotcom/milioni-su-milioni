@@ -3,7 +3,7 @@ import { connection } from "next/server";
 import { AdminPageHeader, AdminSkeleton, ago, Empty, Panel } from "@/components/admin/ui";
 import { requireAdmin } from "@/lib/auth/session";
 import { setProvinceOpenAction } from "@/app/admin/actions";
-import { Button } from "@/components/ui/button";
+import { ConfirmButton } from "@/components/admin/forms";
 import { getAreaRequestsAdmin } from "@/lib/data/admin";
 
 export const metadata = { title: "Zone" };
@@ -47,9 +47,18 @@ async function AreaRequests() {
               </span>
               <form action={setProvinceOpenAction.bind(null, p.code)}>
                 <input type="hidden" name="open" value={p.isOpen ? "0" : "1"} />
-                <Button type="submit" size="s" variant={p.isOpen ? "secondary" : "primary"} aria-label={`${p.isOpen ? "Chiudi" : "Apri"} la provincia di ${p.name}`}>
+                <ConfirmButton
+                  size="s"
+                  variant={p.isOpen ? "secondary" : "primary"}
+                  aria-label={`${p.isOpen ? "Chiudi" : "Apri"} la provincia di ${p.name}`}
+                  confirm={
+                    p.isOpen
+                      ? `Chiudere la provincia di ${p.name}? Le sue ${p.partners} aziende spariscono subito dai risultati e chi cerca vede "Inoltra una richiesta".`
+                      : `Aprire la provincia di ${p.name}? Compare subito nei risultati e nella mappa della Home.`
+                  }
+                >
                   {p.isOpen ? "Chiudi" : "Apri"}
-                </Button>
+                </ConfirmButton>
               </form>
             </li>
           ))}

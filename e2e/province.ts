@@ -16,6 +16,8 @@ export async function setProvinceOpen(browser: Browser, name: string, open: bool
   await admin.waitForLoadState("networkidle");
   const [verb, other] = open ? ["Apri", "Chiudi"] : ["Chiudi", "Apri"];
   const button = admin.getByRole("button", { name: `${verb} la provincia di ${name}` });
+  // Apri e Chiudi chiedono conferma (27/11/2026).
+  admin.once("dialog", (d) => d.accept());
   if (await button.isVisible()) await button.click();
   await expect(admin.getByRole("button", { name: `${other} la provincia di ${name}` })).toBeVisible();
   await admin.close();

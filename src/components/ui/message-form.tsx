@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, useRef } from "react";
+import { startTransition, useActionState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/field";
 
@@ -46,7 +46,16 @@ export function MessageForm({
     if (state.ok) form.current?.reset();
   }, [state]);
   return (
-    <form ref={form} action={formAction} className="flex flex-col gap-2">
+    <form
+      ref={form}
+      className="flex flex-col gap-2"
+      onSubmit={(e) => {
+        // Invio manuale: con action={...} React svuota il testo anche quando il server risponde con un errore.
+        e.preventDefault();
+        const data = new FormData(e.currentTarget);
+        startTransition(() => formAction(data));
+      }}
+    >
       <label htmlFor={id} className="text-body-s font-semibold">
         {label}
       </label>

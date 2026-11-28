@@ -274,6 +274,13 @@
       "when": 1795728486690,
       "tag": "0038_province_aperte",
       "breakpoints": true
+    },
+    {
+      "idx": 39,
+      "version": "7",
+      "when": 1795791179001,
+      "tag": "0039_sospensione_team",
+      "breakpoints": true
     }
   ]
 }

@@ -3,36 +3,57 @@
 import { Suspense } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { CreditCard, Flag, Globe, Inbox, LayoutDashboard, LifeBuoy, LogOut, MapPinned, Rocket, ScrollText, Store, Tags } from "lucide-react";
+import { Globe, Inbox, LayoutDashboard, LifeBuoy, LogOut, Settings, Store } from "lucide-react";
 import { logoutAdmin } from "@/app/admin/actions";
 import { Wordmark } from "@/components/site/wordmark";
 import { cn } from "@/lib/utils";
 
-const NAV = [
-  { href: "/admin", label: "Panoramica", icon: LayoutDashboard },
-  { href: "/admin/assistenza", label: "Assistenza", icon: LifeBuoy, badge: true },
-  { href: "/admin/partner", label: "Partner", icon: Store },
-  { href: "/admin/richieste", label: "Richieste clienti", icon: Inbox },
-  { href: "/admin/zone", label: "Zone", icon: MapPinned },
-  { href: "/admin/categorie", label: "Categorie", icon: Tags },
-  { href: "/admin/abbonamenti", label: "Abbonamenti", icon: CreditCard },
-  { href: "/admin/sponsorizzazioni", label: "Sponsorizzazioni", icon: Rocket },
-  { href: "/admin/segnalazioni", label: "Segnalazioni lead", icon: Flag },
-  { href: "/admin/registro", label: "Registro attività", icon: ScrollText },
+/**
+ * Menu del gestionale in 5 voci (27/11/2026, prima 10): le pagine vicine stanno sotto la stessa voce e si
+ * raggiungono dalle schede in cima alla pagina (SectionTabs).
+ */
+const SECTIONS = [
+  { href: "/admin", label: "Da fare", icon: LayoutDashboard, tabs: [] },
+  { href: "/admin/assistenza", label: "Assistenza", icon: LifeBuoy, badge: true, tabs: [] },
+  {
+    href: "/admin/partner",
+    label: "Aziende",
+    icon: Store,
+    tabs: [
+      { href: "/admin/partner", label: "Elenco" },
+      { href: "/admin/abbonamenti", label: "Abbonamenti" },
+      { href: "/admin/sponsorizzazioni", label: "Sponsorizzazioni" },
+    ],
+  },
+  { href: "/admin/richieste", label: "Richieste clienti", icon: Inbox, tabs: [] },
+  {
+    href: "/admin/zone",
+    label: "Impostazioni",
+    icon: Settings,
+    tabs: [
+      { href: "/admin/zone", label: "Zone" },
+      { href: "/admin/categorie", label: "Categorie" },
+      { href: "/admin/registro", label: "Registro attività" },
+    ],
+  },
 ];
 
+const under = (pathname: string, href: string) => pathname === href || pathname.startsWith(`${href}/`);
+const sectionOf = (pathname: string | null) =>
+  pathname ? SECTIONS.find((s) => (s.tabs.length ? s.tabs.some((t) => under(pathname, t.href)) : s.href === "/admin" ? pathname === s.href : under(pathname, s.href))) : undefined;
+
 function NavList({ pathname, badge }: { pathname: string | null; badge: React.ReactNode }) {
-  const active = (href: string) => !!pathname && (href === "/admin" ? pathname === href : pathname.startsWith(href));
+  const current = sectionOf(pathname);
   return (
     <>
-      {NAV.map(({ href, label, icon: Icon, badge: hasBadge }) => (
+      {SECTIONS.map(({ href, label, icon: Icon, badge: hasBadge }) => (
         <Link
           key={href}
           href={href}
-          aria-current={active(href) ? "page" : undefined}
+          aria-current={current?.href === href ? "page" : undefined}
           className={cn(
             "flex shrink-0 items-center gap-3 rounded-md px-3 py-2 text-body-s font-medium",
-            active(href) ? "bg-bosco-600 text-on-brand" : "text-on-brand-muted hover:bg-bosco-700 hover:text-on-brand",
+            current?.href === href ? "bg-bosco-600 text-on-brand" : "text-on-brand-muted hover:bg-bosco-700 hover:text-on-brand",
           )}
         >
           <Icon className="size-[18px]" aria-hidden />
@@ -41,6 +62,33 @@ function NavList({ pathname, badge }: { pathname: string | null; badge: React.Re
         </Link>
       ))}
     </>
+  );
+}
+
+/** Schede della voce di menu aperta (Aziende, Impostazioni), in cima al contenuto. */
+export function SectionTabs() {
+  const pathname = usePathname();
+  const tabs = sectionOf(pathname)?.tabs ?? [];
+  if (!tabs.length) return null;
+  return (
+    <nav aria-label="Sezione" className="mb-6 flex gap-1 overflow-x-auto border-b border-line">
+      {tabs.map((t) => {
+        const active = under(pathname, t.href);
+        return (
+          <Link
+            key={t.href}
+            href={t.href}
+            aria-current={active ? "page" : undefined}
+            className={cn(
+              "-mb-px shrink-0 border-b-2 px-3 py-2 text-body-s font-semibold",
+              active ? "border-primary text-ink" : "border-transparent text-ink-2 hover:text-ink",
+            )}
+          >
+            {t.label}
+          </Link>
+        );
+      })}
+    </nav>
   );
 }
 

@@ -1,5 +1,5 @@
 import "server-only";
-import { and, count, desc, eq, ilike, inArray, isNotNull, isNull, ne, not, or, sql, type SQL } from "drizzle-orm";
+import { and, count, desc, eq, ilike, inArray, isNotNull, not, or, sql, type SQL } from "drizzle-orm";
 import { db } from "@/lib/db/client";
 import {
   areaRequests,
@@ -17,7 +17,6 @@ import {
 } from "@/lib/db/schema";
 import { profileCompleteness } from "@/lib/data/completeness";
 import { profileHref } from "@/lib/data/search";
-import { listTickets } from "@/lib/data/support";
 import { monthlyRecurringCents } from "@/lib/domain/admin";
 
 /** Nome del piano nel gestionale: il piano gratuito di lancio è un Base senza pagamento. */
@@ -79,7 +78,7 @@ type OverviewCounters = {
 export async function getAdminOverview(now: Date) {
   const at = (ms: number) => new Date(now.getTime() + ms).toISOString();
   const t = now.toISOString();
-  const [counters, openTickets, recentPartners] = await Promise.all([
+  const [counters, recentPartners] = await Promise.all([
     db.execute<OverviewCounters>(sql`
       select
         (select count(*) from partners where account_status = 'active')::int as active,
@@ -89,8 +88,7 @@ export async function getAdminOverview(now: Date) {
         (select count(*) from partners where verification_status = 'pending' and account_status <> 'cancelled')::int as to_verify,
         (select count(*) from partners where created_at > ${at(-30 * DAY)})::int as new_partners,
         (select count(*) from partners where created_at between ${at(-60 * DAY)} and ${at(-30 * DAY)})::int as new_partners_prev,
-        (select count(*) from partners p where p.account_status = 'activating' and p.created_at < ${at(-3 * DAY)}
-           and not exists (select 1 from subscriptions s where s.partner_id = p.id and s.status = 'active'))::int as stuck_activating,
+        (select count(*) from partners where ${partnerFilterSql("senza-piano")})::int as stuck_activating,
         (select count(*) from subscriptions where status = 'active' and free)::int as free_subs,
         (select coalesce(json_agg(json_build_object('plan', p.name, 'period', s.period, 'monthlyPriceCents', p.monthly_price_cents, 'yearlyPriceCents', p.yearly_price_cents)), '[]')
            from subscriptions s join plans p on p.id = s.plan_id where s.status = 'active' and not s.free) as paid_subs,
@@ -104,9 +102,9 @@ export async function getAdminOverview(now: Date) {
            left join (select (verified_at at time zone 'Europe/Rome')::date as day, count(*)::int as n from leads
                       where verified_at > ${at(-31 * DAY)} group by 1) x on x.day = d.day) as leads_daily,
         (select count(*) from leads where delivered_at > ${at(-30 * DAY)} and charge = 'quota')::int as leads_delivered,
-        (select count(*) from leads where verified_at is null and created_at between ${at(-7 * DAY)} and ${at(-30 * 60_000)})::int as leads_unconfirmed,
+        (select count(*) from leads where ${leadFilterSql("da-confermare")})::int as leads_unconfirmed,
         (select count(*) from leads where verified_at > ${at(-30 * DAY)} and charge = 'locked')::int as leads_locked,
-        (select count(*) from leads where verified_at > ${at(-7 * DAY)} and delivered_at is null and charge = 'pending')::int as leads_not_delivered,
+        (select count(*) from leads where ${leadFilterSql("non-consegnate")})::int as leads_not_delivered,
         (select count(*) from leads where report_status = 'open')::int as open_reports,
         (select count(*) from support_tickets where status = 'open')::int as open_tickets,
         (select count(*) from boosts where placement = 'home' and starts_at <= ${t} and ends_at > ${t})::int as home_active,
@@ -128,7 +126,6 @@ export async function getAdminOverview(now: Date) {
            select c.name, count(*)::int as n from partners pa join categories c on c.id = pa.category_id
            where pa.account_status = 'active' group by c.name order by n desc limit 8) x) as by_category
     `),
-    listTickets({ status: "open", limit: 6 }),
     db
       .select({
         id: partners.id,
@@ -142,7 +139,7 @@ export async function getAdminOverview(now: Date) {
       .innerJoin(categories, eq(categories.id, partners.categoryId))
       .innerJoin(municipalities, eq(municipalities.id, partners.municipalityId))
       .orderBy(desc(partners.createdAt))
-      .limit(5),
+      .limit(3),
   ]);
   const c = counters[0];
   return {
@@ -178,12 +175,24 @@ export async function getAdminOverview(now: Date) {
     byPlan: c.by_plan,
     byProvince: c.by_province,
     byCategory: c.by_category,
-    openTickets,
     recentPartners,
   };
 }
 
-export type PartnerFilter = AccountStatus | "da-verificare";
+export type PartnerFilter = AccountStatus | "da-verificare" | "senza-piano";
+export const PARTNER_EXTRA_FILTERS: { value: PartnerFilter; label: string }[] = [
+  { value: "da-verificare", label: "Da verificare" },
+  { value: "senza-piano", label: "Senza piano da 3 giorni" },
+];
+
+/** Stessi criteri per "Da fare" e per l'elenco che apre (sql grezzo: vale anche dentro la panoramica). */
+function partnerFilterSql(f: PartnerFilter): SQL {
+  if (f === "da-verificare") return sql`${partners.verificationStatus} = 'pending' and ${partners.accountStatus} <> 'cancelled'`;
+  if (f === "senza-piano")
+    return sql`${partners.accountStatus} = 'activating' and ${partners.createdAt} < now() - interval '3 days'
+      and not exists (select 1 from ${subscriptions} s where s.partner_id = ${partners.id} and s.status = 'active')`;
+  return sql`${partners.accountStatus} = ${f}`;
+}
 
 export async function listPartnersAdmin({ q, filter }: { q?: string; filter?: PartnerFilter }) {
   const filters: SQL[] = [];
@@ -198,8 +207,7 @@ export async function listPartnersAdmin({ q, filter }: { q?: string; filter?: Pa
       )!,
     );
   }
-  if (filter === "da-verificare") filters.push(eq(partners.verificationStatus, "pending"), ne(partners.accountStatus, "cancelled"));
-  else if (filter) filters.push(eq(partners.accountStatus, filter));
+  if (filter) filters.push(partnerFilterSql(filter));
   const rows = await db
     .select({
       id: partners.id,
@@ -227,26 +235,11 @@ export async function listPartnersAdmin({ q, filter }: { q?: string; filter?: Pa
 }
 
 export async function countPartnersByFilter(): Promise<Record<PartnerFilter | "all", number>> {
-  const [byStatus, [toVerify]] = await Promise.all([
-    db.select({ status: partners.accountStatus, n: count() }).from(partners).groupBy(partners.accountStatus),
-    db
-      .select({ n: count() })
-      .from(partners)
-      .where(and(eq(partners.verificationStatus, "pending"), ne(partners.accountStatus, "cancelled"))),
-  ]);
-  const counts = {
-    active: 0,
-    activating: 0,
-    suspended: 0,
-    cancelled: 0,
-    "da-verificare": toVerify?.n ?? 0,
-    all: 0,
-  };
-  for (const r of byStatus) {
-    counts[r.status] = r.n;
-    counts.all += r.n;
-  }
-  return counts;
+  const all: PartnerFilter[] = [...ACCOUNT_STATUSES.map((s) => s.value), ...PARTNER_EXTRA_FILTERS.map((f) => f.value)];
+  const [r] = await db
+    .select({ all: count(), ...Object.fromEntries(all.map((f) => [f, sql<number>`count(*) filter (where ${partnerFilterSql(f)})`.mapWith(Number)])) })
+    .from(partners);
+  return r as Record<PartnerFilter | "all", number>;
 }
 
 export async function getPartnerAdmin(id: string, now: Date) {
@@ -269,6 +262,7 @@ export async function getPartnerAdmin(id: string, now: Date) {
         tagline: partners.tagline,
         accountStatus: partners.accountStatus,
         verificationStatus: partners.verificationStatus,
+        suspendedByTeam: partners.suspendedByTeam,
         completeness: profileCompleteness,
         stripeCustomerId: partners.stripeCustomerId,
         createdAt: partners.createdAt,
@@ -361,29 +355,6 @@ export async function getPartnerAdmin(id: string, now: Date) {
   };
 }
 
-export async function listLeadReports() {
-  return db
-    .select({
-      id: leads.id,
-      partnerId: partners.id,
-      partnerName: partners.displayName,
-      clientName: leads.clientName,
-      requestType: leads.requestType,
-      municipality: municipalities.name,
-      reportReason: leads.reportReason,
-      reportStatus: leads.reportStatus,
-      reportedAt: leads.reportedAt,
-      charge: leads.charge,
-      tokensCharged: leads.tokensCharged,
-    })
-    .from(leads)
-    .innerJoin(partners, eq(partners.id, leads.partnerId))
-    .innerJoin(municipalities, eq(municipalities.id, leads.municipalityId))
-    .where(isNotNull(leads.reportStatus))
-    .orderBy(sql`${leads.reportStatus} = 'open' desc`, desc(leads.reportedAt))
-    .limit(200);
-}
-
 /** Registro delle attività, senza le righe del freno anti-flood per IP (servono solo a contare). */
 export async function listAudit(q?: string) {
   const filters: SQL[] = [not(eq(auditLogs.entity, "ip"))];
@@ -412,8 +383,8 @@ export async function listAudit(q?: string) {
 export const LEAD_FILTERS = [
   { value: "consegnate", label: "Consegnate" },
   { value: "senza-contatti", label: "Senza contatti" },
-  { value: "non-consegnate", label: "Non consegnate" },
-  { value: "da-confermare", label: "Codice non confermato" },
+  { value: "non-consegnate", label: "Non consegnate (7 giorni)" },
+  { value: "da-confermare", label: "Codice non confermato (7 giorni)" },
   { value: "segnalate", label: "Segnalate" },
   { value: "non-richiamati", label: "Cliente non richiamato" },
 ] as const;
@@ -423,8 +394,10 @@ const leadFilterSql = (f: LeadFilter): SQL =>
   ({
     consegnate: and(eq(leads.charge, "quota"), isNotNull(leads.deliveredAt))!,
     "senza-contatti": eq(leads.charge, "locked"),
-    "non-consegnate": and(isNotNull(leads.verifiedAt), isNull(leads.deliveredAt), eq(leads.charge, "pending"))!,
-    "da-confermare": isNull(leads.verifiedAt),
+    // Ultimi 7 giorni, come in "Da fare": più vecchie restano in "Tutte" con il loro esito.
+    "non-consegnate": sql`${leads.verifiedAt} > now() - interval '7 days' and ${leads.deliveredAt} is null and ${leads.charge} = 'pending'`,
+    // Da 30 minuti in su: prima il cliente può ancora inserire il codice.
+    "da-confermare": sql`${leads.verifiedAt} is null and ${leads.createdAt} between now() - interval '7 days' and now() - interval '30 minutes'`,
     segnalate: isNotNull(leads.reportStatus),
     "non-richiamati": eq(leads.clientContacted, false),
   })[f];
@@ -461,6 +434,7 @@ export async function listLeadsAdmin({ q, filter, partnerId, limit = 200 }: { q?
       verifiedAt: leads.verifiedAt,
       deliveredAt: leads.deliveredAt,
       reportStatus: leads.reportStatus,
+      reportReason: leads.reportReason,
       clientContacted: leads.clientContacted,
     })
     .from(leads)
@@ -468,17 +442,19 @@ export async function listLeadsAdmin({ q, filter, partnerId, limit = 200 }: { q?
     .innerJoin(categories, eq(categories.id, leads.categoryId))
     .innerJoin(municipalities, eq(municipalities.id, leads.municipalityId))
     .where(and(...filters))
-    .orderBy(desc(leads.createdAt))
+    // Le segnalazioni da decidere in cima, poi le più recenti.
+    .orderBy(sql`${leads.reportStatus} = 'open' desc nulls last`, desc(leads.createdAt))
     .limit(limit);
 }
 
-export async function countLeadsByFilter(): Promise<Record<LeadFilter | "all", number>> {
+export async function countLeadsByFilter(partnerId?: string): Promise<Record<LeadFilter | "all", number>> {
   const [r] = await db
     .select({
       all: count(),
       ...Object.fromEntries(LEAD_FILTERS.map((f) => [f.value, sql<number>`count(*) filter (where ${leadFilterSql(f.value)})`.mapWith(Number)])),
     })
-    .from(leads);
+    .from(leads)
+    .where(partnerId ? eq(leads.partnerId, partnerId) : undefined);
   return r as Record<LeadFilter | "all", number>;
 }
 
@@ -489,6 +465,7 @@ export async function countLeadsByFilter(): Promise<Record<LeadFilter | "all", n
 export const SUBSCRIPTION_FILTERS = [
   { value: "attivi", label: "A pagamento" },
   { value: "gratuiti", label: "Gratuiti" },
+  { value: "gratuiti-finiti", label: "Gratuiti finiti" },
   { value: "sospesi", label: "Pagamento non riuscito" },
   { value: "da-pagare", label: "Da pagare" },
   { value: "disdetti", label: "Disdetti" },
@@ -498,8 +475,9 @@ export type SubscriptionFilter = (typeof SUBSCRIPTION_FILTERS)[number]["value"];
 const subscriptionFilterSql = (f: SubscriptionFilter): SQL =>
   ({
     attivi: and(eq(subscriptions.status, "active"), eq(subscriptions.free, false))!,
-    // Anche i gratuiti finiti dopo le 3 richieste (syncFreePlan), che non sono pagamenti non riusciti.
-    gratuiti: and(inArray(subscriptions.status, ["active", "suspended"]), eq(subscriptions.free, true))!,
+    gratuiti: and(eq(subscriptions.status, "active"), eq(subscriptions.free, true))!,
+    // Finiti dopo le 3 richieste (syncFreePlan): aspettano che l'azienda scelga un piano, non sono pagamenti non riusciti.
+    "gratuiti-finiti": and(eq(subscriptions.status, "suspended"), eq(subscriptions.free, true))!,
     sospesi: and(eq(subscriptions.status, "suspended"), eq(subscriptions.free, false))!,
     "da-pagare": eq(subscriptions.status, "activating"),
     disdetti: eq(subscriptions.status, "cancelled"),

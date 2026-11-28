@@ -154,9 +154,12 @@ test("lead segnalato: il partner segnala e l'amministratore accoglie", async ({ 
 
   const admin = await browser.newPage();
   await login(admin, ADMIN);
+  // Dal 27/11/2026 le segnalazioni stanno in Richieste clienti: il vecchio indirizzo ci rimanda.
   await admin.goto("/admin/segnalazioni");
+  await expect(admin).toHaveURL(/\/admin\/richieste\?filtro=segnalate/);
   const row = admin.getByRole("listitem").filter({ hasText: "Paola R." });
   await expect(row.getByText("Numero inesistente o irraggiungibile")).toBeVisible();
+  admin.once("dialog", (d) => d.accept());
   await row.getByRole("button", { name: "Accogli e restituisci" }).click();
   await expect(row.getByText("Accolta")).toBeVisible();
 
@@ -192,11 +195,14 @@ test("dal menu l'amministratore vede richieste, abbonamenti e sponsorizzazioni",
   await page.getByRole("link", { name: /^Codice non confermato/ }).click();
   await expect(page).toHaveURL(/filtro=da-confermare/);
 
-  await nav.getByRole("link", { name: "Abbonamenti" }).click();
+  // Abbonamenti e Sponsorizzazioni sono schede della voce Aziende (menu a 5 voci, 27/11/2026).
+  await nav.getByRole("link", { name: "Aziende" }).click();
+  const tabs = page.getByRole("navigation", { name: "Sezione" });
+  await tabs.getByRole("link", { name: "Abbonamenti" }).click();
   await expect(page.getByRole("heading", { level: 1, name: "Abbonamenti" })).toBeVisible();
   await expect(page.getByRole("link", { name: "Rossi Impianti" })).toBeVisible();
 
-  await nav.getByRole("link", { name: "Sponsorizzazioni" }).click();
+  await tabs.getByRole("link", { name: "Sponsorizzazioni" }).click();
   await expect(page.getByRole("heading", { level: 1, name: "Sponsorizzazioni" })).toBeVisible();
   await page.getByRole("link", { name: "Finite negli ultimi 90 giorni" }).click();
   await expect(page).toHaveURL(/filtro=finite/);
