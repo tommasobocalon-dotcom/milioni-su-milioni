@@ -22,9 +22,11 @@ test("una password sbagliata non fa entrare", async ({ page }) => {
   await expect(page).toHaveURL(/\/accedi$/);
 });
 
-test("Google e Apple non configurati rimandano al login con un avviso", async ({ page }) => {
+test("Apple non è nel modulo e, non configurato, rimanda al login con un avviso", async ({ page }) => {
   await page.goto("/accedi");
-  await page.getByRole("link", { name: "Continua con Apple" }).click();
+  await expect(page.getByRole("link", { name: "Continua con Google" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Continua con Apple" })).toHaveCount(0);
+  await page.goto("/auth/apple");
   await expect(page).toHaveURL(/\/accedi\?errore=apple-config$/);
   await expect(page.getByText("L'accesso con Apple non è ancora attivo. Usa email e password.")).toBeVisible();
 });
@@ -72,6 +74,11 @@ test("chi crea un account senza azienda entra come cliente nell'Area cliente", a
   await page.getByRole("button", { name: "Crea il tuo account" }).click();
   await expect(page.getByText("La password deve avere almeno 8 caratteri")).toBeVisible();
   await page.getByLabel(/^Password/).fill("una password lunga");
+  // Senza la spunta su termini e privacy l'account non nasce.
+  await page.getByRole("button", { name: "Crea il tuo account" }).click();
+  await expect(page.getByText("Per creare l'account devi accettare i Termini e l'Informativa privacy")).toBeVisible();
+  await expect(page).toHaveURL(/\/accedi$/);
+  await page.getByLabel(/^Accetto i termini/).check();
   await page.getByRole("button", { name: "Crea il tuo account" }).click();
   await expect(page).toHaveURL(/\/area-cliente$/);
   await expect(page.getByRole("heading", { name: "Le tue richieste" })).toBeVisible();

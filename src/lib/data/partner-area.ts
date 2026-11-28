@@ -56,6 +56,7 @@ export async function getSubscription(partnerId: string) {
         currentPeriodStart: subscriptions.currentPeriodStart,
         currentPeriodEnd: subscriptions.currentPeriodEnd,
         stripeSubscriptionId: subscriptions.stripeSubscriptionId,
+        cancelAt: subscriptions.cancelAt,
         free: subscriptions.free,
       })
       .from(subscriptions)

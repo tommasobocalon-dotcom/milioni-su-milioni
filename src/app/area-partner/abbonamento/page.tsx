@@ -4,6 +4,7 @@ import Link from "next/link";
 import { connection } from "next/server";
 import { Check, Lock } from "lucide-react";
 import { openBillingPortal, startFreePlan } from "@/app/area-partner/actions";
+import { CancelSubscription, UndoCancellationButton } from "@/components/partner/cancel-subscription";
 import { CheckoutButton, PaymentNotice } from "@/components/partner/checkout-button";
 import { PartnerPageHeader } from "@/components/partner/page-header";
 import { PlanChooser } from "@/components/partner/plan-chooser";
@@ -39,6 +40,7 @@ export default function SubscriptionPage({ searchParams }: PageProps<"/area-part
           <Subscription
             payment={sp.pagamento === "ricevuto" ? "received" : sp.pagamento === "ok" ? "started" : sp.pagamento === "cambio" ? "changed" : null}
             welcome={sp.benvenuto === "1"}
+            cancellation={sp.disdetta === "ok" ? "done" : sp.disdetta === "annullata" ? "undone" : null}
           />
           {sp.benvenuto === "1" && <TrackConversion event="signup" />}
           {(sp.pagamento === "ricevuto" || sp.pagamento === "ok") && <TrackConversion event="purchase" />}
@@ -84,7 +86,15 @@ async function Chooser({
   return <PlanChooser plans={plans} demo={demo} owner={owner} trial={trial} current={current} guaranteed={guaranteed} />;
 }
 
-async function Subscription({ payment, welcome }: { payment: "received" | "started" | "changed" | null; welcome: boolean }) {
+async function Subscription({
+  payment,
+  welcome,
+  cancellation,
+}: {
+  payment: "received" | "started" | "changed" | null;
+  welcome: boolean;
+  cancellation: "done" | "undone" | null;
+}) {
   // Pagina raggiungibile anche con account sospeso: è qui che il partner paga per riattivarsi.
   const { partner, memberRole } = await requirePartner({ allowSuspended: true });
   const [sub, hadStripe, fromFree] = await Promise.all([getSubscription(partner.id), hadStripeSubscription(partner.id), hadFreePlan(partner.id)]);
@@ -139,7 +149,13 @@ async function Subscription({ payment, welcome }: { payment: "received" | "start
             risultati quando il piano è attivo e abbiamo verificato i dati dell&apos;azienda.
           </p>
         )}
-        {!notice && !welcome && <p className="rounded-lg bg-subtle p-4 text-body-s">Nessun piano attivo: la tua scheda non compare nei risultati.</p>}
+        {!notice && !welcome && (
+          <p className="rounded-lg bg-subtle p-4 text-body-s">
+            {sub?.status === "cancelled"
+              ? "Il tuo abbonamento è terminato: la scheda non compare più sul sito. I dati dell'azienda sono salvati, scegli un piano per tornare online."
+              : "Nessun piano attivo: la tua scheda non compare nei risultati."}
+          </p>
+        )}
         {free && (
           <section aria-labelledby="piano-gratuito" className="flex flex-col gap-4 rounded-lg border-2 border-primary bg-surface p-6">
             <div className="flex flex-col gap-1">
@@ -291,6 +307,9 @@ async function Subscription({ payment, welcome }: { payment: "received" | "start
   // Discesa programmata nel portale: il database cambia solo al rinnovo, qui si dice subito. Se Stripe non risponde, niente avviso.
   const pending = stripeOn && sub.stripeSubscriptionId ? await pendingPlanChange(sub.stripeSubscriptionId).catch(() => null) : null;
   const pendingName = pending && (await getPlansWithPromo()).find((p) => p.code === pending.planCode)?.name;
+  // Disdetta fatta (qui o nel portale): attivo fino a cancelAt, poi Stripe chiude e la scheda esce dal sito.
+  const endsAt = sub.cancelAt;
+  const canCancel = stripeOn && !!sub.stripeSubscriptionId && !endsAt;
   const portal = stripeOn && sub.stripeSubscriptionId && (
     <CheckoutButton action={openBillingPortal} variant="secondary" className="self-start" disabled={!owner}>
       Apri pagamenti e fatture
@@ -301,7 +320,25 @@ async function Subscription({ payment, welcome }: { payment: "received" | "start
       <PartnerPageHeader title="Il tuo abbonamento" partnerName={partner.displayName} logoUrl={partner.logoUrl} planCode={sub.planCode} />
       {notice}
       {teamSuspension}
-      {pending && pendingName && (
+      {cancellation === "undone" && !endsAt && (
+        <p role="status" className="rounded-lg bg-subtle p-4 text-body-s">
+          <strong>Disdetta annullata.</strong> L&apos;abbonamento continua e si rinnova da solo come prima.
+        </p>
+      )}
+      {endsAt && (
+        <section role="status" className="flex flex-col gap-3 rounded-lg border border-primary bg-surface p-5">
+          <p className="text-body font-semibold">
+            {cancellation === "done" ? "Disdetta registrata. " : ""}L&apos;abbonamento termina il {dateFmt.format(endsAt)}.
+          </p>
+          <p className="text-body-s">
+            Fino ad allora la scheda resta visibile e ricevi le richieste. Da quel giorno la scheda non comparirà più sul sito e non ti
+            addebiteremo più nulla. Ti abbiamo mandato una conferma per email. Hai cambiato idea? Puoi annullare la disdetta fino al{" "}
+            {dateFmt.format(endsAt)}.
+          </p>
+          {stripeOn && sub.stripeSubscriptionId && <UndoCancellationButton owner={owner} />}
+        </section>
+      )}
+      {!endsAt && pending && pendingName && (
         <p role="status" className="rounded-lg bg-subtle p-4 text-body-s">
           <strong>
             Dal {dateFmt.format(pending.from)} passi a {pendingName} {pending.period === "yearly" ? "annuale" : "mensile"}.
@@ -329,21 +366,21 @@ async function Subscription({ payment, welcome }: { payment: "received" | "start
             </div>
             <div>
               <dt className="text-ink-2">Stato</dt>
-              <dd className="font-semibold">{STATUS[sub.status] ?? sub.status}</dd>
+              <dd className="font-semibold">{endsAt && sub.status === "active" ? "attivo, disdetto" : (STATUS[sub.status] ?? sub.status)}</dd>
             </div>
             <div>
-              <dt className="text-ink-2">Prossimo rinnovo</dt>
-              <dd className="font-semibold">{dateFmt.format(sub.currentPeriodEnd)}</dd>
+              <dt className="text-ink-2">{endsAt ? "Termina il" : "Prossimo rinnovo"}</dt>
+              <dd className="font-semibold">{dateFmt.format(endsAt ?? sub.currentPeriodEnd)}</dd>
             </div>
             <div>
               <dt className="text-ink-2">Pagamento</dt>
-              <dd className="font-semibold">{yearly ? "Annuale" : "Mensile"}, automatico</dd>
+              <dd className="font-semibold">{endsAt ? "Nessun altro addebito" : `${yearly ? "Annuale" : "Mensile"}, automatico`}</dd>
             </div>
           </dl>
           {portal ? (
             <div className="flex flex-col gap-2">
               {portal}
-              <p className="text-caption text-ink-2">Cambio piano, metodo di pagamento, fatture e disdetta (vale a fine periodo pagato).</p>
+              <p className="text-caption text-ink-2">Metodo di pagamento, dati di fatturazione e fatture.</p>
             </div>
           ) : (
             !stripeOn && <p className="text-body-s text-ink-2">I pagamenti online non sono ancora attivi.</p>
@@ -360,7 +397,7 @@ async function Subscription({ payment, welcome }: { payment: "received" | "start
           </ul>
         </div>
       </section>
-      {sub.status === "active" && ((stripeOn && sub.stripeSubscriptionId) || demo) && (
+      {sub.status === "active" && !endsAt && ((stripeOn && sub.stripeSubscriptionId) || demo) && (
         <section aria-labelledby="cambia-piano" className="flex flex-col gap-4">
           <div className="flex flex-col gap-1">
             <h2 id="cambia-piano" className="text-h3 font-semibold">
@@ -378,6 +415,7 @@ async function Subscription({ payment, welcome }: { payment: "received" | "start
       <p className="text-body-s text-ink-2">
         Se un pagamento non va a buon fine la scheda viene sospesa subito e torna visibile da sola al pagamento riuscito.
       </p>
+      {canCancel && <CancelSubscription until={dateFmt.format(sub.currentPeriodEnd)} owner={owner} />}
     </div>
   );
 }

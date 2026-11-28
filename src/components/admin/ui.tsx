@@ -103,6 +103,8 @@ const ACTION_LABEL: Record<string, string> = {
   "billing.subscription_checkout": "Aperto il pagamento del piano",
   "billing.plan_change": "Cambio di piano",
   "billing.portal": "Aperto il portale dei pagamenti",
+  "billing.cancel": "Abbonamento disdetto (attivo fino a fine periodo)",
+  "billing.cancel_undone": "Disdetta annullata",
   "billing.home_sponsor_checkout": "Aperto il pagamento del logo in Home",
   "billing.search_boost_checkout": "Aperto il pagamento del boost",
   "billing.area_extension_checkout": "Aperto il pagamento delle province in più",

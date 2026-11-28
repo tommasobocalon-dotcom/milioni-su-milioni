@@ -102,17 +102,17 @@ export function PartnerSignupForm({ categories, places }: { categories: OptionGr
 
       <div className="flex flex-col gap-4">
         <label className="flex items-start gap-3 text-body-s">
-          <input type="checkbox" name="terms" className="mt-0.5 size-5 accent-primary" {...invalid("terms")} />
+          <input type="checkbox" name="terms" required className="mt-0.5 size-5 shrink-0 accent-primary" {...invalid("terms")} />
           <span>
             Accetto i{" "}
-            <Link href="/termini" className="font-semibold text-primary underline">
-              termini per i partner
-            </Link>{" "}
-            e ho letto l&apos;
-            <Link href="/privacy" className="font-semibold text-primary underline">
-              informativa privacy
+            <Link href="/termini" target="_blank" className="font-semibold text-primary underline">
+              termini e condizioni
             </Link>
-            .
+            , comprese le regole per le aziende, e ho letto l&apos;
+            <Link href="/privacy" target="_blank" className="font-semibold text-primary underline">
+              Informativa privacy
+            </Link>
+            . GecoItalia mette solo in contatto e non risponde dei rapporti tra la mia azienda e i clienti. *
           </span>
         </label>
         {/* Gli errori dei campi compaiono sotto il campo; qui quelli generali e quello della casella dei termini. */}

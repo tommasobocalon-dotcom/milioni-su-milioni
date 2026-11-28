@@ -12,7 +12,7 @@ import { COMPANY_COOKIE, partnersOfUser, requirePartner } from "@/lib/auth/sessi
 import { ipRateLimited } from "@/lib/security/ip-limit";
 import { logError } from "@/lib/domain/log";
 import { putImage } from "@/lib/storage";
-import { BillingError, createAreaExtensionCheckout, createHomeSponsorCheckout, createSearchBoostCheckout, createPlanChangeSession, createPortalSession, createSubscriptionCheckout, stripeConfigured } from "@/lib/billing/stripe";
+import { BillingError, cancelSubscriptionAtPeriodEnd, resumeSubscription, createAreaExtensionCheckout, createHomeSponsorCheckout, createSearchBoostCheckout, createPlanChangeSession, createPortalSession, createSubscriptionCheckout, stripeConfigured } from "@/lib/billing/stripe";
 import { db } from "@/lib/db/client";
 import { asPartner } from "@/lib/db/tenant";
 import { auditLogs, leadEvents, leads, partners, partnerServices, plans, portfolioItems, priceUnit, subscriptions, users } from "@/lib/db/schema";
@@ -22,7 +22,8 @@ import { parseAmount } from "@/lib/domain/format";
 import { parseOpeningHours, parseSpecialties } from "@/lib/domain/profile-fields";
 import { canReportLead, REPORT_REASONS } from "@/lib/domain/lead-rules";
 import { AREA_EXTENSION_OFFER, HOME_SPONSOR_PACKAGES, provinceIdsFrom, SEARCH_BOOST_PACKAGES } from "@/lib/domain/offers";
-import { listingStatus } from "@/lib/domain/billing";
+import { CANCEL_REASONS, listingStatus } from "@/lib/domain/billing";
+import { alertTeam, sendEmail } from "@/lib/notify";
 
 import { grantAreaExtensions, grantHomeSponsor, grantSearchBoost, unlockLeads } from "@/lib/leads/service";
 import { freePlanOpen } from "@/lib/domain/free-plan";
@@ -440,6 +441,75 @@ async function billingAction(run: (payer: { partnerId: string; email: string; na
     logError(`[stripe] ${action}`, e);
     return { error: "Stripe non risponde, riprova tra poco" };
   }
+}
+
+const cancelDate = new Intl.DateTimeFormat("it-IT", { day: "numeric", month: "long", year: "numeric", timeZone: "Europe/Rome" });
+const subscriptionPageUrl = () => `${process.env.APP_URL ?? "http://localhost:3000"}/area-partner/abbonamento`;
+
+export type CancelState = { error?: string };
+
+/**
+ * Disdetta dall'Area aziende (28/11/2026): resta tutto attivo fino alla fine del periodo pagato, poi la scheda esce dal sito.
+ * Solo il titolare. Motivo facoltativo, per il team. Email di conferma all'azienda e avviso al team.
+ */
+export async function cancelSubscription(_prev: CancelState, formData: FormData): Promise<CancelState> {
+  const { user, partner, memberRole } = await requirePartner({ allowSuspended: true });
+  if (memberRole !== "owner") return { error: "Solo il titolare dell'account può disdire l'abbonamento" };
+  if (!stripeConfigured()) return { error: "I pagamenti online non sono ancora attivi" };
+  const reason = CANCEL_REASONS.find((r) => r.value === formData.get("reason"));
+  const note = String(formData.get("note") ?? "").trim().slice(0, 500);
+  let endsAt: Date;
+  try {
+    endsAt = await cancelSubscriptionAtPeriodEnd(partner.id, [reason?.label, note].filter(Boolean).join(" — "));
+  } catch (e) {
+    if (e instanceof BillingError) return { error: e.message };
+    logError("[stripe] disdetta", e);
+    return { error: "Stripe non risponde, riprova tra poco" };
+  }
+  await db.insert(auditLogs).values({
+    actor: user.email,
+    action: "billing.cancel",
+    entity: "partner",
+    entityId: partner.id,
+    data: { endsAt: endsAt.toISOString(), reason: reason?.value ?? null, note: note || null },
+  });
+  const until = cancelDate.format(endsAt);
+  // Email e avviso non bloccano: la disdetta è già registrata in Stripe.
+  await Promise.all([
+    sendEmail(
+      user.email,
+      `Disdetta registrata: l'abbonamento termina il ${until}`,
+      `Ciao ${user.name},\n\nabbiamo registrato la disdetta dell'abbonamento di ${partner.displayName}.\n\nFino al ${until} resta tutto attivo: la scheda è visibile sul sito e ricevi le richieste dei clienti. Da quel giorno la scheda non comparirà più su GecoItalia e non ti addebiteremo altro.\n\nHai cambiato idea? Fino al ${until} puoi annullare la disdetta da Area aziende → Abbonamento:\n${subscriptionPageUrl()}\n\nI dati della tua azienda restano salvati: per tornare online basta scegliere di nuovo un piano.\n\nIl team di GecoItalia`,
+    ).catch((e) => logError("[stripe] email di disdetta non inviata", e)),
+    alertTeam(
+      `Disdetta: ${partner.displayName}`,
+      `${partner.displayName} ha disdetto l'abbonamento: resta attivo fino al ${until}.\nMotivo: ${reason?.label ?? "non indicato"}${note ? `\nNote: ${note}` : ""}\nTitolare: ${user.name} <${user.email}>`,
+    ).catch((e) => logError("[stripe] avviso di disdetta non inviato", e)),
+  ]);
+  revalidatePath("/area-partner/abbonamento");
+  redirect("/area-partner/abbonamento?disdetta=ok");
+}
+
+/** Annulla la disdetta prima della scadenza: l'abbonamento torna a rinnovarsi da solo. */
+export async function undoCancellation(): Promise<CancelState> {
+  const { user, partner, memberRole } = await requirePartner({ allowSuspended: true });
+  if (memberRole !== "owner") return { error: "Solo il titolare dell'account può gestire l'abbonamento" };
+  if (!stripeConfigured()) return { error: "I pagamenti online non sono ancora attivi" };
+  try {
+    await resumeSubscription(partner.id);
+  } catch (e) {
+    if (e instanceof BillingError) return { error: e.message };
+    logError("[stripe] annullamento disdetta", e);
+    return { error: "Stripe non risponde, riprova tra poco" };
+  }
+  await db.insert(auditLogs).values({ actor: user.email, action: "billing.cancel_undone", entity: "partner", entityId: partner.id });
+  await sendEmail(
+    user.email,
+    "Disdetta annullata: il tuo abbonamento continua",
+    `Ciao ${user.name},\n\nhai annullato la disdetta: l'abbonamento di ${partner.displayName} continua e si rinnova da solo come prima.\n\n${subscriptionPageUrl()}\n\nIl team di GecoItalia`,
+  ).catch((e) => logError("[stripe] email di annullamento disdetta non inviata", e));
+  revalidatePath("/area-partner/abbonamento");
+  redirect("/area-partner/abbonamento?disdetta=annullata");
 }
 
 /** I pacchetti (logo in Home, boost, estensione) sono solo per Normal e Premium (recap del cliente, 5/11/2026). */

@@ -521,6 +521,8 @@ export const subscriptions = pgTable(
     /** Piano gratuito di lancio (free-plan.ts): Base senza Stripe, 3 richieste con i contatti al mese. */
     free: boolean("free").notNull().default(false),
     stripeSubscriptionId: text("stripe_subscription_id").unique(),
+    /** Disdetta già fatta: l'abbonamento resta attivo fino a questa data, poi si chiude e la scheda esce dal sito. */
+    cancelAt: timestamp("cancel_at", { withTimezone: true }),
     createdAt: createdAt(),
   },
   (t) => [index("subscriptions_partner_idx").on(t.partnerId)],

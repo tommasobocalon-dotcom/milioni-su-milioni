@@ -28,6 +28,7 @@ test("un'azienda parte gratis e alla 3ª richiesta sparisce dai risultati con l'
   await page.getByLabel(/^Nome e cognome/).fill("Sara Gratis");
   await page.getByRole("textbox", { name: /^Email/ }).fill(`partner.gratis.${stamp}@example.com`);
   await page.getByLabel(/^Password/).fill("password-di-prova-2026");
+  await page.getByLabel(/^Accetto i termini/).check();
   await page.getByRole("button", { name: "Continua con i dati dell'attività" }).click();
   await expect(page).toHaveURL(/\/registrazione-partner$/);
   await page.getByLabel(/^Cosa fai/).selectOption({ label: "Idraulico" });

@@ -3,9 +3,9 @@
 import { useState, useSyncExternalStore, useTransition } from "react";
 import Link from "next/link";
 import { ArrowRight, Eye, EyeOff } from "lucide-react";
-import { signIn, signUp, type AuthResult } from "@/app/accedi/actions";
+import { signIn, signUp, type SignUpResult } from "@/app/accedi/actions";
 import type { Audience } from "@/lib/auth/session";
-import { AppleIcon, GoogleIcon } from "@/components/site/provider-icons";
+import { GoogleIcon } from "@/components/site/provider-icons";
 import { Turnstile } from "@/components/site/turnstile";
 import { Button } from "@/components/ui/button";
 import { Field, Input } from "@/components/ui/field";
@@ -62,13 +62,14 @@ export function LoginForm({
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [accepted, setAccepted] = useState(false);
   const [turnstileToken, setTurnstileToken] = useState("");
   const [turnstileReset, setTurnstileReset] = useState(0);
-  const [error, setError] = useState<AuthResult | null>(null);
+  const [error, setError] = useState<SignUpResult | null>(null);
   const [pending, start] = useTransition();
   const signup = mode === "signup";
   const copy = COPY[audience];
-  // Google e Apple solo per i clienti: le aziende entrano con email e password.
+  // Google solo per i clienti: le aziende entrano con email e password. Apple tolto dal modulo (28/11/2026): arriverà più avanti.
   const providers = audience === "client";
 
   function switchMode(to: Mode) {
@@ -81,7 +82,7 @@ export function LoginForm({
     setError(null);
     start(async () => {
       // Se va tutto bene l'azione fa redirect e non torna qui.
-      const res = signup ? await signUp(name, email, password, next, audience, turnstileToken) : await signIn(email, password, next, audience);
+      const res = signup ? await signUp(name, email, password, next, audience, turnstileToken, accepted) : await signIn(email, password, next, audience);
       if (res && !res.ok) {
         setError(res);
         if (signup) setTurnstileReset((n) => n + 1);
@@ -89,8 +90,16 @@ export function LoginForm({
     });
   }
 
-  const fieldError = (f: NonNullable<AuthResult["field"]>) => (error?.field === f ? error.error : undefined);
-  const describedBy = (id: string, f: NonNullable<AuthResult["field"]>) => (fieldError(f) ? `${id}-error` : `${id}-help`);
+  /** In "Crea account" anche Google crea un account: prima serve la spunta sui termini. */
+  function guardProvider(e: React.MouseEvent) {
+    if (!signup || accepted) return;
+    e.preventDefault();
+    setError({ ok: false, error: "Per creare l'account devi accettare i Termini e l'Informativa privacy", field: "terms" });
+    document.getElementById("terms")?.focus();
+  }
+
+  const fieldError = (f: NonNullable<SignUpResult["field"]>) => (error?.field === f ? error.error : undefined);
+  const describedBy = (id: string, f: NonNullable<SignUpResult["field"]>) => (fieldError(f) ? `${id}-error` : `${id}-help`);
 
   return (
     <div className="flex flex-col gap-6">
@@ -126,12 +135,8 @@ export function LoginForm({
           {/* Link normali, non <Link>: le route /auth/* rimandano al sito del provider con una navigazione completa. */}
           <div className="flex flex-col gap-3">
             {/* eslint-disable-next-line @next/next/no-html-link-for-pages -- route handler, non una pagina */}
-            <a href="/auth/google" className={cn(providerLink, "border border-line bg-surface text-ink hover:bg-crema-100")}>
+            <a href="/auth/google" onClick={guardProvider} className={cn(providerLink, "border border-line bg-surface text-ink hover:bg-crema-100")}>
               <GoogleIcon /> Continua con Google
-            </a>
-            {/* eslint-disable-next-line @next/next/no-html-link-for-pages -- route handler, non una pagina */}
-            <a href="/auth/apple" className={cn(providerLink, "bg-black text-white hover:bg-neutro-900")}>
-              <AppleIcon /> Continua con Apple
             </a>
           </div>
 
@@ -201,6 +206,41 @@ export function LoginForm({
             </button>
           </div>
         </Field>
+        {signup && (
+          <div className="flex flex-col gap-1.5">
+            <label className="flex items-start gap-3 text-body-s">
+              <input
+                id="terms"
+                type="checkbox"
+                required
+                checked={accepted}
+                aria-invalid={!!fieldError("terms")}
+                aria-describedby={fieldError("terms") ? "terms-error" : undefined}
+                onChange={(e) => {
+                  setAccepted(e.target.checked);
+                  if (e.target.checked && error?.field === "terms") setError(null);
+                }}
+                className="mt-0.5 size-5 shrink-0 accent-primary"
+              />
+              <span>
+                Accetto i{" "}
+                <Link href="/termini" target="_blank" className="font-semibold text-primary underline">
+                  termini e condizioni
+                </Link>{" "}
+                e ho letto l&apos;
+                <Link href="/privacy" target="_blank" className="font-semibold text-primary underline">
+                  Informativa privacy
+                </Link>
+                . GecoItalia mette solo in contatto clienti e aziende e non risponde dei rapporti tra loro. *
+              </span>
+            </label>
+            {fieldError("terms") && (
+              <p id="terms-error" role="alert" className="text-body-s text-error">
+                {fieldError("terms")}
+              </p>
+            )}
+          </div>
+        )}
         {/* Antispam solo sulla creazione dell'account: l'accesso ha già i suoi limiti di tentativi. */}
         {signup && <Turnstile onToken={setTurnstileToken} resetKey={turnstileReset} />}
         {!signup && (

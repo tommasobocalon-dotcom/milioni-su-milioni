@@ -283,6 +283,7 @@ export async function getPartnerAdmin(id: string, now: Date) {
         status: subscriptions.status,
         period: subscriptions.period,
         currentPeriodEnd: subscriptions.currentPeriodEnd,
+        cancelAt: subscriptions.cancelAt,
         stripeSubscriptionId: subscriptions.stripeSubscriptionId,
         planName: planLabel,
         free: subscriptions.free,
@@ -467,6 +468,7 @@ export const SUBSCRIPTION_FILTERS = [
   { value: "gratuiti", label: "Gratuiti" },
   { value: "gratuiti-finiti", label: "Gratuiti finiti" },
   { value: "sospesi", label: "Pagamento non riuscito" },
+  { value: "in-disdetta", label: "In disdetta" },
   { value: "da-pagare", label: "Da pagare" },
   { value: "disdetti", label: "Disdetti" },
 ] as const;
@@ -479,6 +481,8 @@ const subscriptionFilterSql = (f: SubscriptionFilter): SQL =>
     // Finiti dopo le 3 richieste (syncFreePlan): aspettano che l'azienda scelga un piano, non sono pagamenti non riusciti.
     "gratuiti-finiti": and(eq(subscriptions.status, "suspended"), eq(subscriptions.free, true))!,
     sospesi: and(eq(subscriptions.status, "suspended"), eq(subscriptions.free, false))!,
+    // Disdetti dall'azienda ma ancora nel periodo pagato: online fino a cancel_at, poi Stripe li chiude.
+    "in-disdetta": and(eq(subscriptions.status, "active"), isNotNull(subscriptions.cancelAt))!,
     "da-pagare": eq(subscriptions.status, "activating"),
     disdetti: eq(subscriptions.status, "cancelled"),
   })[f];
@@ -496,6 +500,7 @@ export async function listSubscriptionsAdmin(filter?: SubscriptionFilter) {
       monthlyPriceCents: plans.monthlyPriceCents,
       yearlyPriceCents: plans.yearlyPriceCents,
       currentPeriodEnd: subscriptions.currentPeriodEnd,
+      cancelAt: subscriptions.cancelAt,
       stripeSubscriptionId: subscriptions.stripeSubscriptionId,
       createdAt: subscriptions.createdAt,
     })

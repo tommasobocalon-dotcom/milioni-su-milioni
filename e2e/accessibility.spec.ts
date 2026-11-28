@@ -77,6 +77,7 @@ for (const [device, viewport] of Object.entries(VIEWPORTS)) {
       await page.getByLabel(/^Nome e cognome/).fill("Anna Verdi");
       await page.getByRole("textbox", { name: /^Email/ }).fill(`a11y-${Date.now()}@example.com`);
       await page.getByLabel(/^Password/).fill("password di prova 1");
+      await page.getByLabel(/^Accetto i termini/).check();
       await page.getByRole("button", { name: "Crea il tuo account" }).click();
       await expect(page).toHaveURL(/\/area-cliente$/);
       await expectAccessible(page, "/area-cliente");

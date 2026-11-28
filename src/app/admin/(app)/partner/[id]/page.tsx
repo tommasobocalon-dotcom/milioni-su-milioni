@@ -68,9 +68,13 @@ async function PartnerDetail({ id }: { id: string }) {
         {[
           { label: "Piano", value: p.sub ? p.sub.planName : "Nessuno", note: p.sub?.free ? (p.sub.status === "suspended" ? "Gratuito finito dopo 3 richieste: scheda nascosta finché non paga" : `Base senza pagamento, ${SUB_LABEL[p.sub.status]}`) : p.sub ? `${PERIOD_LABEL[p.sub.period]}, ${SUB_LABEL[p.sub.status]}` : "Non ha ancora pagato" },
           {
-            label: "Rinnovo",
-            value: p.sub && !p.sub.free ? dateOnly.format(p.sub.currentPeriodEnd) : "—",
-            note: p.sub?.free ? "Gratis fino a 3 richieste, poi deve scegliere un piano" : "",
+            label: p.sub?.cancelAt ? "Termina il" : "Rinnovo",
+            value: p.sub && !p.sub.free ? dateOnly.format(p.sub.cancelAt ?? p.sub.currentPeriodEnd) : "—",
+            note: p.sub?.free
+              ? "Gratis fino a 3 richieste, poi deve scegliere un piano"
+              : p.sub?.cancelAt
+                ? "Disdetto dall'azienda: online fino a questa data, poi la scheda esce dal sito"
+                : "",
           },
           { label: "Lead ricevuti", value: String(p.leads.total), note: `${p.leads.last30} negli ultimi 30 giorni · ${p.leads.reported} segnalati` },
           {

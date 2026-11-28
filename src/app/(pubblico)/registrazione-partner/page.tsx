@@ -5,7 +5,8 @@ import { redirect } from "next/navigation";
 import { PartnerSignupForm, type OptionGroup } from "@/components/site/partner-signup-form";
 import { ButtonLink } from "@/components/ui/button";
 import { getSessionUser } from "@/lib/auth/session";
-import { getCategories, getMunicipalities } from "@/lib/data/catalog";
+import { getCategories, getMunicipalities, getOpenProvinceCodes } from "@/lib/data/catalog";
+import { isProvinceOpen } from "@/lib/domain/open-areas";
 import { db } from "@/lib/db/client";
 import { partnerMembers } from "@/lib/db/schema";
 import { cn } from "@/lib/utils";
@@ -78,7 +79,9 @@ async function SignupStep() {
   const [member] = await db.select({ id: partnerMembers.partnerId }).from(partnerMembers).where(eq(partnerMembers.userId, user.id)).limit(1);
   if (member) redirect("/area-partner/abbonamento");
 
-  const [categories, places] = await Promise.all([getCategories(), getMunicipalities()]);
+  const [categories, allPlaces, open] = await Promise.all([getCategories(), getMunicipalities(), getOpenProvinceCodes()]);
+  // Sede solo nelle province aperte dal gestionale → Zone (al lancio Treviso).
+  const places = allPlaces.filter((p) => isProvinceOpen(p.provinceCode, open));
   const categoryGroups: OptionGroup[] = (Object.keys(TYPE_LABEL) as (keyof typeof TYPE_LABEL)[])
     .map((t) => ({ label: TYPE_LABEL[t], options: categories.filter((c) => c.partnerType === t).map((c) => ({ value: c.id, label: c.name })) }))
     .filter((g) => g.options.length > 0);

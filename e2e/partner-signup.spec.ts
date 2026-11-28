@@ -13,6 +13,7 @@ test("un'azienda si registra, la scheda resta nascosta fino all'attivazione del 
   await page.getByLabel(/^Nome e cognome/).fill("Giulia Verdi");
   await page.getByRole("textbox", { name: /^Email/ }).fill(email);
   await page.getByLabel(/^Password/).fill("password-di-prova-2026");
+  await page.getByLabel(/^Accetto i termini/).check();
   await page.getByRole("button", { name: "Continua con i dati dell'attività" }).click();
   await expect(page).toHaveURL(/\/registrazione-partner$/);
   await expect(page.getByText(email)).toBeVisible();
@@ -83,6 +84,7 @@ test("un'agenzia appena registrata compare in Trova casa solo dopo l'attivazione
   await page.getByLabel(/^Nome e cognome/).fill("Paolo Neri");
   await page.getByRole("textbox", { name: /^Email/ }).fill(`nuova.agenzia.${Date.now()}@example.com`);
   await page.getByLabel(/^Password/).fill("password-di-prova-2026");
+  await page.getByLabel(/^Accetto i termini/).check();
   await page.getByRole("button", { name: "Continua con i dati dell'attività" }).click();
   await expect(page).toHaveURL(/\/registrazione-partner$/);
   await page.getByLabel(/^Cosa fai/).selectOption({ label: "Agenzia immobiliare" });

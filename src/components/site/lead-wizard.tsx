@@ -288,8 +288,12 @@ export function LeadWizard({ ctx, places, initialServiceSlug }: Props) {
               Ho letto l&apos;
               <a href="/privacy" target="_blank" className="font-semibold text-primary underline">
                 informativa privacy
+              </a>
+              , accetto i{" "}
+              <a href="/termini" target="_blank" className="font-semibold text-primary underline">
+                termini
               </a>{" "}
-              e accetto che i miei dati vengano inviati solo a {ctx.partner.displayName} per ricontattarmi. *
+              e che i miei dati vengano inviati solo a {ctx.partner.displayName} per ricontattarmi. *
             </span>
           </label>
           <label className="flex items-start gap-3 text-body-s sm:col-span-2">

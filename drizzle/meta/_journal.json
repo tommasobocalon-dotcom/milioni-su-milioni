@@ -281,6 +281,13 @@
       "when": 1795791179001,
       "tag": "0039_sospensione_team",
       "breakpoints": true
+    },
+    {
+      "idx": 40,
+      "version": "7",
+      "when": 1795879523248,
+      "tag": "0040_disdetta",
+      "breakpoints": true
     }
   ]
 }

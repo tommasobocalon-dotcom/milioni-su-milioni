@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { accountStatusFrom, listingStatus, periodFromItems, planFromLookupKey, planLookupKey, subscriptionStatusFromStripe, homeSponsorFromCheckout, areaExtensionFromCheckout, searchBoostFromCheckout } from "./billing";
+import { accountStatusFrom, cancellationDate, listingStatus, periodFromItems, planFromLookupKey, planLookupKey, subscriptionStatusFromStripe, homeSponsorFromCheckout, areaExtensionFromCheckout, searchBoostFromCheckout } from "./billing";
 
 describe("subscriptionStatusFromStripe", () => {
   it("attivo solo con pagamento in regola", () => {
@@ -139,3 +139,19 @@ describe("listingStatus", () => {
   });
 });
 
+describe("cancellationDate", () => {
+  const end = new Date("2026-12-28T10:00:00Z");
+
+  it("nessuna disdetta: null", () => {
+    expect(cancellationDate({ cancel_at_period_end: false, cancel_at: null }, end)).toBeNull();
+  });
+
+  it("disdetta a fine periodo: la fine del periodo pagato", () => {
+    expect(cancellationDate({ cancel_at_period_end: true, cancel_at: null }, end)).toEqual(end);
+  });
+
+  it("data di chiusura impostata in Stripe: quella data", () => {
+    const at = Math.floor(new Date("2027-01-15T00:00:00Z").getTime() / 1000);
+    expect(cancellationDate({ cancel_at_period_end: false, cancel_at: at }, end)).toEqual(new Date(at * 1000));
+  });
+});

@@ -9,6 +9,7 @@ test("conferma email e recupero password con i link monouso", async ({ page }) =
   await page.getByLabel(/^Nome e cognome/).fill("Paola Neri");
   await page.getByRole("textbox", { name: /^Email/ }).fill(email);
   await page.getByLabel(/^Password/).fill("password iniziale 1");
+  await page.getByLabel(/^Accetto i termini/).check();
   await page.getByRole("button", { name: "Crea il tuo account" }).click();
   await expect(page).toHaveURL(/\/area-cliente$/);
   await expect(page.getByText(/Conferma la tua email/)).toBeVisible();
@@ -56,6 +57,7 @@ test("password dimenticata dall'accesso aziende: la nuova password riporta all'a
   await page.getByLabel(/^Nome e cognome/).fill("Luca Verdi");
   await page.getByRole("textbox", { name: /^Email/ }).fill(email);
   await page.getByLabel(/^Password/).fill("password iniziale 1");
+  await page.getByLabel(/^Accetto i termini/).check();
   await page.getByRole("button", { name: "Continua con i dati dell'attività" }).click();
   await expect(page).toHaveURL(/\/registrazione-partner$/);
 

@@ -75,7 +75,12 @@ async function Subscriptions({ filter }: { filter?: SubscriptionFilter }) {
                   </span>
                 </span>
                 <span className="flex flex-wrap items-center gap-2 text-caption text-ink-2">
-                  {!s.free && s.status === "active" && <span>rinnovo il {dateOnly.format(s.currentPeriodEnd)}</span>}
+                  {!s.free && s.status === "active" &&
+                    (s.cancelAt ? (
+                      <span className="font-semibold text-error">disdetto, termina il {dateOnly.format(s.cancelAt)}</span>
+                    ) : (
+                      <span>rinnovo il {dateOnly.format(s.currentPeriodEnd)}</span>
+                    ))}
                   {s.stripeSubscriptionId && (
                     <a
                       href={stripeDashboardUrl("subscriptions", s.stripeSubscriptionId)}

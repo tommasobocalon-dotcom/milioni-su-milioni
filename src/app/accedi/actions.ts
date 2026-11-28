@@ -12,9 +12,12 @@ import { TURNSTILE_ERROR, turnstileOk } from "@/lib/security/turnstile";
 import { db } from "@/lib/db/client";
 import { auditLogs, oauthAccounts, sessions, users } from "@/lib/db/schema";
 import { normalizeEmail } from "@/lib/domain/otp";
+import { LEGAL_VERSION } from "@/lib/domain/legal";
 import { burnPasswordCheck, hashPassword, PASSWORD_MAX, passwordProblem, verifyPassword } from "@/lib/domain/password";
 
 export type AuthResult = { ok: false; error: string; field?: "name" | "email" | "password" };
+/** La creazione dell'account ha in più la spunta su Termini e privacy. */
+export type SignUpResult = AuthResult | { ok: false; error: string; field: "terms" };
 
 /** Anti forza bruta per email: oltre 10 password sbagliate in 15 minuti l'accesso si ferma. */
 const FAILED_LIMIT = { attempts: 10, minutes: 15 };
@@ -68,13 +71,15 @@ export async function signUp(
   next?: string,
   audience: Audience = "client",
   turnstileToken?: string,
-): Promise<AuthResult> {
+  acceptedTerms = false,
+): Promise<SignUpResult> {
   const name = rawName.trim().replace(/\s+/g, " ");
   if (name.length < 2 || name.length > 80) return { ok: false, error: "Scrivi nome e cognome", field: "name" };
   const email = parseEmail(rawEmail);
   if (!email) return { ok: false, error: "Controlla l'indirizzo email", field: "email" };
   const problem = passwordProblem(password);
   if (problem) return { ok: false, error: problem, field: "password" };
+  if (acceptedTerms !== true) return { ok: false, error: "Per creare l'account devi accettare i Termini e l'Informativa privacy", field: "terms" };
   if (await ipRateLimited("signup", 20, 60)) return { ok: false, error: "Troppi tentativi da questo dispositivo. Riprova tra qualche minuto." };
   if (!(await turnstileOk(turnstileToken))) return { ok: false, error: TURNSTILE_ERROR };
 
@@ -91,7 +96,7 @@ export async function signUp(
   const passwordHash = await hashPassword(password);
   const [created] = await db.insert(users).values({ email, name, passwordHash }).onConflictDoNothing().returning({ id: users.id });
   if (!created) return { ok: false, error: "Esiste già un account con questa email: accedi", field: "email" };
-  await db.insert(auditLogs).values({ actor: email, action: "auth.signup", entity: "user", entityId: created.id });
+  await db.insert(auditLogs).values({ actor: email, action: "auth.signup", entity: "user", entityId: created.id, data: { terms: LEGAL_VERSION } });
   // Un intoppo del provider email non deve bloccare la registrazione: il link si può rimandare dall'area personale.
   await sendEmailVerificationLink({ id: created.id, email, name }).catch((e) => logError("[auth] email di conferma non inviata:", e));
   await createSession(created.id, audience);

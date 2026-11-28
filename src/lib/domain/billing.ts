@@ -47,6 +47,26 @@ export function listingStatus(fromPlans: SubscriptionStatus, verification: Verif
   return fromPlans === "active" && verification !== "verified" ? "activating" : fromPlans;
 }
 
+/** Motivi della disdetta, facoltativi: finiscono nel registro e nell'avviso al team, per capire perché le aziende se ne vanno. */
+export const CANCEL_REASONS = [
+  { value: "price", label: "Costa troppo" },
+  { value: "few_leads", label: "Ricevo poche richieste" },
+  { value: "bad_leads", label: "Le richieste non sono adatte al mio lavoro" },
+  { value: "busy", label: "Ho già abbastanza lavoro" },
+  { value: "closing", label: "Chiudo o cambio attività" },
+  { value: "other", label: "Altro" },
+] as const;
+
+/**
+ * Data in cui l'abbonamento si chiude per una disdetta già fatta, o null. Disdetta dall'Area aziende o dal portale
+ * (cancel_at_period_end): resta attivo fino alla fine del periodo pagato, poi Stripe lo chiude (customer.subscription.deleted)
+ * e la scheda esce dal sito. Una data scelta a mano in Stripe (cancel_at) vale quella.
+ */
+export function cancellationDate(sub: { cancel_at_period_end: boolean; cancel_at: number | null }, periodEnd: Date): Date | null {
+  if (sub.cancel_at) return new Date(sub.cancel_at * 1000);
+  return sub.cancel_at_period_end ? periodEnd : null;
+}
+
 /** Periodo corrente dalle voci dell'abbonamento (Stripe lo tiene sulle voci, in secondi Unix). */
 export function periodFromItems(items: { current_period_start: number; current_period_end: number }[]): { start: Date; end: Date } {
   if (items.length === 0) throw new Error("Abbonamento Stripe senza voci");

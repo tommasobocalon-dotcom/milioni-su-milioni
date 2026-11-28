@@ -5,12 +5,15 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { requireUser } from "@/lib/auth/session";
 import { db } from "@/lib/db/client";
-import { auditLogs, categories, municipalities, partnerMembers, partners, serviceAreas, users } from "@/lib/db/schema";
+import { auditLogs, categories, municipalities, partnerMembers, partners, provinces, serviceAreas, users } from "@/lib/db/schema";
+import { getOpenProvinceCodes } from "@/lib/data/catalog";
+import { isProvinceOpen } from "@/lib/domain/open-areas";
 import { slugify } from "@/lib/domain/format";
 import { billingContactProblem, freeSlug, isValidVatNumber, normalizeVatNumber } from "@/lib/domain/partner-signup";
 import { ipRateLimited } from "@/lib/security/ip-limit";
 import { adminBaseUrl } from "@/lib/domain/admin-host";
 import { alertTeam } from "@/lib/notify";
+import { LEGAL_VERSION } from "@/lib/domain/legal";
 
 export type SignupState = { error?: string; field?: string };
 
@@ -36,7 +39,7 @@ const SignupSchema = z.object({
     .transform((v) => v.replace(/[\s.-]/g, ""))
     .pipe(z.string().regex(/^\+?\d{6,15}$/, "Scrivi un numero di telefono valido")),
   tagline: z.string().trim().min(3, "Scrivi una frase che presenti la tua attività").max(120),
-  terms: z.literal("on", { error: "Serve accettare i termini per i partner" }),
+  terms: z.literal("on", { error: "Per registrare l'azienda devi accettare i Termini e l'Informativa privacy" }),
 });
 
 const FIELDS = Object.keys(SignupSchema.shape);
@@ -63,13 +66,14 @@ export async function registerPartner(_prev: SignupState, formData: FormData): P
   const [[category], [place], [sameVat]] = await Promise.all([
     db.select({ id: categories.id, type: categories.partnerType }).from(categories).where(eq(categories.id, d.categoryId)),
     db
-      .select({ id: municipalities.id, name: municipalities.name, provinceId: municipalities.provinceId, lat: municipalities.lat, lng: municipalities.lng })
+      .select({ id: municipalities.id, name: municipalities.name, provinceId: municipalities.provinceId, provinceCode: provinces.code, lat: municipalities.lat, lng: municipalities.lng })
       .from(municipalities)
+      .innerJoin(provinces, eq(provinces.id, municipalities.provinceId))
       .where(eq(municipalities.id, d.municipalityId)),
     db.select({ id: partners.id }).from(partners).where(eq(partners.vatNumber, d.vatNumber)).limit(1),
   ]);
   if (!category) return { error: "Scegli cosa fa la tua attività", field: "categoryId" };
-  if (!place) return { error: "Scegli il comune della sede", field: "municipalityId" };
+  if (!place || !isProvinceOpen(place.provinceCode, await getOpenProvinceCodes())) return { error: "Scegli il comune della sede", field: "municipalityId" };
   if (sameVat) return { error: "Questa partita IVA ha già una scheda su GecoItalia: scrivi all'assistenza per entrare nell'account", field: "vatNumber" };
 
   const taken = await db.select({ slug: partners.slug }).from(partners).where(like(partners.slug, `${slugify(d.displayName)}%`));
@@ -103,7 +107,7 @@ export async function registerPartner(_prev: SignupState, formData: FormData): P
     await tx.insert(partnerMembers).values({ partnerId: p.id, userId: user.id, role: "owner" });
     await tx.insert(serviceAreas).values({ partnerId: p.id, provinceId: place.provinceId });
     if (user.role === "client") await tx.update(users).set({ role: "partner" }).where(eq(users.id, user.id));
-    await tx.insert(auditLogs).values({ actor: user.email, action: "partner.signup", entity: "partner", entityId: p.id, data: { slug } });
+    await tx.insert(auditLogs).values({ actor: user.email, action: "partner.signup", entity: "partner", entityId: p.id, data: { slug, terms: LEGAL_VERSION } });
     return p.id;
   });
   // La scheda va online solo dopo la verifica del team (listingStatus): chi controlla deve saperlo subito.

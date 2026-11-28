@@ -20,6 +20,7 @@ describe.skipIf(!RUN)("Stripe sandbox: abbonamento, discesa programmata e cambio
   let customer: string;
   let subscription: string;
   let partnerId: string;
+  let listing: string;
   const payer = () => ({ partnerId, email: "stripe.sandbox@example.com", name: "Prova sandbox" });
 
   async function priceOf(lookup: string) {
@@ -40,7 +41,7 @@ describe.skipIf(!RUN)("Stripe sandbox: abbonamento, discesa programmata e cambio
     billing = await import("./stripe");
     sql = (await import("postgres")).default(process.env.DATABASE_URL, { max: 1, onnotice: () => {} });
 
-    [{ id: partnerId }] = await sql<{ id: string }[]>`select id from partners where slug = 'elettro-bortolin'`;
+    [{ id: partnerId, listing }] = await sql<{ id: string; listing: string }[]>`select id, account_status as listing from partners where slug = 'elettro-bortolin'`;
     const c = await billing.stripe().customers.create({ name: "Prova sandbox geco", email: payer().email, metadata: { partnerId, test: "sandbox" } });
     customer = c.id;
     const pm = await billing.stripe().paymentMethods.attach("pm_card_visa", { customer });
@@ -56,7 +57,7 @@ describe.skipIf(!RUN)("Stripe sandbox: abbonamento, discesa programmata e cambio
     if (partnerId) {
       await sql`delete from subscriptions where partner_id = ${partnerId} and stripe_subscription_id is not null`;
       await sql`update subscriptions set status = 'active' where partner_id = ${partnerId}`;
-      await sql`update partners set stripe_customer_id = null where id = ${partnerId}`;
+      await sql`update partners set stripe_customer_id = null, account_status = ${listing} where id = ${partnerId}`;
       await sql`delete from stripe_processed where key = ${`change-promo:${partnerId}`}`;
     }
     await sql?.end();
@@ -122,4 +123,41 @@ describe.skipIf(!RUN)("Stripe sandbox: abbonamento, discesa programmata e cambio
     const sub = await billing.stripe().subscriptions.retrieve(subscription);
     expect(sub.items.data[0].price.lookup_key).toBe("geco_premium_monthly");
   }, 30_000);
+
+  async function dbSubscription() {
+    const [row] = await sql<{ status: string; cancel_at: Date | null; listing: string }[]>`
+      select s.status, s.cancel_at, p.account_status as listing from subscriptions s join partners p on p.id = s.partner_id
+      where s.stripe_subscription_id = ${subscription}`;
+    return row;
+  }
+
+  it("disdetta dall'Area aziende: resta attivo fino alla fine del periodo pagato, poi niente rinnovo", async () => {
+    const end = await billing.cancelSubscriptionAtPeriodEnd(partnerId, "Costa troppo");
+    const sub = await billing.stripe().subscriptions.retrieve(subscription);
+    expect(sub.status).toBe("active");
+    expect(sub.cancel_at_period_end || sub.cancel_at !== null).toBe(true);
+    expect(end).toEqual(new Date(sub.items.data[0].current_period_end * 1000));
+    expect(sub.cancellation_details?.comment).toBe("Costa troppo");
+    const row = await dbSubscription();
+    expect(row.status).toBe("active");
+    expect(row.cancel_at).toEqual(end);
+  }, 60_000);
+
+  it("annullare la disdetta prima della scadenza riporta il rinnovo automatico", async () => {
+    await billing.resumeSubscription(partnerId);
+    const sub = await billing.stripe().subscriptions.retrieve(subscription);
+    expect(sub.cancel_at_period_end).toBe(false);
+    expect(sub.cancel_at).toBeNull();
+    expect((await dbSubscription()).cancel_at).toBeNull();
+  }, 60_000);
+
+  it("alla scadenza Stripe chiude l'abbonamento e la scheda esce dal sito", async () => {
+    await billing.cancelSubscriptionAtPeriodEnd(partnerId, "");
+    // Stripe a fine periodo: abbonamento chiuso ed evento customer.subscription.deleted.
+    await billing.stripe().subscriptions.cancel(subscription);
+    await billing.handleStripeEvent({ type: "customer.subscription.deleted", data: { object: { id: subscription } } } as never);
+    const row = await dbSubscription();
+    expect(row.status).toBe("cancelled");
+    expect(row.listing).not.toBe("active");
+  }, 60_000);
 });

@@ -4,7 +4,7 @@ import { and, eq, inArray, isNotNull, isNull, or } from "drizzle-orm";
 import Stripe from "stripe";
 import { db } from "@/lib/db/client";
 import { partners, plans, provinces, stripeProcessed, subscriptions } from "@/lib/db/schema";
-import { accountStatusFrom, areaExtensionFromCheckout, listingStatus, homeSponsorFromCheckout, searchBoostFromCheckout, periodFromItems, planFromLookupKey, planLookupKey, subscriptionStatusFromStripe, TRIAL_DAYS } from "@/lib/domain/billing";
+import { accountStatusFrom, cancellationDate, areaExtensionFromCheckout, listingStatus, homeSponsorFromCheckout, searchBoostFromCheckout, periodFromItems, planFromLookupKey, planLookupKey, subscriptionStatusFromStripe, TRIAL_DAYS } from "@/lib/domain/billing";
 import { AREA_EXTENSION_OFFER, changePromo, HOME_SPONSOR_PACKAGES, homeSponsorPrice, launchDate, planPromo, type PlanPromo, provinceIdsFrom, SEARCH_BOOST_PACKAGES } from "@/lib/domain/offers";
 import { hadFreePlan } from "@/lib/data/partner-area";
 import { grantAreaExtensions, grantHomeSponsor, grantSearchBoost, unlockLeads } from "@/lib/leads/service";
@@ -286,6 +286,42 @@ export async function createPlanChangeSession(partnerId: string, planCode: strin
   return session.url;
 }
 
+/** Abbonamento Stripe ancora in corso dell'azienda (attivo, in prova o sospeso), per disdetta e annullamento. */
+async function currentStripeSubscription(partnerId: string): Promise<string> {
+  const [row] = await db
+    .select({ id: subscriptions.stripeSubscriptionId })
+    .from(subscriptions)
+    .where(and(eq(subscriptions.partnerId, partnerId), inArray(subscriptions.status, ["active", "suspended"]), isNotNull(subscriptions.stripeSubscriptionId)));
+  if (!row?.id) throw new BillingError("Nessun abbonamento da disdire");
+  return row.id;
+}
+
+/**
+ * Disdetta dall'Area aziende (28/11/2026): l'abbonamento resta attivo fino alla fine del periodo già pagato, poi Stripe lo
+ * chiude e il webhook toglie la scheda dal sito. Nessun altro addebito. Una discesa di piano programmata non serve più e si toglie.
+ * Restituisce la data di chiusura.
+ */
+export async function cancelSubscriptionAtPeriodEnd(partnerId: string, reason: string): Promise<Date> {
+  const id = await currentStripeSubscription(partnerId);
+  const current = await stripe().subscriptions.retrieve(id);
+  if (current.schedule) await stripe().subscriptionSchedules.release(typeof current.schedule === "string" ? current.schedule : current.schedule.id);
+  await stripe().subscriptions.update(id, {
+    cancel_at_period_end: true,
+    cancellation_details: { comment: reason.slice(0, 500) || undefined },
+  });
+  await syncSubscription(id);
+  const [row] = await db.select({ cancelAt: subscriptions.cancelAt }).from(subscriptions).where(eq(subscriptions.stripeSubscriptionId, id));
+  if (!row?.cancelAt) throw new Error(`Disdetta di ${id} non registrata`);
+  return row.cancelAt;
+}
+
+/** Ripensamento prima della scadenza: l'abbonamento torna a rinnovarsi da solo, come prima della disdetta. */
+export async function resumeSubscription(partnerId: string): Promise<void> {
+  const id = await currentStripeSubscription(partnerId);
+  await stripe().subscriptions.update(id, { cancel_at_period_end: false });
+  await syncSubscription(id);
+}
+
 const changePromoKey = (partnerId: string) => `change-promo:${partnerId}`;
 
 /** L'azienda ha già avuto la promo in un cambio piano. */
@@ -392,6 +428,7 @@ async function syncSubscription(subscriptionId: string): Promise<{ id: string; p
     status: subscriptionStatusFromStripe(sub.status),
     currentPeriodStart: start,
     currentPeriodEnd: end,
+    cancelAt: cancellationDate(sub, end),
   };
 
   const id = await db.transaction(async (tx) => {

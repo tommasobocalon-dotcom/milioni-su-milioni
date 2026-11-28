@@ -8,6 +8,7 @@ test("il cliente scarica i suoi dati ed elimina l'account", async ({ page }) => 
   await page.getByLabel(/^Nome e cognome/).fill("Luca Bianchi");
   await page.getByRole("textbox", { name: /^Email/ }).fill(email);
   await page.getByLabel(/^Password/).fill("password di prova 1");
+  await page.getByLabel(/^Accetto i termini/).check();
   await page.getByRole("button", { name: "Crea il tuo account" }).click();
   await expect(page).toHaveURL(/\/area-cliente$/);
 
